@@ -1,6 +1,5 @@
 #@osa-lang:AppleScript
--- Import selected Mail messages to DEVONthink.
-
+-- Display infos for selected record in DEVONthink.
 
 tell application id "DNtp"
 
