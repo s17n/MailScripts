@@ -9,8 +9,8 @@ tell application id "DNtp"
 			tell theRecord
 				set {theId, theName, theFilename, theMetadata} ¬
 					to {the id, the name, the filename, the meta data}
-				set {theAuthorEmail, theAuthorName} ¬
-					to {the kMDItemAuthorEmailAddresses of theMetadata, the kMDItemAuthors of theMetadata}
+				set {theAuthorEmail, theAuthorName, theSubject} ¬
+					to {the kMDItemAuthorEmailAddresses of theMetadata, the kMDItemAuthors of theMetadata, the kMDItemSubject of theMetadata}
 			end tell
 
 			set theGroup to (name of location group of theRecord as string)
@@ -31,7 +31,7 @@ tell application id "DNtp"
 				set theGroupsAsString to ""
 				repeat with theGroup in theGroups
 					--					display dialog theGroup
-					set theGroupsAsString to theGroupsAsString & (name of theGroup as string) & " "
+					set theGroupsAsString to theGroupsAsString & (name of theGroup as string) & ", "
 				end repeat
 			end tell
 
@@ -42,7 +42,8 @@ tell application id "DNtp"
 				& "      Filename: " & theFilename & (return) ¬
 				& "      Meta data: " & (return) ¬
 				& "            kMDItemAuthors: " & theAuthorName & (return) ¬
-				& "            kMDItemAuthorEmailAddresses: " & theAuthorEmail & (return) ¬
+				& "            theAuthorEmail: " & theAuthorEmail & (return) ¬
+				& "            kMDItemSubject: " & theSubject & (return) ¬
 				& "Contact Data: " & (return) ¬
 				& "       Contacts: " & ((count of personsWithSameEmail) as string) & (return) ¬
 				& "       Name (1st Contact): " & (name of firstPerson) & (return) ¬

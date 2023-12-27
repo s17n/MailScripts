@@ -24,7 +24,7 @@ using terms from application "Mail"
 
 		set mailLib to (load script file mailLibraryPath)
 		repeat with theMessage in theMessages
-			tell mailLib to addMessagesToDevonthink(theMessage, dtImportDatabase, dtImportFolder, mailboxAccount, mailboxArchiveFolder)
+			tell mailLib to addMessagesToDevonthink(theMessage, dtImportDatabase, dtImportFolder, false, mailboxAccount, mailboxArchiveFolder)
 		end repeat
 
 	end perform mail action with messages

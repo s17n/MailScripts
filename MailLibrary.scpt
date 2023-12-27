@@ -3,14 +3,12 @@ property pScriptName : "Mail Library"
 
 -- Erstellt für jeden Record (.eml) einen Kontakt und fügt diesen einer Kontaktgruppe hinzu
 -- ODER aktualiserte die Kontaktgruppe des Kontakts - falls der Kontakt bereits existiert.
--- Die Kontaktgruppe muss bereits existieren. Die Zuordnung der Kontaktgruppe ergibt sich aus der 'location group' des records in DEVONthink.
+-- Die Kontaktgruppe muss bereits existieren.
+-- Die Zuordnung der Kontaktgruppe ergibt sich aus der 'location group' des records in DEVONthink.
+-- Parameter:
+--    theRecords: records
+--    theCallerScript: the caller script (for logging)
 --
--- kMDItemSubject
--- kMDItemAuthorEmailAddresses
--- kMDItemRecipientEmailAddresses
-
--- kMDItemRecipients
--- kMDItemAuthors
 on addOrUpdateContactsByGroup(theRecords, theCallerScript)
 	tell application id "DNtp"
 
@@ -63,14 +61,18 @@ on addOrUpdateContactsByGroup(theRecords, theCallerScript)
 end addOrUpdateContactsByGroup
 
 -- Importiert Mail Messages nach DEVONthink u. verschiebt sie anschließend in das Mailbox-Archiv.
--- 	theMessages : Die zu importierenden Messages.
---	theDatabase : DEVONthink Datenbank, in die importiert wird.
---	theImportFolder : DEVONthink Ordner in den importiert wird.
--- 	theMailboxAccount : Mailbox Account
---	theArchiveFolder : Mailbox / Ordner in den die Messages nach dem Import verschoben werden sollen.
-on addMessagesToDevonthink(theMessages, theDatabase, theImportFolder, theMailboxAccount, theArchiveFolder)
+-- Parameter:
+--    theMessages : Die zu importierenden Messages.
+--    theDatabase : DEVONthink Datenbank, in die importiert wird.
+--    theImportBaseFolder : DEVONthink Ordner in den importiert wird.
+--    useImportSubFoldersByContactGroup :
+--    theMailboxAccount : Mailbox Account
+--    theArchiveFolder : Mailbox / Ordner in den die Messages nach dem Import verschoben werden sollen.
+--
+on addMessagesToDevonthink(theMessages, theDatabase, theImportBaseFolder, useImportSubFoldersByContactGroup, theMailboxAccount, theArchiveFolder)
 	set logActionName to pScriptName & " - Import Message"
 	set pNoSubjectString to "(no subject)"
+	set theImportSubFolder to ""
 	tell application id "DNtp"
 		if not (exists current database) then error "No database is in use."
 		set theGroup to incoming group of database theDatabase
@@ -82,8 +84,18 @@ on addMessagesToDevonthink(theMessages, theDatabase, theImportFolder, theMailbox
 					set {theDateReceived, theDateSent, theSender, theSubject, theSource, theReadFlag} ¬
 						to {the date received, the date sent, the sender, the subject, the source, the read status}
 				end tell
+				set senderAddress to extract address from sender of theMessage
 				set theName to my format(theDateSent)
 				if theSubject is equal to "" then set theSubject to pNoSubjectString
+
+				set theImportFolder to theImportBaseFolder
+				if useImportSubFoldersByContactGroup then
+					set theImportSubFolder to my getContactGroupName(senderAddress)
+					if theImportSubFolder is not null then
+						set theImportFolder to theImportFolder & "/" & theImportSubFolder
+					end if
+				end if
+
 				tell application id "DNtp"
 					set theRecord to create record with {name:theName & ".eml", type:unknown, creation date:theDateSent, modification date:theDateReceived, URL:theSender, source:(theSource as string), unread:(not theReadFlag)} in theGroup
 					perform smart rule trigger import event record theRecord
@@ -100,6 +112,22 @@ on addMessagesToDevonthink(theMessages, theDatabase, theImportFolder, theMailbox
 		end repeat
 	end tell
 end addMessagesToDevonthink
+
+on getContactGroupName(theMailAddress)
+	tell application "Contacts"
+		set theGroupName to null
+		set personsWithSameEmailAddress to (every person whose value of emails contains theMailAddress)
+		if length of personsWithSameEmailAddress > 0 then
+			set firstPerson to first item of personsWithSameEmailAddress
+			set theGroups to groups of firstPerson
+			repeat with theGroup in theGroups
+				set aGroupName to name of theGroup as string
+				if (aGroupName is not null) and (aGroupName is not "card") then set theGroupName to aGroupName
+			end repeat
+		end if
+		return theGroupName
+	end tell
+end getContactGroupName
 
 -- Verschiebt die in DEVONthink selektierten Records in die Archiv-Verzeichnisstruktur.
 -- Für eml basierend auf 'creation date'

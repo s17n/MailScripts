@@ -23,7 +23,7 @@ tell application "Mail"
 		if the length of theSelection is less than 1 then error "One or more messages must be selected."
 
 		set mailLib to (load script file mailLibraryPath)
-		tell mailLib to addMessagesToDevonthink(theSelection, dtImportDatabase, dtImportFolder, mailboxAccount, mailboxArchiveFolder)
+		tell mailLib to addMessagesToDevonthink(theSelection, dtImportDatabase, dtImportFolder, true, mailboxAccount, mailboxArchiveFolder)
 
 	on error error_message number error_number
 		if error_number is not -128 then display alert "Mail" message error_message as warning
