@@ -1,5 +1,7 @@
 #@osa-lang:AppleScript
--- Import selected Mail messages to DEVONthink.
+-- Launcher für MailLibrary.addMessagesToDevonthink()
+
+property pScriptName : "Add Messages to DEVONthink"
 
 set propertiesPath to POSIX path of (path to home folder)
 set propertiesPath to propertiesPath & ".applescript/properties-mailscripts.scpt"
@@ -12,12 +14,6 @@ tell application "Mail"
 		set dtImportFolder to (the pDtImportFolder_1 of mailscriptProperties)
 		set mailboxAccount to (the pMailboxAccount of mailscriptProperties)
 		set mailboxArchiveFolder to (the pMailboxArchiveFolder of mailscriptProperties)
-
-		--display dialog "MailLibraryPath: " & mailLibraryPath & (return) & ¬
-		--	"dtImportDatabase: " & dtImportDatabase & (return) & ¬
-		--	"dtImportFolder: " & dtImportFolder & (return) & ¬
-		--	"mailboxAccount: " & mailboxAccount & (return) & ¬
-		-- 	"mailboxArchiveFolder: " & mailboxArchiveFolder
 
 		tell application id "DNtp"
 			if not (exists current database) then error "No database is in use."

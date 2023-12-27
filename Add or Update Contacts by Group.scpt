@@ -1,5 +1,5 @@
 #@osa-lang:AppleScript
--- Import selected Mail messages to DEVONthink.
+-- Launcher für MailLibrary.addOrUpdateContactsByGroup()
 
 property pScriptName : "Add/Update Contacts"
 
@@ -9,9 +9,10 @@ set mailscriptProperties to (load script propertiesPath)
 
 try
 	set mailLibraryPath to (the pMailLibraryPath of mailscriptProperties)
-	set mailLib to (load script file mailLibraryPath)
 
 	tell application id "DNtp" to set theSelection to the selection
+
+	set mailLib to (load script file mailLibraryPath)
 	tell mailLib to addOrUpdateContactsByGroup(theSelection, pScriptName)
 
 on error error_message number error_number

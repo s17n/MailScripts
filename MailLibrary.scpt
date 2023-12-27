@@ -2,8 +2,8 @@
 property pScriptName : "Mail Library"
 
 -- Erstellt für jeden Record (.eml) einen Kontakt und fügt diesen einer Kontaktgruppe hinzu
--- ODER aktualiserte die Kontaktgruppe des Kontakts - falls der Kontakt bereits existiert. Die Kontaktgruppe muss bereits existieren.
--- Die Zuordnung der Kontaktgruppe ergibt sich aus der 'location group' des records in DEVONthink.
+-- ODER aktualiserte die Kontaktgruppe des Kontakts - falls der Kontakt bereits existiert.
+-- Die Kontaktgruppe muss bereits existieren. Die Zuordnung der Kontaktgruppe ergibt sich aus der 'location group' des records in DEVONthink.
 --
 -- kMDItemSubject
 -- kMDItemAuthorEmailAddresses
