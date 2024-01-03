@@ -1,6 +1,52 @@
 #@osa-lang:AppleScript
 property pScriptName : "Mail Library"
 
+on extractAttachmentsFromEmail()
+	tell application id "DNtp"
+		set theSelection to the selection
+		set tmpFolder to path to temporary items
+		set tmpPath to POSIX path of tmpFolder
+
+		repeat with theRecord in theSelection
+			if (type of theRecord is unknown and path of theRecord ends with ".eml") or (type of the record is formatted note) then
+				set theRTF to convert record theRecord to rich
+
+				try
+					if type of theRTF is rtfd then
+						set thePath to path of theRTF
+						set theGroup to parent 1 of theRecord
+
+						tell application "Finder"
+							set filelist to every file in ((POSIX file thePath) as alias)
+							repeat with theFile in filelist
+								set theAttachment to POSIX path of (theFile as string)
+
+								if theAttachment ends with ".pdf" then
+									-- Importing skips files inside the database package,
+									-- therefore let's move them to a temporary folder first
+									set theAttachment to move ((POSIX file theAttachment) as alias) to tmpFolder with replacing
+									set theAttachment to POSIX path of (theAttachment as string)
+									-- tell application id "DNtp" to import theAttachment to theGroup
+									tell application id "DNtp"
+										set theImportedRecord to import theAttachment to theGroup
+										set theEmailCreationDate to get creation date of theRecord
+										set theCmdDate to my formatDateWithDashes(theEmailCreationDate)
+										add custom meta data theCmdDate for "Date" to theImportedRecord
+										set name of theImportedRecord to theCmdDate
+										set creation date of theImportedRecord to theCreationDateOfTheEmail
+									end tell
+								end if
+							end repeat
+						end tell
+					end if
+				end try
+
+				delete record theRTF
+			end if
+		end repeat
+	end tell
+end extractAttachmentsFromEmail
+
 -- Erstellt für jeden Record (.eml) einen Kontakt und fügt diesen einer Kontaktgruppe hinzu
 -- ODER aktualiserte die Kontaktgruppe des Kontakts - falls der Kontakt bereits existiert.
 -- Die Kontaktgruppe muss bereits existieren.
@@ -191,6 +237,18 @@ on zero_pad(value, string_length)
 	set padded_value to string_zeroes & value as string
 	return padded_value
 end zero_pad
+
+on formatDateWithDashes(theDate)
+	set now to (theDate)
+
+	set result to (year of now as integer) as string
+	set result to result & "-"
+	set result to result & zero_pad(month of now as integer, 2)
+	set result to result & "-"
+	set result to result & zero_pad(day of now as integer, 2)
+
+	return result
+end formatDateWithDashes
 
 on format(theDate)
 	set now to (theDate)

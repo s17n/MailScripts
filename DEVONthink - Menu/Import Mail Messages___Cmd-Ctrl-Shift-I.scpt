@@ -25,13 +25,12 @@ tell application "Mail"
 			else
 				log message pScriptName info "Messages to import: " & (messageCount as string)
 			end if
-
 		end tell
 
 		set mailLib to (load script file mailLibraryPath)
 		repeat with i from 1 to messageCount by 1
 			set theMessage to message 1 of mailbox "Zu archivieren" of account mailboxAccount
-			tell mailLib to addMessagesToDevonthink(theMessage, dtImportDatabase, dtImportFolder, mailboxAccount, mailboxArchiveFolder)
+			tell mailLib to addMessagesToDevonthink(theMessage, dtImportDatabase, dtImportFolder, false, mailboxAccount, mailboxArchiveFolder)
 		end repeat
 
 	on error error_message number error_number
