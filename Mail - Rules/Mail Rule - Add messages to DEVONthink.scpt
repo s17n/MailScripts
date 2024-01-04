@@ -1,5 +1,5 @@
 #@osa-lang:AppleScript
-property pScriptName : "Mail Rule - TEMPLATE"
+property pScriptName : "Mail Rule"
 property pMailPropertiesPath : POSIX path of (path to home folder) & ".applescript/properties-mailscripts.scpt"
 
 using terms from application "Mail"
@@ -9,7 +9,6 @@ using terms from application "Mail"
 		set scptProp to (load script pMailPropertiesPath)
 		set mailLibraryPath to (the pMailLibraryPath of scptProp)
 		set mailboxAccount to (the pMailboxAccount of scptProp)
-		set mailboxImportFolder to (the pMailboxImportFolder of scptProp)
 		set mailboxArchiveFolder to (the pMailboxArchiveFolder of scptProp)
 		set dtImportDatabase to (the pDtImportDatabase of scptProp)
 		set dtImportFolder to (the pDtImportFolder_1 of scptProp)
@@ -24,7 +23,7 @@ using terms from application "Mail"
 
 		set mailLib to (load script file mailLibraryPath)
 		repeat with theMessage in theMessages
-			tell mailLib to addMessagesToDevonthink(theMessage, dtImportDatabase, dtImportFolder, false, mailboxAccount, mailboxArchiveFolder)
+			tell mailLib to addMessagesToDevonthink(theMessage, dtImportDatabase, dtImportFolder, true, mailboxAccount, mailboxArchiveFolder)
 		end repeat
 
 	end perform mail action with messages

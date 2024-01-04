@@ -1,6 +1,16 @@
 #@osa-lang:AppleScript
 property pScriptName : "Mail Library"
 
+on setGroupAsTag(theRecords, theCallerScript)
+	tell application id "DNtp"
+		repeat with theRecord in theRecords
+			set theGroup to (name of location group of theRecord as string)
+			set tags of theRecord to theGroup
+			--display dialog theGroup
+		end repeat
+	end tell
+end setGroupAsTag
+
 on extractAttachmentsFromEmail()
 	tell application id "DNtp"
 		set theSelection to the selection
@@ -138,7 +148,7 @@ on addMessagesToDevonthink(theMessages, theDatabase, theImportBaseFolder, useImp
 				if useImportSubFoldersByContactGroup then
 					set theImportSubFolder to my getContactGroupName(senderAddress)
 					if theImportSubFolder is not null then
-						set theImportFolder to theImportFolder & "/" & theImportSubFolder
+						set theImportFolder to "Inbox/" & theImportSubFolder
 					end if
 				end if
 
