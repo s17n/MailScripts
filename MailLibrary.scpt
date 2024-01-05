@@ -6,7 +6,6 @@ on setGroupAsTag(theRecords, theCallerScript)
 		repeat with theRecord in theRecords
 			set theGroup to (name of location group of theRecord as string)
 			set tags of theRecord to theGroup
-			--display dialog theGroup
 		end repeat
 	end tell
 end setGroupAsTag
@@ -121,11 +120,11 @@ end addOrUpdateContactsByGroup
 --    theMessages : Die zu importierenden Messages.
 --    theDatabase : DEVONthink Datenbank, in die importiert wird.
 --    theImportBaseFolder : DEVONthink Ordner in den importiert wird.
---    useImportSubFoldersByContactGroup :
+--    sortBySender : Kennzeichen, ob die Messages in DEVONthink-Gruppen - identisch zu Contact-Gruppe der Sender-Adresse - verschoben werden soll.
 --    theMailboxAccount : Mailbox Account
 --    theArchiveFolder : Mailbox / Ordner in den die Messages nach dem Import verschoben werden sollen.
 --
-on addMessagesToDevonthink(theMessages, theDatabase, theImportBaseFolder, useImportSubFoldersByContactGroup, theMailboxAccount, theArchiveFolder)
+on addMessagesToDevonthink(theMessages, theDatabase, theImportBaseFolder, sortBySender, theMailboxAccount, theArchiveFolder)
 	set logActionName to pScriptName & " - Import Message"
 	set pNoSubjectString to "(no subject)"
 	set theImportSubFolder to ""
@@ -145,7 +144,7 @@ on addMessagesToDevonthink(theMessages, theDatabase, theImportBaseFolder, useImp
 				if theSubject is equal to "" then set theSubject to pNoSubjectString
 
 				set theImportFolder to theImportBaseFolder
-				if useImportSubFoldersByContactGroup then
+				if sortBySender then
 					set theImportSubFolder to my getContactGroupName(senderAddress)
 					if theImportSubFolder is not null then
 						set theImportFolder to "Inbox/" & theImportSubFolder

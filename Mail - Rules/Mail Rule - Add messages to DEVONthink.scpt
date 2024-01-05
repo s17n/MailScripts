@@ -12,6 +12,7 @@ using terms from application "Mail"
 		set mailboxArchiveFolder to (the pMailboxArchiveFolder of scptProp)
 		set dtImportDatabase to (the pDtImportDatabase of scptProp)
 		set dtImportFolder to (the pDtImportFolder_1 of scptProp)
+		set dtSortBySender to (the pDtSortBySender of scptProp)
 
 		set messageCount to count theMessages
 
@@ -23,7 +24,7 @@ using terms from application "Mail"
 
 		set mailLib to (load script file mailLibraryPath)
 		repeat with theMessage in theMessages
-			tell mailLib to addMessagesToDevonthink(theMessage, dtImportDatabase, dtImportFolder, true, mailboxAccount, mailboxArchiveFolder)
+			tell mailLib to addMessagesToDevonthink(theMessage, dtImportDatabase, dtImportFolder, dtSortBySender, mailboxAccount, mailboxArchiveFolder)
 		end repeat
 
 	end perform mail action with messages

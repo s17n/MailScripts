@@ -1,3 +1,3 @@
 Documentation
 
-![](architecture.drawio.svg)
+![](Docs/architecture.drawio.svg)
