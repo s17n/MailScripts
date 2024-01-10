@@ -1,18 +1,17 @@
 #@osa-lang:AppleScript
-
+property pScriptName : "Archive Record"
+property pMailPropertiesPath : POSIX path of (path to home folder) & ".applescript/properties-mailscripts.scpt"
 
 on run
 
-	set propertiesPath to POSIX path of (path to home folder)
-	set propertiesPath to propertiesPath & ".applescript/properties-mailscripts.scpt"
-	set mailscriptProperties to (load script propertiesPath)
+	set scptProp to (load script pMailPropertiesPath)
+	set mailLibraryPath to (the pMailLibraryPath of scptProp)
+	set archiveRoot to (the pDtArchiveRoot of scptProp)
 
-	set mailLibraryPath to (the pMailLibraryPath of mailscriptProperties)
 	set mailLib to (load script file mailLibraryPath)
-
 	tell application id "DNtp"
 		set theSelection to selection
-		tell mailLib to archiveRecords(theSelection)
+		tell mailLib to archiveRecords(archiveRoot, theSelection)
 	end tell
 
 end run

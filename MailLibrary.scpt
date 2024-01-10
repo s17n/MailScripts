@@ -188,7 +188,8 @@ end getContactGroupName
 -- Für eml basierend auf 'creation date'
 -- Für alle anderen Typem basierend auf dem Custom Meta Data "Date"
 --	theRecords : Die zu archivierenden Records.
-on archiveRecords(theRecords)
+--	theArchiveRoot : Root-Verzeichnis des Archivs
+on archiveRecords(theArchiveRoot, theRecords)
 	tell application id "DNtp"
 		try
 			repeat with aRecord in theRecords
@@ -205,7 +206,7 @@ on archiveRecords(theRecords)
 				set theYear to texts 1 thru 4 of creationDateAsString
 				set theMonth to texts 5 thru 6 of creationDateAsString
 
-				set archiveFolder to ""
+				set archiveFolder to theArchiveRoot
 				set theYearAsInteger to theYear as integer
 				if theYearAsInteger ≥ 2000 and theYearAsInteger ≤ 2009 then
 					set archiveFolder to archiveFolder & "/2000-2009"
