@@ -1,9 +1,9 @@
-<svg host="65bd71144e" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="441px" height="81px" viewBox="-0.5 -0.5 441 81" content="&lt;mxfile&gt;&lt;diagram id=&quot;cOSsLdokPKlFtEB-6QED&quot; name=&quot;Page-1&quot;&gt;zZTBboMwDIafhnshVdddR7vu0u1QaTtHxCXRQoxCKLCnX1pMIWKdJk2adkr8xXH8/wlELC3aneWl3KMAHSUL0UZsEyVJzJb3fjiTjohnPcmtEsRGcFAfQHBBtFYCqiDRIWqnyhBmaAxkLmDcWmzCtCPq8NSS5zADh4zrOX1TwsmerpO7kT+ByuVwcrwixQUfkklJJbnAZoLYNmKpRXT9rGhT0Gf3Bl/6fY83Vq+NWTDuJxuW1IbrBm0gvFQKDRo/PEhXaB/FfjqvT0dWWNuMSiR0JdzmQFl0v+fik23U0w6wAGc7n2BBc6dOoc+criu/5o2K/IREfS2QejlxXVPRPVd6ptpibQQIUtlI5eBQ8ougxj/i0ISj0jpFjXa06KYvJ7AO2m810+qankQXhs34wOIVMTl5XEPeb0xiM5M229eXZyeVef+PVrHVn3nlw/FrvKxNfmps+wk=&lt;/diagram&gt;&lt;/mxfile&gt;">
+<svg host="65bd71144e" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="721px" height="81px" viewBox="-0.5 -0.5 721 81" content="&lt;mxfile&gt;&lt;diagram id=&quot;cOSsLdokPKlFtEB-6QED&quot; name=&quot;Page-1&quot;&gt;xVXBUoMwEP0a7i2pWK/SWi/VQ2f0nCEryRgSJoQCfr1pWQqYVjvqtKdkXzabfe/tQEDirF4ZmvO1ZiCDcMLqgCyCMJyS2Z1bdkiDiMNaJDWCIdYDG/EBCE4QLQWDYpRotZZW5GMw0UpBYkcYNUZX47Q3Lcev5jQFD9gkVProq2CWt+g8vO3xRxAp716eRsg4o10yMik4ZboaQGQZkNhobdtdVscgd+p1urT3Hk6cHhozoOw5F2bYhm06bsAcVQyVVm655zaTLpq6rV8fnyx0aRIsEaIl1KSAWejvrvjgGva0Ap2BNY1LMCCpFduxzhTtSg95PSO3QVLHCWIvWypLLLqmQnqsjS4VA4YsKy4sbHK6J1S5IT5ThC0YC/W3BPF0jv4347Dqp2kaIcYHk9Tl/UWR6FeWf3Huxxkg/gzcXMhy4lm+WL48P1ku1PvVjSfR9Zy/8YSJtbI0scV/yOJpcESpk7JEs4vJ4sL++7o/G/ymyPIT&lt;/diagram&gt;&lt;/mxfile&gt;">
     <defs/>
     <g>
         <path d="M 160 40 L 273.63 40" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/>
         <path d="M 278.88 40 L 271.88 43.5 L 273.63 40 L 271.88 36.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/>
-        <rect x="0" y="0" width="160" height="80" rx="12" ry="12" fill="none" stroke="rgb(0, 0, 0)" pointer-events="all"/>
+        <rect x="0" y="0" width="160" height="80" rx="12" ry="12" fill="rgb(255, 255, 255)" stroke="rgb(0, 0, 0)" pointer-events="all"/>
         <g transform="translate(-0.5 -0.5)">
             <switch>
                 <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
@@ -20,7 +20,9 @@
                 </text>
             </switch>
         </g>
-        <rect x="280" y="0" width="160" height="80" rx="12" ry="12" fill="none" stroke="rgb(0, 0, 0)" pointer-events="all"/>
+        <path d="M 440 40 L 553.63 40" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/>
+        <path d="M 558.88 40 L 551.88 43.5 L 553.63 40 L 551.88 36.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/>
+        <rect x="280" y="0" width="160" height="80" rx="12" ry="12" fill="rgb(255, 255, 255)" stroke="rgb(0, 0, 0)" pointer-events="all"/>
         <g transform="translate(-0.5 -0.5)">
             <switch>
                 <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
@@ -34,6 +36,23 @@
                 </foreignObject>
                 <text x="360" y="44" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">
                     DEVONthink
+                </text>
+            </switch>
+        </g>
+        <rect x="560" y="0" width="160" height="80" rx="12" ry="12" fill="rgb(255, 255, 255)" stroke="rgb(0, 0, 0)" pointer-events="all"/>
+        <g transform="translate(-0.5 -0.5)">
+            <switch>
+                <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
+                    <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 158px; height: 1px; padding-top: 40px; margin-left: 561px;">
+                        <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
+                            <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">
+                                Contacts
+                            </div>
+                        </div>
+                    </div>
+                </foreignObject>
+                <text x="640" y="44" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">
+                    Contacts
                 </text>
             </switch>
         </g>

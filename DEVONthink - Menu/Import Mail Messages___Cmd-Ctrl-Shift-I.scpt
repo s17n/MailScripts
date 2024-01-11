@@ -9,10 +9,11 @@ tell application "Mail"
 		set scptProp to (load script pMailPropertiesPath)
 		set mailLibraryPath to (the pMailLibraryPath of scptProp)
 		set mailboxAccount to (the pMailboxAccount of scptProp)
-		set mailboxImportFolder to (the pMailboxImportFolder of scptProp)
 		set mailboxArchiveFolder to (the pMailboxArchiveFolder of scptProp)
+		set mailboxImportFolder to (the pMailboxImportFolder of scptProp)
 		set dtImportDatabase to (the pDtImportDatabase of scptProp)
 		set dtImportFolder to (the pDtImportFolder_1 of scptProp)
+		set dtSortBySender to (the pDtSortBySender of scptProp)
 
 		set messageCount to count messages of mailbox mailboxImportFolder of account mailboxAccount
 
@@ -29,8 +30,8 @@ tell application "Mail"
 
 		set mailLib to (load script file mailLibraryPath)
 		repeat with i from 1 to messageCount by 1
-			set theMessage to message 1 of mailbox "Zu archivieren" of account mailboxAccount
-			tell mailLib to addMessagesToDevonthink(theMessage, dtImportDatabase, dtImportFolder, false, mailboxAccount, mailboxArchiveFolder)
+			set theMessage to message 1 of mailbox mailboxImportFolder of account mailboxAccount
+			tell mailLib to addMessagesToDevonthink(theMessage, dtImportDatabase, dtImportFolder, dtSortBySender, mailboxAccount, mailboxArchiveFolder)
 		end repeat
 
 	on error error_message number error_number
