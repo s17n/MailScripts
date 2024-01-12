@@ -1,20 +1,16 @@
 #@osa-lang:AppleScript
-property pScriptName : "Archive Record"
+property pScriptName : "Rule - Archive Records"
 
 property pMailPropertiesPath : POSIX path of (path to home folder) & ".applescript/properties-mailscripts.scpt"
 
-on run
+on performSmartRule(theRecords)
 
 	set scptProp to (load script pMailPropertiesPath)
 	set mailLibraryPath to (the pMailLibraryPath of scptProp)
 	set archiveRoot to (the pDtArchiveRoot of scptProp)
 
 	set mailLib to (load script file mailLibraryPath)
-	tell application id "DNtp"
-		set theSelection to selection
-		tell mailLib to archiveRecords(archiveRoot, theSelection, pScriptName)
-	end tell
+	tell mailLib to archiveRecords(archiveRoot, theRecords, pScriptName)
 
-end run
-
+end performSmartRule
 

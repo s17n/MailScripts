@@ -24,7 +24,11 @@ using terms from application "Mail"
 
 		set mailLib to (load script file mailLibraryPath)
 		repeat with theMessage in theMessages
-			tell mailLib to addMessagesToDevonthink(theMessage, dtImportDatabase, dtImportFolder, dtSortBySender, mailboxAccount, mailboxArchiveFolder)
+			try
+				tell mailLib to addMessagesToDevonthink(theMessage, dtImportDatabase, dtImportFolder, dtSortBySender, mailboxAccount, mailboxArchiveFolder)
+			on error error_message number error_number
+				tell mailLib to dtLog(pScriptName, ((error_number as string) & " - " & error_message))
+			end try
 		end repeat
 
 	end perform mail action with messages

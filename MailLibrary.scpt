@@ -1,6 +1,25 @@
 #@osa-lang:AppleScript
 property pScriptName : "Mail Library"
 
+property pScoreThreshold : 0.25
+
+on tagByCompareRecords(theRecord, theCallerScript)
+	tell application id "DNtp"
+		set theDatabase to current database
+		set theTags to tags of theRecord
+		set theComparedRecords to compare record theRecord to theDatabase
+		repeat with aCompareRecord in theComparedRecords
+			if location of aCompareRecord does not contain "Inbox" then
+				if score of aCompareRecord ≥ pScoreThreshold then
+					set theTagsFromCompareRecord to tags of aCompareRecord
+					set tags of theRecord to theTagsFromCompareRecord
+					exit repeat
+				end if
+			end if
+		end repeat
+	end tell
+end tagByCompareRecords
+
 on setGroupAsTag(theRecords, theCallerScript)
 	tell application id "DNtp"
 		repeat with theRecord in theRecords
@@ -189,9 +208,10 @@ end getContactGroupName
 -- Für alle anderen Typem basierend auf dem Custom Meta Data "Date"
 --	theRecords : Die zu archivierenden Records.
 --	theArchiveRoot : Root-Verzeichnis des Archivs
-on archiveRecords(theArchiveRoot, theRecords)
+on archiveRecords(theArchiveRoot, theRecords, theCallerScript)
 	tell application id "DNtp"
 		try
+			my dtLog(theCallerScript, "Records to archive: " & (length of theRecords as string))
 			repeat with aRecord in theRecords
 				set theTags to the tags of aRecord
 				--if the length of theTags is greater than 0 then
@@ -221,7 +241,6 @@ on archiveRecords(theArchiveRoot, theRecords)
 		on error error_message number error_number
 			if error_number is not -128 then display alert "Devonthink" message error_message as warning
 		end try
-
 	end tell
 end archiveRecords
 
