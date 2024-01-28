@@ -1,0 +1,14 @@
+# PopClip Devonthink Set Subject
+name: Set Subject
+icon: square Sub
+required apps: [com.devon-technologies.think3]
+applescript: | # pipe character begins a multi-line string
+  property pScriptName : "PopClip Set Sender"
+  property pMailScriptProperties : POSIX path of (path to home folder) & ".applescript/properties-mailscripts.scpt"
+  
+  set mailScriptProperties to (load script pMailScriptProperties)
+  set popClipLibraryPath to (pPopClipLibraryPath of mailScriptProperties)
+  set popClipLibrary to (load script file popClipLibraryPath)
+  
+  tell popClipLibrary to setSubject("{popclip text}", pScriptName)
+# the above line    
