@@ -15,7 +15,7 @@ on run
 		tell docLib
 			initializeTagLists(theDatabase)
 			repeat with aRecord in theSelection
-				setFilenameAndCustomMd(aRecord, pScriptName)
+				renameAndUpdateCustomMetadata(aRecord, pScriptName)
 			end repeat
 		end tell
 	end tell

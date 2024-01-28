@@ -8,12 +8,14 @@ property pYears : {}
 property pSenders : {}
 property pSubjects : {}
 property pContexts : {}
-property pDocSentIndicator : "Postausgang"
+property pSentTag : "Postausgang"
+property pCcTag : "In-Kopie"
+property pNoSenderTag : "kein-Absender"
 
 property pMonthsList : {"Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", ¬
 	"August", "September", "Oktober", "November", "Dezember"}
 
-property pScoreThreshold : 0.25
+property pScoreThreshold : 0.05
 
 property DEBUG : 1
 property INFO : 2
@@ -23,7 +25,7 @@ on verifyTags(checkDate, checkSender, theScriptName)
 	tell application id "DNtp"
 		my initializeTagLists(get current database)
 		set theRecords to contents of current database whose location begins with "/"
-		my dtLog(INFO, theScriptName, "Start to verify records - record count: " & (length of theRecords as string))
+		my dtLog(INFO, theScriptName, "Verify records started - records: " & (length of theRecords as string))
 		set issueRecords to 0
 		set {issueRecords, issues} to {0, 0}
 		repeat with aRecord in theRecords
@@ -88,24 +90,26 @@ on verifyTags(checkDate, checkSender, theScriptName)
 				set issues to issues + issueCount
 			end if
 		end repeat
-		my dtLog(INFO, theScriptName, "Finished - Issues: " & (issues as string) & ", Records: " & (issueRecords as string))
+		my dtLog(INFO, theScriptName, "Verify records finished - Issues: " & (issues as string) & ", Records: " & (issueRecords as string))
 	end tell
 end verifyTags
 
 on importDocuments(theRecords)
 	tell application id "DNtp"
 		repeat with theRecord in theRecords
-			set theDatabase to database of theRecord
+			set theDatabaseName to name of location group of theRecord
+			set theDatabase to database theDatabaseName
 			my initializeTagLists(theDatabase)
 			my setDateTagsFromRecordName(theRecord)
 			my setNonDateTagsFromCompareRecord(theRecord, theDatabase)
-			set theRecordName to my setFilenameAndCustomMd(theRecord)
+			set theRecordName to my renameAndUpdateCustomMetadata(theRecord)
+			move record theRecord to incoming group of database theDatabaseName
 			my dtLog(INFO, pScriptName & " - importDocuments", "Document imported - Record name: " & theRecordName)
 		end repeat
 	end tell
 end importDocuments
 
-on setCustomMetaData(theRecord, theYear, theMonth_MM, theDay, theSender, theSubject, theDocSentIndicator)
+on setCustomMetaData(theRecord, theYear, theMonth_MM, theDay, theSender, theSubject, theSentFlag, theCCFlag)
 	tell application id "DNtp"
 		set {cmdDate, cmdSender, cmdSubject} to {null, null, null}
 		-- Date
@@ -116,8 +120,13 @@ on setCustomMetaData(theRecord, theYear, theMonth_MM, theDay, theSender, theSubj
 		-- Sender
 		if theSender is not null then
 			set cmdSender to ""
-			if theDocSentIndicator is true then set cmdSender to "An: "
-			set cmdSender to cmdSender & theSender
+			if (theSender as string) is equal to pNoSenderTag then
+				set cmdSender to "k.A."
+			else
+				if theSentFlag is true then set cmdSender to "An: "
+				set cmdSender to cmdSender & theSender
+				if theCCFlag is true then set cmdSender to cmdSender & " (in CC)"
+			end if
 			add custom meta data cmdSender for "Sender" to theRecord
 		end if
 		-- Subject
@@ -130,12 +139,13 @@ end setCustomMetaData
 
 -- Rename the given record based on it's tags and upate corresponding custom meta data.
 -- Each tag added to the file name is prefixed with an underscore "_" except of the date tags.
--- Name format is: yyyy-MM-dd_[SENTINDICATOR]_SENDER_[CONTEXT]_[SUBJECT].pdf
+-- Name format is: yyyy-MM-dd_[SENTFLAG|CCFLAG]_SENDER_[CONTEXT]_[SUBJECT].pdf
 -- Mandatory tags: Year, Month, Day, Sender
--- Optional tags: Subject, Context, DocumentSentIndicator
-on setFilenameAndCustomMd(theRecord)
+-- Optional tags: Subject, Context, SentFlag
+on renameAndUpdateCustomMetadata(theRecord)
 	tell application id "DNtp"
-		set {theYear, theMonth, theDay, theSender, theSubject, theContext, theDocSentIndicator} to {null, null, null, null, null, null, false}
+		set {theYear, theMonth, theDay, theSender, theSubject, theContext, theSentFlag, theCCFlag} ¬
+			to {null, null, null, null, null, null, false, false}
 		set theTags to tags of theRecord
 		repeat with aTag in theTags
 			if pDays contains aTag then set theDay to aTag
@@ -147,24 +157,26 @@ on setFilenameAndCustomMd(theRecord)
 			if pSenders contains aTag then set theSender to aTag
 			if pSubjects contains aTag then set theSubject to aTag
 			if pContexts contains aTag then set theContext to aTag
-			if (aTag as string) is equal to pDocSentIndicator then set theDocSentIndicator to true
+			if (aTag as string) is equal to pSentTag then set theSentFlag to true
+			if (aTag as string) is equal to pCcTag then set theCCFlag to true
 		end repeat
 		if theYear is null or theMonth is null or theDay is null or theSender is null then
-			my dtLogRecord(INFO, pScriptName & " - setFilenameAndCustomMd", "Record can't renamed - missing tags.", theRecord)
+			my dtLogRecord(INFO, pScriptName & " - renameAndUpdateCustomMetadata", "Record can't renamed - missing tags.", theRecord)
 		else
 			set theOldRecordName to name of theRecord
 			set theRecordName to theYear & "-" & theMonth & "-" & theDay
-			if theDocSentIndicator is true then set theRecordName to theRecordName & my tokenForFilename("AN")
-			if theSender is not null then set theRecordName to theRecordName & my tokenForFilename(theSender)
+			if theSentFlag is true then set theRecordName to theRecordName & my tokenForFilename("AN")
+			if theCCFlag is true then set theRecordName to theRecordName & my tokenForFilename("CC")
+			if (theSender as string) is not equal to pNoSenderTag then set theRecordName to theRecordName & my tokenForFilename(theSender)
 			if theContext is not null then set theRecordName to theRecordName & my tokenForFilename(theContext)
 			if theSubject is not null then set theRecordName to theRecordName & my tokenForFilename(theSubject)
 			set name of theRecord to theRecordName
-			my setCustomMetaData(theRecord, theYear, theMonth_MM, theDay, theSender, theSubject, theDocSentIndicator)
-			my dtLogRecord(INFO, pScriptName & " - setFilenameAndCustomMd", "Record successfully renamed - old name was:  " & theOldRecordName, theRecord)
+			my setCustomMetaData(theRecord, theYear, theMonth_MM, theDay, theSender, theSubject, theSentFlag, theCCFlag)
+			my dtLogRecord(INFO, pScriptName & " - renameAndUpdateCustomMetadata", "Record successfully renamed - old name was:  " & theOldRecordName, theRecord)
 			return theRecordName
 		end if
 	end tell
-end setFilenameAndCustomMd
+end renameAndUpdateCustomMetadata
 
 on tokenForFilename(theTagValue)
 	return ("_" & theTagValue as string)
@@ -188,7 +200,8 @@ on setNonDateTagsFromCompareRecord(theRecord, theDatabase)
 		set theComparedRecords to compare record theRecord to theDatabase
 		repeat with aCompareRecord in theComparedRecords
 			if location of aCompareRecord does not contain "Inbox" then
-				if score of aCompareRecord ≥ pScoreThreshold then
+				set theScore to score of aCompareRecord
+				if theScore ≥ pScoreThreshold then
 					set theTags to tags of aCompareRecord
 					set {nonDateTags, theSender, theSubject, theContext} to {{}, null, null, null}
 					repeat with aTag in theTags
@@ -200,8 +213,10 @@ on setNonDateTagsFromCompareRecord(theRecord, theDatabase)
 					if theSubject is not null then set end of nonDateTags to theSubject
 					if theContext is not null then set end of nonDateTags to theContext
 					set tags of theRecord to tags of theRecord & nonDateTags
-					exit repeat
+				else
+					my dtLogRecord(INFO, "", "No tags copied - score of best compare record below threshold - score: " & (theScore as string), theRecord)
 				end if
+				exit repeat -- only first record needed
 			end if
 		end repeat
 	end tell

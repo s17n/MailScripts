@@ -1,6 +1,7 @@
 #@osa-lang:AppleScript
 -- full qualified path to MailLibrary
 property pMailLibraryPath : "Users:[Username]:Projects:AppleScripts:MailScripts:MailLibrary.scpt"
+property pDocLibraryPath : "Users:[Username]:Projects:AppleScripts:MailScripts:DocLibrary.scpt"
 
 -- name of the mailbox account in Apple Mail used for import
 property pMailboxAccount : "Google"
