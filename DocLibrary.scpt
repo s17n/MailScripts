@@ -110,6 +110,7 @@ on importDocuments(theRecords)
 end importDocuments
 
 on setCustomMetaData(theRecord, theYear, theMonth_MM, theDay, theSender, theSubject, theSentFlag, theCCFlag)
+	my dtLog(INFO, pScriptName, theMonth_MM)
 	tell application id "DNtp"
 		set {cmdDate, cmdSender, cmdSubject} to {null, null, null}
 		-- Date
@@ -171,7 +172,7 @@ on renameAndUpdateCustomMetadata(theRecord)
 			if theContext is not null then set theRecordName to theRecordName & my tokenForFilename(theContext)
 			if theSubject is not null then set theRecordName to theRecordName & my tokenForFilename(theSubject)
 			set name of theRecord to theRecordName
-			my setCustomMetaData(theRecord, theYear, theMonth_MM, theDay, theSender, theSubject, theSentFlag, theCCFlag)
+			my setCustomMetaData(theRecord, theYear, theMonth, theDay, theSender, theSubject, theSentFlag, theCCFlag)
 			my dtLogRecord(INFO, pScriptName & " - renameAndUpdateCustomMetadata", "Record successfully renamed - old name was:  " & theOldRecordName, theRecord)
 			return theRecordName
 		end if
