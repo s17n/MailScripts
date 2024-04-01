@@ -204,7 +204,7 @@ on getContactGroupName(theMailAddress)
 end getContactGroupName
 
 -- Verschiebt die in DEVONthink selektierten Records in die Archiv-Verzeichnisstruktur.
--- Für eml basierend auf 'creation date'
+-- Basierend auf 'creation date' für: *.eml, *.webloc, *.md
 -- Für alle anderen Typem basierend auf dem Custom Meta Data "Date"
 --	theRecords : Die zu archivierenden Records.
 --	theArchiveRoot : Root-Verzeichnis des Archivs
@@ -216,7 +216,8 @@ on archiveRecords(theArchiveRoot, theRecords, theCallerScript)
 				set theTags to the tags of aRecord
 				--if the length of theTags is greater than 0 then
 				set creationDate to null
-				if the filename of aRecord ends with ".eml" then
+				set theFilename to filename of aRecord
+				if theFilename ends with ".eml" or theFilename ends with ".webloc" or theFilename ends with ".md" then
 					set creationDate to creation date of aRecord
 				else
 					set creationDate to get custom meta data for "Date" from aRecord
