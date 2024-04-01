@@ -6,6 +6,8 @@ using terms from application "Mail"
 
 	on perform mail action with messages theMessages for rule theRule
 
+		delay 5
+
 		set scptProp to (load script pMailPropertiesPath)
 		set mailLibraryPath to (the pMailLibraryPath of scptProp)
 		set mailboxAccount to (the pMailboxAccount of scptProp)
@@ -19,7 +21,9 @@ using terms from application "Mail"
 		tell application id "DNtp"
 			if not (exists current database) then error "No database is in use."
 			set theGroup to incoming group of database dtImportDatabase
-			log message pScriptName info "Messages to import: " & (messageCount as string)
+			if messageCount > 1 then
+				log message pScriptName info "Messages to import (delayed 5 sec): " & (messageCount as string)
+			end if
 		end tell
 
 		set mailLib to (load script file mailLibraryPath)
