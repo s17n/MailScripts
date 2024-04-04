@@ -1,6 +1,5 @@
-
 # PopClip DEVONthink open Actions record in new Window
-name: DT Open Actions Window
+name: Open Actions Window
 icon: square filled A
 #before: show-result
 applescript: | # pipe character begins a multi-line string
