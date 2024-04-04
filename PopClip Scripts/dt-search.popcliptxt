@@ -1,5 +1,5 @@
 # PopClip DEVONthink Perform Search
-name: DT Perform Search
+name: DEVONthink Perform Search
 icon: search filled S
 #before: show-result
 applescript: | # pipe character begins a multi-line string
