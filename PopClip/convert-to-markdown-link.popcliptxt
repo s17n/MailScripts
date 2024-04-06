@@ -1,0 +1,6 @@
+// # popclip
+// name: Markdown Link
+// icon: square filled MdL
+// after: paste-result
+// language: javascript
+return "[](" + popclip.input.text + ")";

@@ -1,0 +1,13 @@
+#popclip 
+name: lb Sensitive
+before: copy # puts selected text on the clipboard
+key combos:
+- command space
+- wait 50 # waits 50 milliseconds
+- s
+- e
+- n
+- s
+- wait 50 # waits 50 milliseconds
+- space # Sens(istive Documentation)indexing rule
+- command v
