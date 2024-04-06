@@ -1,6 +1,6 @@
 # PopClip DEVONthink Set Reminder
 # https://discourse.devontechnologies.com/t/a-script-to-automate-reminders/57235
-name: DEVONthink Set Reminder
+name: DNtp Set Reminder
 icon: iconify:noto:alarm-clock
 regex: ([0-9]{2})\.([0-9]{2})\.
 applescript: | # pipe character begins a multi-line string

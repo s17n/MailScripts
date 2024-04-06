@@ -1,5 +1,5 @@
 # PopClip DEVONthink Set Subject
-name: Set Subject
+name: DNtp Set Subject
 icon: square Sub
 required apps: [com.devon-technologies.think3]
 applescript: | # pipe character begins a multi-line string
