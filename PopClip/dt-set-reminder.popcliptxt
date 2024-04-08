@@ -6,9 +6,10 @@ regex: ([0-9]{2})\.([0-9]{2})\.
 applescript: | # pipe character begins a multi-line string
   tell application id "DNtp"
     set theRecord to first item of selected records
-    set theDate to "{popclip text}2024" as string
-    -- display dialog theDate
-    tell theRecord to make new reminder with properties {schedule:once, alarm:notification, due date:theDate}
+    set theDate to "{popclip text}2024 08:30" as string
+    set theAlarmString to "{popclip full text}"
+    tell theRecord to make new reminder with properties {schedule:once, alarm:notification, alarm string:theAlarmString, due date:theDate}
+	  set label of theRecord to 1
   end tell
 # the above lines are indented with two spaces. no tabs allowed in YAML!
 

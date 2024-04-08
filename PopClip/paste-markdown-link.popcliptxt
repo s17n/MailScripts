@@ -1,0 +1,6 @@
+// # popclip
+// name: Paste Markdown Link
+// requirements: [paste]
+// language: javascript
+// Source: https://forum.popclip.app/t/paste-and-go-snippet/465
+javascript: popclip.pasteText("[pastboard](" + pasteboard.text + ")")
