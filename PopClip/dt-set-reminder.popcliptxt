@@ -10,6 +10,7 @@ applescript: | # pipe character begins a multi-line string
     set theAlarmString to "{popclip full text}"
     tell theRecord to make new reminder with properties {schedule:once, alarm:notification, alarm string:theAlarmString, due date:theDate}
     set label of theRecord to 1
+    set selected text of first item of (viewer windows as list) to "=={popclip full text}=="
   end tell
 # the above lines are indented with two spaces. no tabs allowed in YAML!
 
