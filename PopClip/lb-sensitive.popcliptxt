@@ -1,5 +1,7 @@
 #popclip 
-name: lb Sensitive
+name: Launchbar Sensitive
+icon: search lbS
+regex: (EKP-[0-9]{4})|(EIP-[0-9]{4})|(EBEJ-[0-9]{3})|(FST-[0-9]{4})
 before: copy # puts selected text on the clipboard
 key combos:
 - command space
