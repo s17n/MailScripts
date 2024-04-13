@@ -3,6 +3,28 @@ property pScriptName : "Mail Library"
 
 property pScoreThreshold : 0.25
 
+-- Hintergrund: Tags werden zur Basis-Klassifizierung (1. Ebene) und zur PARA-Klassifizierung (2. Ebene) verwendet (01_Projects, 02_Areas...)
+--              Die Kennzeichung der konkreten (PARA-)Projekte/Areas erfolgt auf der 3. Ebene.
+-- Die Methode liefert alle konkreten PARA-Projekte/-Areas - d.h. alle Tags der 3. Ebene - als Liste.
+on getProjectsAndAreaTags()
+	tell application id "DNtp"
+		set theProjects to {}
+		set theL1TagGroups to children of tags group of current database -- Level 1 Tag Groups: ...
+		repeat with theL1TagGroup in theL1TagGroups
+			set theL2TagGroups to (get children of theL1TagGroup) -- Level 2 Tag Groups: 01_P, 02_A ...
+			repeat with theL2TagGroup in theL2TagGroups
+				if name of theL2TagGroup starts with "01" or name of theL2TagGroup starts with "02" then
+					set theL3TagGroups to (get children of theL2TagGroup)
+					repeat with theL3TagGroup in theL3TagGroups
+						set end of theProjects to name of theL3TagGroup as string
+					end repeat
+				end if
+			end repeat
+		end repeat
+		return theProjects
+	end tell
+end getProjectsAndAreaTags
+
 on tagByCompareRecords(theRecord, theCallerScript)
 	tell application id "DNtp"
 		set theDatabase to current database
