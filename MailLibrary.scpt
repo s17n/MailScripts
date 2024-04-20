@@ -244,36 +244,61 @@ end getContactGroupName
 -- Für alle anderen Typem basierend auf dem Custom Meta Data "Date"
 --	theRecords : Die zu archivierenden Records.
 --	theArchiveRoot : Root-Verzeichnis des Archivs
+
+-- Verschiebt die selektierten Records in das Archiv-Verzeichnis.
+-- Datenbank:
+--    (2nd-Brain) tag = article, link, video -> /Archive/Capture/YYYY/mm
+--                      asset -> /Archive/Asset/
+--    (E-Mail)    file type = eml -> /Archive/YYYY/mm
+--    (Dokumente) file type = pdf -> /YYYY/mm  (custom meta data 'Date')
 on archiveRecords(theArchiveRoot, theRecords, theCallerScript)
 	tell application id "DNtp"
 		try
 			my dtLog(theCallerScript, "Records to archive: " & (length of theRecords as string))
+			set theDatabaseName to name of current database as string
 			repeat with aRecord in theRecords
-				set theTags to the tags of aRecord
-				--if the length of theTags is greater than 0 then
-				set creationDate to null
-				set theFilename to filename of aRecord
-				if theFilename ends with ".eml" or theFilename ends with ".webloc" or theFilename ends with ".md" then
-					set creationDate to creation date of aRecord
-				else
-					set creationDate to get custom meta data for "Date" from aRecord
-					if creationDate is missing value then display dialog "Custom Meta Data 'Date' ist null - Record kann nicht verschoben werden."
-				end if
-				set creationDateAsString to my format(creationDate)
-				set theYear to texts 1 thru 4 of creationDateAsString
-				set theMonth to texts 5 thru 6 of creationDateAsString
 
-				set archiveFolder to theArchiveRoot
-				set theYearAsInteger to theYear as integer
-				if theYearAsInteger ≥ 2000 and theYearAsInteger ≤ 2009 then
-					set archiveFolder to archiveFolder & "/2000-2009"
-				else if theYearAsInteger ≥ 2010 and theYearAsInteger ≤ 2019 then
-					set archiveFolder to archiveFolder & "/2010-2019"
+				-- Record Datum ermitteln
+				set creationDate to null
+				if theDatabaseName contains "Dokumente" or theDatabaseName contains "Belege" then
+					set creationDate to get custom meta data for "Date" from aRecord
+				else
+					set creationDate to creation date of aRecord
 				end if
-				set archiveFolder to archiveFolder & "/" & theYear & "/" & theMonth
-				set theGroup to create location archiveFolder
-				move record aRecord to theGroup
-				--end if
+				if creationDate is missing value then
+					display dialog "'Date' not set. Can't archive record"
+				else
+
+					set creationDateAsString to my format(creationDate)
+					set theYear to texts 1 thru 4 of creationDateAsString
+					set theMonth to texts 5 thru 6 of creationDateAsString
+
+					-- Ablageort ermitteln
+					set archiveFolder to ""
+					if theDatabaseName contains "Dokumente" or theDatabaseName contains "Belege" then
+						set theYearAsInteger to theYear as integer
+						if theYearAsInteger ≥ 2000 and theYearAsInteger ≤ 2009 then
+							set archiveFolder to "/2000-2009"
+						else if theYearAsInteger ≥ 2010 and theYearAsInteger ≤ 2019 then
+							set archiveFolder to "/2010-2019"
+						end if
+						set archiveFolder to archiveFolder & "/" & theYear & "/" & theMonth
+					else
+						set archiveFolder to "/Archive"
+						set theTags to the tags of aRecord
+						if theTags contains "Article" or theTags contains "Link" or theTags contains "Video" or theTags contains "Audio" then
+							set archiveFolder to archiveFolder & "/Captures"
+						else if theTags contains "note" then
+							set archiveFolder to archiveFolder & "/Notes"
+						else if theTags contains "asset" then
+							set archiveFolder to archiveFolder & "/Assets"
+						end if
+						set archiveFolder to archiveFolder & "/" & theYear & "/" & theMonth
+					end if
+					set theGroup to create location archiveFolder
+					move record aRecord to theGroup
+					--display dialog archiveFolder
+				end if
 			end repeat
 		on error error_message number error_number
 			if error_number is not -128 then display alert "Devonthink" message error_message as warning
