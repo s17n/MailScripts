@@ -18,6 +18,10 @@ tell application id "DNtp"
 	repeat with theTag in theTags
 		if theProjects contains theTag then
 			set theJournalGroup to get record at "/Journal/" & theTag
+			-- Work around bis alle Journal Groups umbenannt sind (eindeutiger Name & über WikiLinks referenzierbar -  "j_[projekt]")
+			if theJournalGroup is missing value then
+				set theJournalGroup to get record at "/Journal/j_" & theTag
+			end if
 			open window for record theJournalGroup
 		end if
 	end repeat

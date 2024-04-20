@@ -3,6 +3,20 @@ property pScriptName : "Mail Library"
 
 property pScoreThreshold : 0.25
 
+on deleteRemindersAndSetLabel(theRecords, theCallerScript)
+	tell application id "DNtp"
+		try
+			repeat with theRecord in theRecords
+				set reminder of theRecord to missing value
+				set label of theRecord to 2
+				my dtLog(theCallerScript, "Reminder deleted: " & name of theRecord)
+			end repeat
+		on error error_message number error_number
+			if error_number is not -128 then display alert "Devonthink" message error_message as warning
+		end try
+	end tell
+end deleteRemindersAndSetLabel
+
 -- Hintergrund: Tags werden zur Basis-Klassifizierung (1. Ebene) und zur PARA-Klassifizierung (2. Ebene) verwendet (01_Projects, 02_Areas...)
 --              Die Kennzeichung der konkreten (PARA-)Projekte/Areas erfolgt auf der 3. Ebene.
 -- Die Methode liefert alle konkreten PARA-Projekte/-Areas - d.h. alle Tags der 3. Ebene - als Liste.
