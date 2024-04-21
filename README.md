@@ -9,11 +9,12 @@ MailScripts is a collection of scripts to improve my document management workflo
 - archive records to a dedicated  DEVONthink archive group
 
 ## Overview
-![](docs/architecture.drawio.svg)
+![](Docs/architecture.drawio.svg)
 
 ## Workflows
 
-[[document-workflow]]
 
+[Documents & Receipts](./Docs/document-workflow.md) (paper documents)
 
-[[email-workflow]]
+[E-Mail](./Docs/email-workflow.md)
+
