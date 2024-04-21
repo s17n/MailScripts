@@ -7,12 +7,12 @@ on run
 
 	set scptProp to (load script pMailPropertiesPath)
 	set mailLibraryPath to (the pMailLibraryPath of scptProp)
-	set archiveRoot to (the pDtArchiveRoot of scptProp)
+	-- set archiveRoot to (the pDtArchiveRoot of scptProp)
 
 	set mailLib to (load script file mailLibraryPath)
 	tell application id "DNtp"
 		set theSelection to selection
-		tell mailLib to archiveRecords(archiveRoot, theSelection, pScriptName)
+		tell mailLib to archiveRecords(theSelection, pScriptName)
 	end tell
 
 end run

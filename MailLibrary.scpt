@@ -239,19 +239,18 @@ on getContactGroupName(theMailAddress)
 	end tell
 end getContactGroupName
 
--- Verschiebt die in DEVONthink selektierten Records in die Archiv-Verzeichnisstruktur.
--- Basierend auf 'creation date' für: *.eml, *.webloc, *.md
--- Für alle anderen Typem basierend auf dem Custom Meta Data "Date"
---	theRecords : Die zu archivierenden Records.
---	theArchiveRoot : Root-Verzeichnis des Archivs
-
--- Verschiebt die selektierten Records in das Archiv-Verzeichnis.
--- Datenbank:
---    (2nd-Brain) tag = article, link, video -> /Archive/Capture/YYYY/mm
---                      asset -> /Archive/Asset/
---    (E-Mail)    file type = eml -> /Archive/YYYY/mm
---    (Dokumente) file type = pdf -> /YYYY/mm  (custom meta data 'Date')
-on archiveRecords(theArchiveRoot, theRecords, theCallerScript)
+-- Verschiebt die selektierten Records ins Archiv - abgelegt nach Erstellungsdatum.
+-- Das Erstellungsdatum ist für:
+--    - Dokumente/Belege (d.h. i.d.R. Papier-Dokumente): Custom Meta Data 'Date'
+-- 	  - alle anderen Datenbanken: das technisches Erstellungsdatum (record creation date)
+-- Die Ablage erfolgt für:
+--    - Dokumente/Belege-Datenbanken in: /YYYY/mm (mit Sonderlocke pro Decade)
+--    - alle E-Mails (".eml") in:        /Archive/YYYY/mm
+--    - alle weitere basierend auf dem Tag:
+--	     - Asset: 						 /Archive/Assets (externer Folder)
+--		 - Article, Link, Audio, Video:  /Archive/Capture/YYYY/mm
+--		 - alles andere  		 	     /Archive/Journal/YYYY/mm
+on archiveRecords(theRecords, theCallerScript)
 	tell application id "DNtp"
 		try
 			my dtLog(theCallerScript, "Records to archive: " & (length of theRecords as string))
@@ -275,6 +274,8 @@ on archiveRecords(theArchiveRoot, theRecords, theCallerScript)
 
 					-- Ablageort ermitteln
 					set archiveFolder to ""
+
+					-- Dokumente & Belege sind (noch) anders
 					if theDatabaseName contains "Dokumente" or theDatabaseName contains "Belege" then
 						set theYearAsInteger to theYear as integer
 						if theYearAsInteger ≥ 2000 and theYearAsInteger ≤ 2009 then
@@ -286,18 +287,20 @@ on archiveRecords(theArchiveRoot, theRecords, theCallerScript)
 					else
 						set archiveFolder to "/Archive"
 						set theTags to the tags of aRecord
-						if theTags contains "Article" or theTags contains "Link" or theTags contains "Video" or theTags contains "Audio" then
-							set archiveFolder to archiveFolder & "/Captures"
-						else if theTags contains "note" then
-							set archiveFolder to archiveFolder & "/Notes"
-						else if theTags contains "asset" then
+						if theTags contains "asset" then
 							set archiveFolder to archiveFolder & "/Assets"
+						else if theTags contains "Article" or theTags contains "Link" or theTags contains "Video" or theTags contains "Audio" then
+							set archiveFolder to archiveFolder & "/Capture"
+						else
+							set recordIsAnEmail to (filename of aRecord ends with ".eml")
+							if not recordIsAnEmail then
+								set archiveFolder to archiveFolder & "/Journal"
+							end if
 						end if
 						set archiveFolder to archiveFolder & "/" & theYear & "/" & theMonth
 					end if
 					set theGroup to create location archiveFolder
 					move record aRecord to theGroup
-					--display dialog archiveFolder
 				end if
 			end repeat
 		on error error_message number error_number
