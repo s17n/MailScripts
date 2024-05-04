@@ -1,20 +1,20 @@
 # MailScripts
 
-MailScripts is a collection of scripts to improve my document management workflow with DEVONthink, which acts as leading system for all documents (document type .pdf or .eml) mangaged with it.  Improvements include:
+I use DEVONthink as primary document, email and personal information management (PIM) system.
+The MailScripts project is a collection of scripts used to connect various - and really gorgeous - macOS applications with DEVONthink to automate daily workflows.
 
-- import of Mail messages (push & pull)
-- auto-lookup for dates, receiver, sender and more in scanned paper documents or imported PDFs
-- catagorize mail messages by contact group of sender
-- auto-renaming / tagging based on dates lookup and similar records using DEVONthink's 'compare records' feature 
-- archive records to a dedicated  DEVONthink archive group
+MailScripts was originally created to automate my document management workflows - in particular for the sake of digitalization of all my paper documents - started somewhere back between 2010 and 2015.
+
+Right now MailScripts still supports me in daily document management workflows for all paper documents (mostly for postal mails & receipts) but it is also the foundation for all my email and PIM related workflows.
 
 ## Overview
 ![](Docs/architecture.drawio.svg)
 
 ## Workflows
 
+[Documents & Receipts](./Docs/document-workflow.md): Mostly (e)mail documents and (e)paper receipts.
 
-[Documents & Receipts](./Docs/document-workflow.md) (paper documents)
+[E-Mail](./Docs/email-workflow.md): E-Mail
 
-[E-Mail](./Docs/email-workflow.md)
+[Information Management](./Docs/information-mgmt-workflow.md): Asset and personal information management system.
 

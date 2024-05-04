@@ -1,5 +1,10 @@
 # Document Worklow
 
+The document workflow includes:
+- scan integation 
+- auto-lookup for dates, receiver, sender and more in scanned paper documents or imported PDFs
+- auto-renaming & tagging 
+- archive records
 
 **Capture (Scan & Import into DEVEONthink)**
 
