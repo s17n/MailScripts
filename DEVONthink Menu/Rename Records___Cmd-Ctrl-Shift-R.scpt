@@ -1,7 +1,7 @@
 #@osa-lang:AppleScript
 property pScriptName : "Rename Records"
 
-property pDocSciptsPropertiesPath : POSIX path of (path to home folder) & ".applescript/properties-docscripts.scpt"
+property pDocSciptsPropertiesPath : POSIX path of (path to home folder) & ".applescript/properties-mailscripts.scpt"
 
 on run
 

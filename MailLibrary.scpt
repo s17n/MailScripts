@@ -225,6 +225,7 @@ end addMessagesToDevonthink
 
 on getContactGroupName(theMailAddress)
 	tell application "Contacts"
+		activate
 		set theGroupName to null
 		set personsWithSameEmailAddress to (every person whose value of emails contains theMailAddress)
 		if length of personsWithSameEmailAddress > 0 then
@@ -235,6 +236,7 @@ on getContactGroupName(theMailAddress)
 				if (aGroupName is not null) and (aGroupName is not "card") then set theGroupName to aGroupName
 			end repeat
 		end if
+		close every window
 		return theGroupName
 	end tell
 end getContactGroupName
