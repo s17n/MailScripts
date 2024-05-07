@@ -13,7 +13,8 @@ tell mailLib to set theProjects to getProjectsAndAreaTags()
 
 -- den zum Record Tag passenden Journal Folder ("Journal/[project/area tag]") in neuem Fenster öffnen
 tell application id "DNtp"
-	set theRecord to first item of selected records
+	--set theRecord to first item of selected records
+	set theRecord to content record of think window 1
 	set theTags to tags of theRecord
 	repeat with theTag in theTags
 		if theProjects contains theTag then
