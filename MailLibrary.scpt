@@ -17,6 +17,34 @@ on deleteRemindersAndSetLabel(theRecords, theCallerScript)
 	end tell
 end deleteRemindersAndSetLabel
 
+on openXTypeRecord(theXType, theCallerScript)
+
+	-- alle 01_Projects + 02_Areas ermitteln
+	set theProjects to my getProjectsAndAreaTags()
+
+	-- das zum Record Tag passende Actions File in neuem Fenster öffnen
+	tell application id "DNtp"
+		set theRecord to content record of think window 1
+		set theTags to tags of theRecord
+		repeat with theTag in theTags
+			if theProjects contains theTag then
+				set theProject to theTag
+				set theLookupRecords to lookup records with tags {theProject, theXType}
+				if length of theLookupRecords = 0 then
+					log message pScriptName info "No record(s) found for project '" & theProject & "' and type '" & theXType & "'."
+				else
+					if length of theLookupRecords > 1 then
+						log message pScriptName info "More then one records found for project '" & theProject & "' and type '" & theXType & "'."
+					else
+						open window for record the first item of theLookupRecords
+					end if
+				end if
+			end if
+		end repeat
+	end tell
+
+end openXTypeRecord
+
 -- Hintergrund: Tags werden zur Basis-Klassifizierung (1. Ebene) und zur PARA-Klassifizierung (2. Ebene) verwendet (01_Projects, 02_Areas...)
 --              Die Kennzeichung der konkreten (PARA-)Projekte/Areas erfolgt auf der 3. Ebene.
 -- Die Methode liefert alle konkreten PARA-Projekte/-Areas - d.h. alle Tags der 3. Ebene - als Liste.
@@ -30,7 +58,19 @@ on getProjectsAndAreaTags()
 				if name of theL2TagGroup starts with "01" or name of theL2TagGroup starts with "02" then
 					set theL3TagGroups to (get children of theL2TagGroup)
 					repeat with theL3TagGroup in theL3TagGroups
-						set end of theProjects to name of theL3TagGroup as string
+						-- set theName to name of theL3TagGroup
+						-- set theType to type of theL3TagGroup as string
+						-- set theTagType to tag type of theL3TagGroup
+						if tag type of theL3TagGroup is not ordinary tag then
+							set theL4TagGroups to (get children of theL3TagGroup)
+							-- my dtLog("DEBUG", "Name: " & theName & ", Type: " & theType & ", Tag Type: " & theTagType)
+							repeat with theL4TagGroup in theL4TagGroups
+								set end of theProjects to name of theL4TagGroup as string
+								-- my dtLog("DEBUG", "Added to projects list: " & name of theL4TagGroup)
+							end repeat
+						else
+							set end of theProjects to name of theL3TagGroup as string
+						end if
 					end repeat
 				end if
 			end repeat
@@ -222,6 +262,17 @@ on addMessagesToDevonthink(theMessages, theDatabase, theImportBaseFolder, sortBy
 		end repeat
 	end tell
 end addMessagesToDevonthink
+
+on renameMailMessage(theMessage)
+	my dtLog("", "test1")
+	tell application "Mail"
+	end tell
+	set theDate to creation date of theMessage
+	my dtLog("", theSender)
+	set theName to my format(theDate)
+	tell application id "DNtp" to set name of theMessage to (theName as string)
+
+end renameMailMessage
 
 on getContactGroupName(theMailAddress)
 	tell application "Contacts"
