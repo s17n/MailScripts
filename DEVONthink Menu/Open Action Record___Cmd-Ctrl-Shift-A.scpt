@@ -1,8 +1,7 @@
 #@osa-lang:AppleScript
 property pScriptName : "Open Action Record"
 
-set propertiesPath to POSIX path of (path to home folder)
-set propertiesPath to propertiesPath & ".applescript/properties-mailscripts.scpt"
+set propertiesPath to POSIX path of (path to home folder) & ".applescript/properties-mailscripts.scpt"
 set mailscriptProperties to (load script propertiesPath)
 
 set mailLibraryPath to (the pMailLibraryPath of mailscriptProperties)
