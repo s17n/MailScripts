@@ -9,7 +9,7 @@ set mailLib to (load script file mailLibraryPath)
 
 set dateTime to do shell script "date +\"%Y%m%d-%H%M\""
 set defaultMetadata to "subject: [subject]
-author: Steffen Wusterhausen"
+author: [author]"
 
 tell application id "DNtp"
 	set theRecords to selection
