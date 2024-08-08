@@ -18,32 +18,33 @@ on deleteRemindersAndSetLabel(theRecords, theCallerScript)
 end deleteRemindersAndSetLabel
 
 on openXTypeRecord(theXType, theCallerScript)
-
-	-- alle 01_Projects + 02_Areas ermitteln
-	set theProjects to my getProjectsAndAreaTags()
-
 	-- das zum Record Tag passende Actions File in neuem Fenster öffnen
 	tell application id "DNtp"
 		set theRecord to content record of think window 1
-		set theTags to tags of theRecord
-		repeat with theTag in theTags
-			if theProjects contains theTag then
-				set theProject to theTag
-				set theLookupRecords to lookup records with tags {theProject, theXType}
-				if length of theLookupRecords = 0 then
-					log message pScriptName info "No record(s) found for project '" & theProject & "' and type '" & theXType & "'."
-				else
-					if length of theLookupRecords > 1 then
-						log message pScriptName info "More then one records found for project '" & theProject & "' and type '" & theXType & "'."
-					else
-						open window for record the first item of theLookupRecords
-					end if
-				end if
-			end if
-		end repeat
-	end tell
+		set theProject to my getProject(theRecord)
 
+		set theLookupRecords to lookup records with tags {theProject, theXType}
+		if length of theLookupRecords = 0 then
+			log message pScriptName info "No record(s) found for project '" & theProject & "' and type '" & theXType & "'."
+		else
+			if length of theLookupRecords > 1 then
+				log message pScriptName info "More then one records found for project '" & theProject & "' and type '" & theXType & "'."
+			else
+				open window for record the first item of theLookupRecords
+			end if
+		end if
+	end tell
 end openXTypeRecord
+
+on getProject(theRecord)
+	set theProjects to my getProjectsAndAreaTags()
+	tell application id "DNtp" to set theTags to tags of theRecord
+	repeat with theTag in theTags
+		if theProjects contains theTag then
+			return theTag
+		end if
+	end repeat
+end getProject
 
 -- Hintergrund: Tags werden zur Basis-Klassifizierung (1. Ebene) und zur PARA-Klassifizierung (2. Ebene) verwendet (01_Projects, 02_Areas...)
 --              Die Kennzeichung der konkreten (PARA-)Projekte/Areas erfolgt auf der 3. Ebene.
