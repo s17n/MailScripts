@@ -24,7 +24,11 @@ property pDtImportFolder_5 : ""
 
 property pDtArchiveRoot : ""
 
--- this string is used when the message subject is empty
+-- used when a message subject is empty
 property pNoSubjectString : "(no subject)"
+
+-- defaut metadata for new markdown documents
+property pDocsAuthor : "[author]"
+property pDocsSubject : "[subject]"
 
 property pDtSortBySender : false
