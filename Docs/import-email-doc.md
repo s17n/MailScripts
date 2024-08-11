@@ -1,6 +1,4 @@
-title: Import E-Mail Workflow Documentation
-
-# Import Email
+# Import Email Workflow
 
 Emails can be imported into DEVONthink via push or pull mechanism. The push import is trigged by a rule in Apple Mail.app. The pull import can requested from DEVONthink.
 
