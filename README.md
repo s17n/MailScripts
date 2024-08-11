@@ -4,3 +4,9 @@ The MailScripts project is a collection of scripts used to connect various MacOS
 
 ## Overview
 ![](Docs/architecture.drawio.svg)
+
+
+## Workflows
+
+[Import E-Mail](Docs/import-email-doc.md)
+
