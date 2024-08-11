@@ -11,14 +11,14 @@ let config = {theme: 'forest',
       'secondaryColor': "#fff0cc",
       'tertiaryColor': "#fff0f0" }
 };
-let config2 = {'sequence': {'noteAlign': 'left', 'boxBorderWith':'100'}} 
+let config2 = {'sequence': {'noteAlign': 'left'} 
 mermaid.initialize(config2)
 </script>
 
 ```mermaid 
 sequenceDiagram
 	participant M as Mail.app
-	box lightblue MailScripts
+	box lightgray MailScripts
 	    participant MR as Mail Rule
     		participant ML as MailLib 
 	end
