@@ -264,16 +264,17 @@ on addMessagesToDevonthink(theMessages, theDatabase, theImportBaseFolder, sortBy
 	end tell
 end addMessagesToDevonthink
 
-on renameMailMessage(theMessage)
-	my dtLog("", "test1")
-	tell application "Mail"
+on renameRecords(theSelection)
+	tell application id "DNtp"
+		repeat with theRecord in theSelection
+			set creationDate to creation date of theRecord
+			set oldName to name of theRecord
+			set creationDateAsString to my format(creationDate)
+			set name of theRecord to creationDateAsString
+			log message info "Record renamed (old name: " & oldName & ")" record theRecord
+		end repeat
 	end tell
-	set theDate to creation date of theMessage
-	my dtLog("", theSender)
-	set theName to my format(theDate)
-	tell application id "DNtp" to set name of theMessage to (theName as string)
-
-end renameMailMessage
+end renameRecords
 
 on getContactGroupName(theMailAddress)
 	tell application "Contacts"
@@ -293,6 +294,39 @@ on getContactGroupName(theMailAddress)
 	end tell
 end getContactGroupName
 
+on archiveRecords(theRecords, theCallerScript)
+	tell application id "DNtp"
+		try
+			-- my dtLog(theCallerScript, "Records to archive: " & (length of theRecords as string))
+			repeat with theRecord in theRecords
+
+				set creationDate to creation date of theRecord
+				set recordIsEmail to (filename of theRecord ends with ".eml")
+
+				set archiveFolder to ""
+				if recordIsEmail then
+					set archiveFolder to "/Archive"
+				else
+					set archiveFolder to "/Assets"
+				end if
+
+				set creationDateAsString to my format(creationDate)
+				set theYear to texts 1 thru 4 of creationDateAsString
+				set theMonth to texts 5 thru 6 of creationDateAsString
+				set archiveFolder to archiveFolder & "/" & theYear & "/" & theMonth
+
+				set theGroup to create location archiveFolder
+				move record theRecord to theGroup
+				log message info "Record archived to: " & archiveFolder record theRecord
+
+			end repeat
+		on error error_message number error_number
+			if error_number is not -128 then display alert "Devonthink" message error_message as warning
+		end try
+	end tell
+end archiveRecords
+
+--- Todo
 -- Verschiebt die selektierten Records ins Archiv - abgelegt nach Erstellungsdatum.
 -- Das Erstellungsdatum ist für:
 --    - Dokumente/Belege (d.h. i.d.R. Papier-Dokumente): Custom Meta Data 'Date'
@@ -304,7 +338,7 @@ end getContactGroupName
 --	     - Asset: 						 /Archive/Assets (externer Folder)
 --		 - Article, Link, Audio, Video:  /Archive/Capture/YYYY/mm
 --		 - alles andere  		 	     /Archive/Journal/YYYY/mm
-on archiveRecords(theRecords, theCallerScript)
+on archiveNonMailRecords(theRecords, theCallerScript)
 	tell application id "DNtp"
 		try
 			my dtLog(theCallerScript, "Records to archive: " & (length of theRecords as string))
@@ -361,17 +395,7 @@ on archiveRecords(theRecords, theCallerScript)
 			if error_number is not -128 then display alert "Devonthink" message error_message as warning
 		end try
 	end tell
-end archiveRecords
-
-on renameMessages(theRecords)
-	tell application id "DNtp"
-		repeat with aRecord in theRecords
-			set creationDate to creation date of aRecord
-			set theName to my format(creationDate)
-			set name of aRecord to (theName as string)
-		end repeat
-	end tell
-end renameMessages
+end archiveNonMailRecords
 
 -- https://gist.github.com/Glutexo/78c170e2e314f0eacc1a
 on zero_pad(value, string_length)
