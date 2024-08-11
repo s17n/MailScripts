@@ -18,7 +18,7 @@ mermaid.initialize(config2)
 ```mermaid 
 sequenceDiagram
 	participant M as Mail.app
-	box lightgrey MailScripts
+	box sand MailScripts
 	    participant MR as Mail Rule
     		participant ML as MailLib 
 	end
