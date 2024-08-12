@@ -7,7 +7,7 @@ The MailScripts project is a collection of scripts used to connect various MacOS
 
 ## Workflows
 
-{{Docs/email-workflow-overview.md}}
+{{./Docs/email-workflow-overview.md}}
 
 [Import Email Workflow](Docs/import-email-workflow.md)
 
