@@ -267,7 +267,7 @@ end addMessagesToDevonthink
 on renameRecords(theSelection)
 	tell application id "DNtp"
 		repeat with theRecord in theSelection
-			set creationDate to creation date of theRecord
+			set creationDate to my getCreationDate(theRecord)
 			set oldName to name of theRecord
 			set creationDateAsString to my format(creationDate)
 			set name of theRecord to creationDateAsString
@@ -275,6 +275,16 @@ on renameRecords(theSelection)
 		end repeat
 	end tell
 end renameRecords
+
+on getCreationDate(theRecord)
+	tell application id "DNtp"
+		set creationDate to creation date of theRecord
+		--if type of theRecord is markdown then
+		--	set creationDate to addition date of theRecord
+		--end if
+		return creationDate
+	end tell
+end getCreationDate
 
 on getContactGroupName(theMailAddress)
 	tell application "Contacts"
@@ -300,7 +310,7 @@ on archiveRecords(theRecords, theCallerScript)
 			-- my dtLog(theCallerScript, "Records to archive: " & (length of theRecords as string))
 			repeat with theRecord in theRecords
 
-				set creationDate to creation date of theRecord
+				set creationDate to my getCreationDate(theRecord)
 				set recordIsEmail to (filename of theRecord ends with ".eml")
 
 				set archiveFolder to ""
