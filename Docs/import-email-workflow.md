@@ -4,26 +4,15 @@ Emails can be imported into DEVONthink via push or pull mechanism from Apple Mai
 
 The following chart shows how the push import works:
 
-<script>
-let config = {theme: 'forest',
-'themeVariables': {
-      'primaryColor': "#ffcccc",
-      'secondaryColor': "#fff0cc",
-      'tertiaryColor': "#fff0f0" }
-};
-let config2 = {'sequence': {'noteAlign': 'left'} 
-mermaid.initialize(config2)
-</script>
-
 ```mermaid 
 sequenceDiagram
 	participant M as Mail.app
 	box Snow MailScripts
-	    participant MR as Mail Rule
-    		participant ML as MailLib 
+		participant MR as Mail Rule
+		participant ML as MailLib 
 	end
 	participant C as Contacts.app
-    participant D as DEVONthink.app
+	participant D as DEVONthink.app
 	
 	M->>+MR: perform mail action
 	MR->>MR: init MailScript properties
