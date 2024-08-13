@@ -21,16 +21,24 @@ on openXTypeRecord(theXType, theCallerScript)
 	-- das zum Record Tag passende Actions File in neuem Fenster öffnen
 	tell application id "DNtp"
 		set theRecord to content record of think window 1
-		set theProject to my getProject(theRecord)
-
-		set theLookupRecords to lookup records with tags {theProject, theXType}
-		if length of theLookupRecords = 0 then
-			log message pScriptName info "No record(s) found for project '" & theProject & "' and type '" & theXType & "'."
+		if theRecord is missing value then
+			delay 0.5
+			set search query of viewer windows to "tags:" & theXType & ";"
+			tell application "System Events"
+				keystroke "f" using {command down, option down}
+				keystroke (key code 124)
+			end tell
 		else
-			if length of theLookupRecords > 1 then
-				log message pScriptName info "More then one records found for project '" & theProject & "' and type '" & theXType & "'."
+			set theProject to my getProject(theRecord)
+			set theLookupRecords to lookup records with tags {theProject, theXType}
+			if length of theLookupRecords = 0 then
+				log message pScriptName info "No record(s) found for project '" & theProject & "' and type '" & theXType & "'."
 			else
-				open window for record the first item of theLookupRecords
+				if length of theLookupRecords > 1 then
+					log message pScriptName info "More then one records found for project '" & theProject & "' and type '" & theXType & "'."
+				else
+					open window for record the first item of theLookupRecords
+				end if
 			end if
 		end if
 	end tell
@@ -204,6 +212,8 @@ on addOrUpdateContactsByGroup(theRecords, theCallerScript)
 					end if
 					save
 					my dtLog(theCallerScript, "Contact moved - Last name: " & theAuthorName & ", email: " & theAuthorEmail & ", group: " & theGroup)
+				else
+					my dtLog(theCallerScript, "Contact not moved - more than one person with same email addess: " & length of personsWithSameEmail as string)
 				end if
 			end tell
 
