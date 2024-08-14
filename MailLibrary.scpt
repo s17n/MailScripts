@@ -226,11 +226,11 @@ end addOrUpdateContactsByGroup
 --    theMessages : Die zu importierenden Messages.
 --    theDatabase : DEVONthink Datenbank, in die importiert wird.
 --    theImportBaseFolder : DEVONthink Ordner in den importiert wird.
---    sortBySender : Kennzeichen, ob die Messages in DEVONthink-Gruppen - identisch zu Contact-Gruppe der Sender-Adresse - verschoben werden soll.
+--    sortByEngagementGroup : Kennzeichen, ob die Messages in DEVONthink-Gruppen - identisch zu Contact-Gruppe der Sender-Adresse - verschoben werden soll.
 --    theMailboxAccount : Mailbox Account
 --    theArchiveFolder : Mailbox / Ordner in den die Messages nach dem Import verschoben werden sollen.
 --
-on addMessagesToDevonthink(theMessages, theDatabase, theImportBaseFolder, sortBySender, theMailboxAccount, theArchiveFolder)
+on addMessagesToDevonthink(theMessages, theDatabase, theImportBaseFolder, sortByEngagementGroup, theMailboxAccount, theArchiveFolder)
 	set logActionName to pScriptName & " - Import Message"
 	set pNoSubjectString to "(no subject)"
 	set theImportSubFolder to ""
@@ -249,12 +249,17 @@ on addMessagesToDevonthink(theMessages, theDatabase, theImportBaseFolder, sortBy
 				set theName to my format(theDateSent)
 				if theSubject is equal to "" then set theSubject to pNoSubjectString
 
-				set theImportFolder to theImportBaseFolder
-				if sortBySender then
-					set theImportSubFolder to my getContactGroupName(senderAddress)
-					if theImportSubFolder is not null then
-						set theImportFolder to "Inbox/" & theImportSubFolder
+				set theImportFolder to null
+				if sortByEngagementGroup then
+					set theInboxEngagementFolder to my getContactGroupName(senderAddress)
+					if theInboxEngagementFolder is not null then
+						set theImportFolder to "Inbox/" & theInboxEngagementFolder
 					end if
+				end if
+				set defaultTags to ""
+				if theImportFolder is null then
+					set theImportFolder to "Inbox/" & theImportBaseFolder
+					set defaultTags to theImportBaseFolder
 				end if
 
 				tell application id "DNtp"
@@ -263,6 +268,8 @@ on addMessagesToDevonthink(theMessages, theDatabase, theImportBaseFolder, sortBy
 					set theImportFolder to create location theImportFolder in database theDatabase
 					move record theRecord to theImportFolder
 					set unread of theRecord to true
+					set tags of theRecord to defaultTags
+					set theName to my setUniqueCreationDate(theRecord, false)
 					log message logActionName info "Received at:  " & theDateSent & " from: " & theSender record theRecord
 				end tell
 				set mailbox of theMessage to mailbox theArchiveFolder of account theMailboxAccount
@@ -277,24 +284,51 @@ end addMessagesToDevonthink
 on renameRecords(theSelection)
 	tell application id "DNtp"
 		repeat with theRecord in theSelection
-			set creationDate to my getCreationDate(theRecord)
-			set oldName to name of theRecord
-			set creationDateAsString to my format(creationDate)
-			set name of theRecord to creationDateAsString
-			log message info "Record renamed (old name: " & oldName & ")" record theRecord
+			set creationDate to creation date of theRecord
+			set currentName to name of theRecord
+			-- if filename and creation date matches -> nothing to do
+			if currentName = my format(creationDate) then
+				log message info "Record not renamed - name & creation date matches." record theRecord
+			else
+				set creationDate to my setUniqueCreationDate(theRecord, true)
+				set newName to my format(creationDate)
+				set name of theRecord to newName
+				log message info "Record renamed from '" & currentName & "' to '" & newName & "'" record theRecord
+			end if
 		end repeat
 	end tell
 end renameRecords
 
-on getCreationDate(theRecord)
+on setUniqueCreationDate(theRecord, checkAndUseAdditionDate)
 	tell application id "DNtp"
 		set creationDate to creation date of theRecord
-		--if type of theRecord is markdown then
-		--	set creationDate to addition date of theRecord
-		--end if
+		if checkAndUseAdditionDate then
+			set additionDate to addition date of theRecord
+			if additionDate > creationDate then
+				set creationDate to additionDate
+			end if
+		end if
+		set filenameIsUnique to false
+		repeat until filenameIsUnique
+			set filenameIsUnique to my isFilenameUnique(creationDate)
+			if filenameIsUnique is false then
+				set creationDate to creationDate + minutes * 1
+			end if
+		end repeat
+		set creation date of theRecord to creationDate
 		return creationDate
 	end tell
-end getCreationDate
+end setUniqueCreationDate
+
+on isFilenameUnique(theDate)
+	tell application id "DNtp"
+		set theFilename to my format(theDate)
+		set filenameAlreadyExists to exists record with file theFilename
+		if filenameAlreadyExists is false then set filenameAlreadyExists to exists record with file (theFilename & ".md")
+		if filenameAlreadyExists is false then set filenameAlreadyExists to exists record with file (theFilename & ".eml")
+		return (not filenameAlreadyExists)
+	end tell
+end isFilenameUnique
 
 on getContactGroupName(theMailAddress)
 	tell application "Contacts"
@@ -317,15 +351,15 @@ end getContactGroupName
 on archiveRecords(theRecords, theCallerScript)
 	tell application id "DNtp"
 		try
-			-- my dtLog(theCallerScript, "Records to archive: " & (length of theRecords as string))
 			repeat with theRecord in theRecords
 
-				set creationDate to my getCreationDate(theRecord)
+				set creationDate to creation date of theRecord
 				set recordIsEmail to (filename of theRecord ends with ".eml")
 
 				set archiveFolder to ""
 				if recordIsEmail then
 					set archiveFolder to "/Archive"
+					set modification date of theRecord to current date
 				else
 					set archiveFolder to "/Assets"
 				end if
@@ -345,77 +379,6 @@ on archiveRecords(theRecords, theCallerScript)
 		end try
 	end tell
 end archiveRecords
-
---- Todo
--- Verschiebt die selektierten Records ins Archiv - abgelegt nach Erstellungsdatum.
--- Das Erstellungsdatum ist für:
---    - Dokumente/Belege (d.h. i.d.R. Papier-Dokumente): Custom Meta Data 'Date'
--- 	  - alle anderen Datenbanken: das technisches Erstellungsdatum (record creation date)
--- Die Ablage erfolgt für:
---    - Dokumente/Belege-Datenbanken in: /YYYY/mm (mit Sonderlocke pro Decade)
---    - alle E-Mails (".eml") in:        /Archive/YYYY/mm
---    - alle weitere basierend auf dem Tag:
---	     - Asset: 						 /Archive/Assets (externer Folder)
---		 - Article, Link, Audio, Video:  /Archive/Capture/YYYY/mm
---		 - alles andere  		 	     /Archive/Journal/YYYY/mm
-on archiveNonMailRecords(theRecords, theCallerScript)
-	tell application id "DNtp"
-		try
-			my dtLog(theCallerScript, "Records to archive: " & (length of theRecords as string))
-			set theDatabaseName to name of current database as string
-			repeat with aRecord in theRecords
-
-				-- Record Datum ermitteln
-				set creationDate to null
-				if theDatabaseName contains "Dokumente" or theDatabaseName contains "Belege" then
-					set creationDate to get custom meta data for "Date" from aRecord
-				else
-					set creationDate to creation date of aRecord
-				end if
-				if creationDate is missing value then
-					display dialog "'Date' not set. Can't archive record"
-				else
-
-					set creationDateAsString to my format(creationDate)
-					set theYear to texts 1 thru 4 of creationDateAsString
-					set theMonth to texts 5 thru 6 of creationDateAsString
-
-					-- Ablageort ermitteln
-					set archiveFolder to ""
-
-					-- Dokumente & Belege sind (noch) anders
-					if theDatabaseName contains "Dokumente" or theDatabaseName contains "Belege" then
-						set theYearAsInteger to theYear as integer
-						if theYearAsInteger ≥ 2000 and theYearAsInteger ≤ 2009 then
-							set archiveFolder to "/2000-2009"
-						else if theYearAsInteger ≥ 2010 and theYearAsInteger ≤ 2019 then
-							set archiveFolder to "/2010-2019"
-						end if
-						set archiveFolder to archiveFolder & "/" & theYear & "/" & theMonth
-					else
-						set archiveFolder to "/Archive"
-						set theTags to the tags of aRecord
-						if theTags contains "asset" then
-							set archiveFolder to archiveFolder & "/Assets"
-						else if theTags contains "Article" or theTags contains "Link" or theTags contains "Video" or theTags contains "Audio" then
-							set archiveFolder to archiveFolder & "/Capture"
-						else
-							set recordIsAnEmail to (filename of aRecord ends with ".eml")
-							if not recordIsAnEmail then
-								set archiveFolder to archiveFolder & "/Journal"
-							end if
-						end if
-						set archiveFolder to archiveFolder & "/" & theYear & "/" & theMonth
-					end if
-					set theGroup to create location archiveFolder
-					move record aRecord to theGroup
-				end if
-			end repeat
-		on error error_message number error_number
-			if error_number is not -128 then display alert "Devonthink" message error_message as warning
-		end try
-	end tell
-end archiveNonMailRecords
 
 -- https://gist.github.com/Glutexo/78c170e2e314f0eacc1a
 on zero_pad(value, string_length)
