@@ -67,15 +67,10 @@ on getProjectsAndAreaTags()
 				if name of theL2TagGroup starts with "01" or name of theL2TagGroup starts with "02" then
 					set theL3TagGroups to (get children of theL2TagGroup)
 					repeat with theL3TagGroup in theL3TagGroups
-						-- set theName to name of theL3TagGroup
-						-- set theType to type of theL3TagGroup as string
-						-- set theTagType to tag type of theL3TagGroup
 						if tag type of theL3TagGroup is not ordinary tag then
 							set theL4TagGroups to (get children of theL3TagGroup)
-							-- my dtLog("DEBUG", "Name: " & theName & ", Type: " & theType & ", Tag Type: " & theTagType)
 							repeat with theL4TagGroup in theL4TagGroups
 								set end of theProjects to name of theL4TagGroup as string
-								-- my dtLog("DEBUG", "Added to projects list: " & name of theL4TagGroup)
 							end repeat
 						else
 							set end of theProjects to name of theL3TagGroup as string
