@@ -225,19 +225,12 @@ end addOrUpdateContactsByGroup
 -- Parameter:
 --    theMessages : Die zu importierenden Messages.
 --    theDatabase : DEVONthink Datenbank, in die importiert wird.
---    theImportBaseFolder : DEVONthink Ordner in den importiert wird.
+--    theDefaultImportFolder : DEVONthink Ordner in den importiert wird.
 --    sortByEngagementGroup : Kennzeichen, ob die Messages in DEVONthink-Gruppen - identisch zu Contact-Gruppe der Sender-Adresse - verschoben werden soll.
 --    theMailboxAccount : Mailbox Account
 --    theArchiveFolder : Mailbox / Ordner in den die Messages nach dem Import verschoben werden sollen.
 --
-on addMessagesToDevonthink(theMessages, theDatabase, theImportBaseFolder, sortByEngagementGroup, theMailboxAccount, theArchiveFolder)
-	set logActionName to pScriptName & " - Import Message"
-	set pNoSubjectString to "(no subject)"
-	set theImportSubFolder to ""
-	tell application id "DNtp"
-		if not (exists current database) then error "No database is in use."
-		set theGroup to incoming group of database theDatabase
-	end tell
+on addMessagesToDevonthink(theMessages, theDatabase, theDefaultImportFolder, sortByEngagementGroup, theMailboxAccount, theArchiveFolder, theCallerScript)
 	tell application "Mail"
 		repeat with theMessage in theMessages
 			try
@@ -247,7 +240,7 @@ on addMessagesToDevonthink(theMessages, theDatabase, theImportBaseFolder, sortBy
 				end tell
 				set senderAddress to extract address from sender of theMessage
 				set theName to my format(theDateSent)
-				if theSubject is equal to "" then set theSubject to pNoSubjectString
+				if theSubject is equal to "" then set theSubject to "(no subject)"
 
 				set theImportFolder to null
 				if sortByEngagementGroup then
@@ -258,19 +251,20 @@ on addMessagesToDevonthink(theMessages, theDatabase, theImportBaseFolder, sortBy
 				end if
 				set defaultTags to ""
 				if theImportFolder is null then
-					set theImportFolder to "Inbox/" & theImportBaseFolder
-					set defaultTags to theImportBaseFolder
+					set theImportFolder to "Inbox/" & theDefaultImportFolder
+					set defaultTags to theDefaultImportFolder
 				end if
 
 				tell application id "DNtp"
+					set theGroup to incoming group of database theDatabase
 					set theRecord to create record with {name:theName & ".eml", type:unknown, creation date:theDateSent, modification date:theDateReceived, URL:theSender, source:(theSource as string), unread:(not theReadFlag)} in theGroup
 					perform smart rule trigger import event record theRecord
 					set theImportFolder to create location theImportFolder in database theDatabase
 					move record theRecord to theImportFolder
 					set unread of theRecord to true
 					set tags of theRecord to defaultTags
-					set theName to my setUniqueCreationDate(theRecord, false)
-					log message logActionName info "Received at:  " & theDateSent & " from: " & theSender record theRecord
+					set theName to my setUniqueCreationDate(theRecord, true)
+					log message info "New Message received at:  " & theDateSent & " from: " & theSender & " subject: " & theSubject record theRecord
 				end tell
 				set mailbox of theMessage to mailbox theArchiveFolder of account theMailboxAccount
 			on error error_message number error_number
