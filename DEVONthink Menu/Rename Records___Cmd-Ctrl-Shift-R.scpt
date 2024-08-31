@@ -12,13 +12,14 @@ set docLib to (load script file docLibraryPath)
 
 tell application id "DNtp"
 
+	set currentDatabase to current database
 	set databaseName to name of current database
 	set theSelection to selection
 	if databaseName contains "Mail" then
 		tell mailLib to renameRecords(theSelection)
 	else
 		tell docLib
-			initializeTagLists(theDatabase)
+			initializeTagLists(currentDatabase)
 			repeat with aRecord in theSelection
 				renameAndUpdateCustomMetadata(aRecord, pScriptName)
 			end repeat
