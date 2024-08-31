@@ -34,8 +34,9 @@ on showLogLevel()
 end showLogLevel
 
 on setBetrag(theRecords)
+	my initialize()
 	set log_ctx to pScriptName & "." & "setBetrag"
-	tell baseLib to baseLib(log_ctx, "enter")
+	tell baseLib to debug(log_ctx, "enter")
 	repeat with theRecord in theRecords
 		my setBetragForRecord(theRecord)
 	end repeat
@@ -46,9 +47,13 @@ on setBetragForRecord(theRecord)
 	set log_ctx to pScriptName & "." & "setBetragForRecord"
 	tell baseLib to debug(log_ctx, "enter")
 	tell application id "DNtp"
-		set theDocumentAmount to document amount of theRecord
-		add custom meta data theDocumentAmount for "Betrag" to theRecord
-		tell baseLib to debug_r(theRecord, "Document amount: " & theDocumentAmount)
+		try
+			set theDocumentAmount to document amount of theRecord
+			add custom meta data theDocumentAmount for "Betrag" to theRecord
+			tell baseLib to debug_r(theRecord, "Document amount: " & theDocumentAmount)
+		on error number -2753
+			tell baseLib to info_r(theRecord, "No 'document amount' found.")
+		end try
 	end tell
 	tell baseLib to debug(log_ctx, "exit")
 end setBetragForRecord
@@ -78,6 +83,7 @@ end classifyDocuments
 -- Mandatory tags: Year, Month, Day, Sender
 -- Optional tags: Subject, Context, SentFlag
 on setNameAndCustomMetadata(theRecord)
+	my initialize()
 	set log_ctx to pScriptName & "." & "setNameAndCustomMetadata"
 	tell baseLib to debug(log_ctx, "enter")
 	tell application id "DNtp"
@@ -316,6 +322,7 @@ on verifyTags(checkDate, checkSender)
 end verifyTags
 
 on initializeTagLists(theDatabase)
+	my initialize()
 	set log_ctx to pScriptName & "." & "initializeTagLists"
 	tell application id "DNtp"
 		tell baseLib to debug(log_ctx, "Initialize tag lists for database: " & name of theDatabase)
