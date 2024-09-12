@@ -5,7 +5,7 @@ set propertiesPath to POSIX path of (path to home folder) & ".applescript/proper
 set mailscriptProperties to (load script propertiesPath)
 
 set mailLibraryPath to (the pMailLibraryPath of mailscriptProperties)
-set mailLib to (load script file mailLibraryPath)
+set mailLib to (load script mailLibraryPath)
 
 set markdownMetadata to ""
 set markdownMetadata to markdownMetadata & "subject: " & (the pDocsSubject of mailscriptProperties) & linefeed

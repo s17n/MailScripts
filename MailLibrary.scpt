@@ -1,7 +1,7 @@
 #@osa-lang:AppleScript
 property pScriptName : "Mail Library"
 
-property pScoreThreshold : 0.25
+property pScoreThreshold : 0.15
 
 on deleteRemindersAndSetLabel(theRecords, theCallerScript)
 	tell application id "DNtp"
@@ -33,12 +33,10 @@ on openXTypeRecord(theXType, theCallerScript)
 			set theLookupRecords to lookup records with tags {theProject, theXType}
 			if length of theLookupRecords = 0 then
 				log message pScriptName info "No record(s) found for project '" & theProject & "' and type '" & theXType & "'."
+			else if length of theLookupRecords > 1 then
+				log message pScriptName info "More then one records found for project '" & theProject & "' and type '" & theXType & "'."
 			else
-				if length of theLookupRecords > 1 then
-					log message pScriptName info "More then one records found for project '" & theProject & "' and type '" & theXType & "'."
-				else
-					open window for record the first item of theLookupRecords
-				end if
+				open window for record the first item of theLookupRecords
 			end if
 		end if
 	end tell
@@ -64,7 +62,7 @@ on getProjectsAndAreaTags()
 		repeat with theL1TagGroup in theL1TagGroups
 			set theL2TagGroups to (get children of theL1TagGroup) -- Level 2 Tag Groups: 01_P, 02_A ...
 			repeat with theL2TagGroup in theL2TagGroups
-				if name of theL2TagGroup starts with "01" or name of theL2TagGroup starts with "02" then
+				if name of theL2TagGroup starts with "0" or name of theL2TagGroup starts with "0" then
 					set theL3TagGroups to (get children of theL2TagGroup)
 					repeat with theL3TagGroup in theL3TagGroups
 						if tag type of theL3TagGroup is not ordinary tag then
@@ -79,6 +77,7 @@ on getProjectsAndAreaTags()
 				end if
 			end repeat
 		end repeat
+		log message pScriptName info "theProjects: " & theProjects
 		return theProjects
 	end tell
 end getProjectsAndAreaTags
@@ -237,14 +236,15 @@ on addMessagesToDevonthink(theMessages, theDatabase, theDefaultImportFolder, sor
 				set theName to my format(theDateSent)
 				if theSubject is equal to "" then set theSubject to "(no subject)"
 
+				set defaultTags to ""
 				set theImportFolder to null
 				if sortByEngagementGroup then
 					set theInboxEngagementFolder to my getContactGroupName(senderAddress)
 					if theInboxEngagementFolder is not null then
 						set theImportFolder to "Inbox/" & theInboxEngagementFolder
+						set defaultTags to theInboxEngagementFolder
 					end if
 				end if
-				set defaultTags to ""
 				if theImportFolder is null then
 					set theImportFolder to "Inbox/" & theDefaultImportFolder
 					set defaultTags to theDefaultImportFolder
@@ -259,7 +259,7 @@ on addMessagesToDevonthink(theMessages, theDatabase, theDefaultImportFolder, sor
 					set unread of theRecord to true
 					set tags of theRecord to defaultTags
 					set theName to my setUniqueCreationDate(theRecord, true)
-					log message info "New Message received at:  " & theDateSent & " from: " & theSender & " subject: " & theSubject record theRecord
+					log message info "New Message received at:  " & theDateSent & " from: " & theSender record theRecord
 				end tell
 				set mailbox of theMessage to mailbox theArchiveFolder of account theMailboxAccount
 			on error error_message number error_number
@@ -349,6 +349,7 @@ on archiveRecords(theRecords, theCallerScript)
 				if recordIsEmail then
 					set archiveFolder to "/Archive"
 					set modification date of theRecord to current date
+					set locking of theRecord to true
 				else
 					set archiveFolder to "/Assets"
 				end if

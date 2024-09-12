@@ -13,13 +13,13 @@ try
 		set theSelection to the selection
 		if databaseName contains "Mail" then
 			set mailLibraryPath to (the pMailLibraryPath of mailscriptProperties)
-			set mailLib to (load script file mailLibraryPath)
+			set mailLib to (load script mailLibraryPath)
 			repeat with aRecord in theSelection
 				tell mailLib to tagByCompareRecords(aRecord, pScriptName)
 			end repeat
 		else
 			set docLibraryPath to (the pDocLibraryPath of mailscriptProperties)
-			set docLib to (load script file docLibraryPath)
+			set docLib to (load script docLibraryPath)
 			repeat with aRecord in theSelection
 				tell docLib
 					initializeTagLists(currentDatabase)

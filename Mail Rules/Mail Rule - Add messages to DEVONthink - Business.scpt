@@ -14,7 +14,7 @@ using terms from application "Mail"
 		set devonthinkDatabase to (the pDtImportDatabase of mailscriptProperties)
 		set devonthinkInboxFolder to (the pDtImportFolder_1 of mailscriptProperties)
 		set dtSortBySender to (the pDtSortBySender of mailscriptProperties)
-		set mailLib to (load script file mailLibraryPath)
+		set mailLib to (load script mailLibraryPath)
 
 		try
 			tell application id "DNtp"
