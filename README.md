@@ -32,6 +32,6 @@ Despite the fact that DEVONthink is my leading system, it is still only a tool. 
 
 Usually the inbox processing ends here - when a mail is archived it is never touched again in terms of getting things done, except that a task exists for it. But, since I reference mail messages a lot I have unified my professional note taking system and my email system. This is were the PARA method comes into play. The workflow is this:
 
-to be continued
+(to be continued)
 
 [PARA Method]: https://fortelabs.com/blog/para/
