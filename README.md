@@ -10,7 +10,7 @@ DEVONthink is my leading system for email and document management. For email eac
 
 ## Methods & Workflows
 
-Despite the fact that DEVONthink is my leading system, it is still only a tool. Just as important, if not more important, are the methodology and the workflows - how the tools is used. Regarding the methodology I use or practice Inbox-Zero along with the [PARA Method]. The workflow is this:
+Despite the fact that DEVONthink is the leading system, it is still only a tool. Just as important, if not more important, are the methodology and the workflows - how the things are getting done and how the tools are used. Regarding the methodology I use or practice Inbox-Zero along with the [PARA Method]. The workflow is this:
 
 1. [Import Message](Docs/import-email-workflow.md) to:
 	- import the email into DEVONthink (this creates a copy of the email) and
@@ -30,8 +30,52 @@ Despite the fact that DEVONthink is my leading system, it is still only a tool. 
 	- move the email to the archive folder, which is: [archive root] / year / month
 		- this will be done through a script with a keyboard shortcut
 
-Usually the inbox processing ends here - when a mail is archived it is never touched again in terms of getting things done, except that a task exists for it. But, since I reference mail messages a lot I have unified my professional note taking system and my email system. This is were the PARA method comes into play. The workflow is this:
+Usually the inbox processing ends here - when a mail is archived it is never touched again in terms of getting things done, except that a task exists for it. But, since I reference mail messages a lot I have unified my note taking system and my email system. This is were the PARA method comes into play. My PARA structure looks like this:
 
-(to be continued)
+**Inbox**: The default DEVONthink database inbox folder.  
+**01 - 04**: The usual PARA structure folders  
+**05**: Emails archive folder  
+**06**: Notes folder (all notes are Markdown files)  
+**07**: Miscellaneous (templates etc.)
+
+```
+Mail Database
+├── Inbox
+│   ├── Engagement E1
+│   ├── Engagement E2
+│   ├── ...
+│   └── Engagement En
+├── 01 Project 
+│   ├── Project P1
+│   │   ├── Messages.smartSearch
+│   │   ├── Messages-with-comments.smartSearch
+│   │   ├── Notes.smartSearch
+│   │   ├── Actions.md
+│   │   └── Content.md
+│   ├── Project P2
+│   │   └── ...
+│   └── Project Pn
+├── 02 Areas 
+│   ├── Area A1
+│   │   └── (same structure as "Project P1")
+│   ├── Area A2
+│   │   └── ...
+│   └── Area An
+├── 03 Resources
+│   └── (same structure as in 01 Projects / 02 Areas)
+├── 04 Archive
+│   └── (same structure as in 01 Projects / 02 Areas)
+├── 05 Mails
+│   └── [year]
+│       └── [month]
+│          └── *.eml
+├── 06 Notes
+│   └── [year]
+│       └── [month]
+│           └── *.md
+└── 07 Miscellaneous
+
+
+```
 
 [PARA Method]: https://fortelabs.com/blog/para/
