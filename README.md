@@ -80,32 +80,33 @@ Mail Database
 
 ```
 
-### Documents
+### Documents & Receipts
 
-The workflow is this:
+The workflow is this (steps 1 to 4 fully automated):
 
 1. Scan the document & import it into the Global Inbox (OCR already done)
 	- ScanSnap scans will be saved directly to Global Inbox
-	- iPhone scans will be synced through iCloud & and imported through a Hazel rule 
+	- iPhone scans will be synced through iCloud & and imported using a Hazel rule 
 2. Start Inbox processing (started by a Smart Rule)
 	- detect the target database through keywords and
 	- move the document to the inbox of the target database 
 3. Classify and tag the document - this includes:
 	- the document date using "Date Placeholders" 
-		- tags applied: [DD], [month], [year]
-	- determine sender, subject and context through "See Also & Classify" 
-		- tags applied: [sender], [subject], [context] (optional)
+		- tags applied: [DD], [month], [YYYY]
+	- determine sender, subject and context (optional) through "See Also & Classify" 
+		- tags applied: [sender], [subject], [context]
+	- the document amount using "Amount placeholer" (receipts only)
 4. Rename the document based on tags
-	- file name: ``[Year]-[MM]-[DD]_[sender]_[context]_[subject].pdf``
+	- file name: ``[YYYY]-[MM]-[DD]_[sender]_[context]_[subject].pdf``
 5. Quality assurance
-	- adjust the tags when something is wrong and 
+	- adjust the tags when something in classification went wrong and 
 	- rename the document through keyboard shortcut
-6. Inbox Processing (similar as for email)
+6. Inbox Processing (similar to email)
 	- process and optionally cross-reference the document in project work products 
 	- Note: in general a document remains in the inbox until:
 		- all required actions are done or 
 		- a task is created when the actions to would take to long to finish 
-7. Archive the document (similar as for email)
+7. Archive the document (similar to email)
 	- move the document to the archive folder, which is: [archive root] / year / month
 		- this will be done through a script with a keyboard shortcut
 
