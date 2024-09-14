@@ -10,23 +10,26 @@ DEVONthink is my leading system for email and document management. For email eac
 
 ## Methods & Workflows
 
-Despite the fact that DEVONthink is the leading system, it is still only a tool. Just as important, if not more important, are the methodology and the workflows - how the things are getting done and how the tools are used. Regarding the methodology I use or practice Inbox-Zero along with the [PARA Method]. The workflow is this:
+Despite the fact that DEVONthink is the leading system, it is still only a tool. Just as important, if not more important from my view, are the methodology and the workflows - how things are getting done and how the tools are used. I practice Inbox-Zero along with the [PARA Method] for everything I do - for business and private projects as well. For email and document management it looks like this.
+### Email
 
-1. [Import Message](Docs/import-email-workflow.md) to:
+The workflow is this:
+
+1. [Import Message](Docs/import-email-workflow.md)
 	- import the email into DEVONthink (this creates a copy of the email) and
 	- move the email to the proper inbox folder (based on the contact group where the sender is member of) and
 	- move the original email from the Inbox to the archive folder in Mail.app
-2. Verify correct Inbox to:
+2. Verify correct Inbox
 	- ensure the email is in the correct inpox folder and, if not,
 	- move the email to the right inbox folder -> this will automatically update the contact group - the sender will be added to the contact group, so further emails from same sender will be moved directly to that inbox folder
-3. Inbox Processing: 
+3. Inbox Processing
 	- tag the email with one specific tag for project, area or resource
 		- this will be done based on best see-also/classiy records through a script with keyboard shortcut
 	- process and optionally cross-reference the email in project work products 
 	- Note: in general a email remains in the Inbox until:
 		- it is done (answered, replied, whatever) or 
 		- a task is created when it takes longer to finish it 
-4. Archive Message:
+4. Archive Message
 	- move the email to the archive folder, which is: [archive root] / year / month
 		- this will be done through a script with a keyboard shortcut
 
@@ -75,7 +78,36 @@ Mail Database
 │           └── *.md
 └── 07 Miscellaneous
 
-
 ```
+
+### Documents
+
+The workflow is this:
+
+1. Scan the document & import it into the Global Inbox (OCR already done)
+	- ScanSnap scans will be saved directly to Global Inbox
+	- iPhone scans will be synced through iCloud & and imported through a Hazel rule 
+2. Start Inbox processing (started by a Smart Rule)
+	- detect the target database through keywords and
+	- move the document to the inbox of the target database 
+3. Classify and tag the document - this includes:
+	- the document date using "Date Placeholders" 
+		- tags applied: [DD], [month], [year]
+	- determine sender, subject and context through "See Also & Classify" 
+		- tags applied: [sender], [subject], [context] (optional)
+4. Rename the document based on tags
+	- file name: ``[Year]-[MM]-[DD]_[sender]_[context]_[subject].pdf``
+5. Quality assurance
+	- adjust the tags when something is wrong and 
+	- rename the document through keyboard shortcut
+6. Inbox Processing (similar as for email)
+	- process and optionally cross-reference the document in project work products 
+	- Note: in general a document remains in the inbox until:
+		- all required actions are done or 
+		- a task is created when the actions to would take to long to finish 
+7. Archive the document (similar as for email)
+	- move the document to the archive folder, which is: [archive root] / year / month
+		- this will be done through a script with a keyboard shortcut
+
 
 [PARA Method]: https://fortelabs.com/blog/para/
