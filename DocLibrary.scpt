@@ -167,12 +167,12 @@ on archiveRecords(theRecords, theCallerScript)
 					set theYear to texts 1 thru 4 of creationDateAsString
 					set theMonth to texts 5 thru 6 of creationDateAsString
 
-					set archiveFolder to ""
+					set archiveFolder to "/05 Assets"
 					set theYearAsInteger to theYear as integer
 					if theYearAsInteger ≥ 2000 and theYearAsInteger ≤ 2009 then
-						set archiveFolder to "/2000-2009"
+						set archiveFolder to archiveFolder & "/2000-2009"
 					else if theYearAsInteger ≥ 2010 and theYearAsInteger ≤ 2019 then
-						set archiveFolder to "/2010-2019"
+						set archiveFolder to archiveFolder & "/2010-2019"
 					end if
 					set archiveFolder to archiveFolder & "/" & theYear & "/" & theMonth
 					set theGroup to create location archiveFolder
