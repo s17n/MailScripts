@@ -11,7 +11,8 @@ DEVONthink is my leading system for email and document management. For email eac
 ## Methods & Workflows
 
 Despite the fact that DEVONthink is the leading system, it is still only a tool. Just as important, if not more important from my view, are the methodology and the workflows - how things are getting done and how the tools are used. I practice Inbox-Zero along with the [PARA Method] for everything I do - for business and private projects as well. For email and document management it looks like this.
-### Email
+
+### Email & Note-taking
 
 The workflow is this:
 
@@ -33,7 +34,9 @@ The workflow is this:
 	- move the email to the archive folder, which is: [archive root] / year / month
 		- this will be done through a script with a keyboard shortcut
 
-Usually the inbox processing ends here - when a mail is archived it is never touched again in terms of getting things done, except that a task exists for it. But, since I reference mail messages a lot I have unified my note taking system and my email system. This is were the PARA method comes into play. My PARA structure looks like this:
+Usually the email inbox processing ends here - when a mail is archived it is never touched again in terms of getting things done, except a task exists for it. But, since I reference mail messages a lot I have unified my note taking system and my email system. This is where the PARA method comes into play and where email moves to the second row - from now on mail messages are just data points. I use the Markdown files for all my notes. As entry points for each topic I have at least two files - an actions.md and a content.md. The content.md is used as index document for work products and static informations (similar to the Map of Content in Obsidian). The actions.md has the same purpose but for actions - it's the entry point to work breakdown structure(s). Notes and mail messages are linked through "Wiki Links" - external content is referenced using the usual Markdown capabilities. 
+
+My PARA structure looks like this:
 
 **Inbox**: The default DEVONthink database inbox folder.  
 **01 - 04**: The usual PARA structure folders  
