@@ -347,11 +347,11 @@ on archiveRecords(theRecords, theCallerScript)
 
 				set archiveFolder to ""
 				if recordIsEmail then
-					set archiveFolder to "/Archive"
+					set archiveFolder to "/05 Mails"
 					set modification date of theRecord to current date
 					set locking of theRecord to true
 				else
-					set archiveFolder to "/Assets"
+					set archiveFolder to "/06 Notes"
 				end if
 
 				set creationDateAsString to my format(creationDate)
