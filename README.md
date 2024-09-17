@@ -87,7 +87,7 @@ Mail Database
 
 The workflow is this (steps 1 to 4 fully automated):
 
-1. Scan the document & import it into the Global Inbox (OCR already done)
+1. [Scan the document & import it into the Global Inbox](./Docs/scan-and-import-from-iphone.md) (OCR already done)
 	- ScanSnap scans will be saved directly to Global Inbox
 	- iPhone scans will be synced through iCloud & and imported using a Hazel rule 
 2. Start Inbox processing (started by a Smart Rule)
