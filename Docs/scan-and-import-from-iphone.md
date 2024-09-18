@@ -1,4 +1,4 @@
-# Scan and Import from iPhone Workflow
+# Scan & Import from iPhone Workflow
 
 ```mermaid 
 
@@ -18,7 +18,7 @@ sequenceDiagram
 		U->>U:verify & adjust or retake if needed <br> (e.g. wrong border detection)
 	end 
 	U->>P: save document
-	Note right of P: Naming Convention: <br> dt-split-auto-import*
+	Note right of P: Naming Convention: <br> dt-[DB]-split-auto-import*
 	P-->>-U: return
 	P->>+I: export PDF <br> (automatically)
 	I-->>P: return

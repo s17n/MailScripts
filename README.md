@@ -1,6 +1,6 @@
 # MailScripts
 
-The MailScripts project is a collection of Apple Scripts to integrate various MacOS applications with DEVONthink to support and automate my daily document and email management workflows.
+MailScripts is a collection of Apple Scripts to integrate various MacOS applications with DEVONthink to support and automate my daily document and email management workflows.
 
 ## Overview
 
@@ -10,7 +10,7 @@ DEVONthink is my leading system for email and document management. For email eac
 
 ## Methods & Workflows
 
-Despite the fact that DEVONthink is the leading system, it is still only a tool. Just as important, if not more important from my view, are the methodology and the workflows - how things are getting done and how the tools are used. I practice Inbox-Zero along with the [PARA Method] for everything I do - for business and private projects as well. For email and document management it looks like this.
+Despite the fact that DEVONthink is the leading system, it is still only a tool. Just as important, if not more important, are the methodology and the workflows - how things are getting done and how the tools are used. I practice Inbox-Zero along with the [PARA Method] for everything I do - for business projects and private projects as well. For email and document management it looks like this.
 
 ### Email & Note-taking
 
@@ -85,31 +85,34 @@ Mail Database
 
 ### Documents & Receipts
 
-The workflow is this (steps 1 to 4 fully automated):
+The workflow is this (steps 1 & 2 fully automated):
 
-1. Scan the document & import it into the Global Inbox (OCR already done)
+1. Scan and import document into Global Inbox (OCR already done)
 	- ScanSnap scans will be saved directly to Global Inbox
-	- iPhone scans will be synced through iCloud & and imported using a Hazel rule ([iPhone Workflow](./Docs/scan-and-import-from-iphone.md))  
-2. Start Inbox processing (started by a Smart Rule)
-	- detect the target database through keywords and
-	- move the document to the inbox of the target database 
-3. Classify and tag the document - this includes:
-	- the document date using "Date Placeholders" 
-		- tags applied: [DD], [month], [YYYY]
-	- determine sender, subject and context (optional) through "See Also & Classify" 
-		- tags applied: [sender], [subject], [context]
-	- the document amount using "Amount placeholer" (receipts only)
-4. Rename the document based on tags
-	- file name: ``[YYYY]-[MM]-[DD]_[sender]_[context]_[subject].pdf``
-5. Quality assurance
+	- iPhone scans will be synced through iCloud & and imported using a Hazel rule ([Workflow](./Docs/scan-and-import-from-iphone.md))  
+2. Move to target database, classify and renane the document ([Workflow](./Docs/move-and-classify.md))
+	- detect target database through keywords
+	- move to inbox of target database
+	- classify the document, meaning:
+		- detect document date using "Date Placeholders" 
+			- added tags: [DD], [month], [YYYY]
+			- added custom meta data: "Date"
+		- detect sender, subject and context (optional) through "See Also & Classify" 
+			- added tags: [sender], [subject], [context]
+			- added custom meta data: "Sender", "Subject"
+		- detect document amount using "Amount placeholer" (optional)
+			 - added custom meta data: "Betrag"
+	- rename the document based on tags
+		- file name: ``[YYYY]-[MM]-[DD]_[sender]_[context]_[subject].pdf``
+3. Quality assurance
 	- adjust the tags when something in classification went wrong and 
 	- rename the document through keyboard shortcut
-6. Inbox Processing (similar to email)
+4. Inbox Processing (similar to email)
 	- process and optionally cross-reference the document in project work products 
 	- Note: in general a document remains in the inbox until:
 		- all required actions are done or 
 		- a task is created when the actions to would take to long to finish 
-7. Archive the document (similar to email)
+5. Archive the document (similar to email)
 	- move the document to the archive folder, which is: [archive root] / year / month
 		- this will be done through a script with a keyboard shortcut
 
