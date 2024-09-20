@@ -1,6 +1,6 @@
 # MailScripts
 
-MailScripts is a collection of Apple Scripts to integrate various MacOS applications with DEVONthink to support and automate my daily document and email management workflows.
+MailScripts is a collection of AppleScript scripts to integrate various MacOS applications with DEVONthink to support and automate document and email management workflows.
 
 ## Overview
 
@@ -34,7 +34,7 @@ The workflow is this:
 	- move the email to the archive folder, which is: [archive root] / year / month
 		- this will be done through a script with a keyboard shortcut
 
-Usually the email inbox processing ends here - when a mail is archived it is never touched again in terms of getting things done, except a task exists for it. But, since I reference mail messages a lot I have unified my note taking system and my email system. This is where the PARA method comes into play and where email moves to the second row - from now on mail messages are just data points. I use the Markdown files for all my notes. As entry points for each topic I have at least two files - an actions.md and a content.md. The content.md is used as index document for work products and static informations (similar to the Map of Content in Obsidian). The actions.md has the same purpose but for actions - it's the entry point to work breakdown structure(s). Notes and mail messages are linked through "Wiki Links" - external content is referenced using the usual Markdown capabilities. 
+Usually the email inbox processing ends here - when a mail is archived it is never touched again in terms of getting things done, except a task exists for it. But, since I reference mail messages a lot I have unified my note taking system and my email system. This is where the PARA method comes into play and where email moves to the second row - from now on mail messages are just data points. I use the Markdown for all my notes. As entry points for each topic I have at least two files - an actions.md and a content.md. The content.md is used as index document for work products and static informations (similar to the Map of Content in Obsidian). The actions.md has the same purpose but for actions - it's the entry point to work breakdown structure(s). Notes and mail messages are linked through "Wiki Links" - external content is referenced using the usual Markdown capabilities. 
 
 My PARA structure looks like this:
 
@@ -87,9 +87,13 @@ Mail Database
 
 The workflow is this (steps 1 & 2 fully automated):
 
-1. Scan and import document into Global Inbox (OCR already done)
+1. Scan and import document into Global Inbox
 	- ScanSnap scans will be saved directly to Global Inbox
-	- iPhone scans will be synced through iCloud & and imported using a Hazel rule ([Workflow](./Docs/scan-and-import-from-iphone.md))  
+	- iPhone scans will be synced through iCloud & and imported through a Hazel rule ([Workflow](./Docs/scan-and-import-from-iphone.md))  
+	- digital documents will be imported: 
+		- directly from Downloads folder through a Hazel rule (when domain conditions met) or
+		- by dropping them into a Finder folder with a Hazel rule   
+	- Note: Usually OCR is already done, before the documents will be imported
 2. Move to target database, classify and renane the document ([Workflow](./Docs/move-and-classify.md))
 	- detect target database through keywords
 	- move to inbox of target database
