@@ -35,11 +35,11 @@ The workflow is this:
 	- move the email to the archive folder, which is: [archive root] / year / month
 		- this will be done through a script with a keyboard shortcut
 
-Usually the email inbox processing ends here - when a mail is archived it is never touched again in terms of getting things done, except a task exists for it. But, since I reference mail messages a lot I have unified my note taking system and my email system. This is where the PARA method comes into play and where email moves to the second row - from now on mail messages are just data points. I use the Markdown for all my notes. As entry points for each topic I have at least two files - an actions.md and a content.md. The content.md is used as index document for work products and static informations (similar to the Map of Content in Obsidian). The actions.md has the same purpose but for actions - it's the entry point to work breakdown structure(s). Notes and mail messages are linked through "Wiki Links" - external content is referenced using the usual Markdown capabilities. 
+Usually the email inbox processing ends here - when a mail is archived it is never touched again in terms of getting things done, except a task exists for it. But, since I reference mail messages a lot I have unified my note taking system and my email system. This is where the PARA method comes into play and where email moves to the second row - from now on mail messages are just data points. I use Markdown for all my notes. As entry points for each topic I have at least two files - an actions.md and a content.md. The content.md is used as index document for work products and static informations (similar to the Map of Content in Obsidian). The actions.md has the same purpose but for actions - it's the entry point to work breakdown structure(s). Notes and mail messages are linked through "Wiki Links" - external content is referenced using the usual Markdown capabilities. 
 
-My PARA structure looks like this:
+The PARA structure looks like this:
 
-**Inbox**: The default DEVONthink database inbox folder.  
+**Inbox**: The default database inbox folder.  
 **01 - 04**: The usual PARA structure folders  
 **05**: Emails archive folder  
 **06**: Notes folder (all notes are Markdown files)  
@@ -121,5 +121,46 @@ The workflow is this (steps 1 & 2 fully automated):
 	- move the document to the archive folder, which is: [archive root] / year / month
 		- this will be done through a script with a keyboard shortcut
 
+The PARA structure looks like this:
+
+**Inbox**: The default database inbox folder.  
+**01 - 04**: The usual PARA structure folders  
+**05**: Assets (archive)  
+
+When a document will be archived, it is moved to the archive folder. When the document is needed for a project, area or as a resource, it will be referenced as a replicant. 
+
+```
+Documents Database
+├── Inbox
+├── 01 Project 
+│   ├── Project P1
+│   │   ├── Document 1.pdf
+│   │   ├── Document 2.pdf
+│   │   ├── ...
+│   │   └── Document n.pdf
+│   ├── Project P2
+│   │   └── ...
+│   └── Project Pn
+├── 02 Areas 
+│   ├── Area A1 (e.g. Insurances)
+│   │   ├── Archive
+│   │   │   ├── Car-2023.smartSearch
+│   │   │   └── Healthcare-2023.smartSearch
+│   │   ├── Car-2024.smartSearch 
+│   │   ├── Healthcare-2024.smartSearch 
+│   │   └── ...
+│   ├── Area A2
+│   │   └── ...
+│   └── Area An
+├── 03 Resources
+│   └── (same structure as in 01 Projects / 02 Areas)
+├── 04 Archive
+│   └── (same structure as in 01 Projects / 02 Areas)
+└── 05 Assets
+    └── [year]
+        └── [month]
+            └── *.pdf
+
+```
 
 [PARA Method]: https://fortelabs.com/blog/para/
