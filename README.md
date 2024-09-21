@@ -6,7 +6,7 @@ MailScripts is a collection of AppleScript scripts to integrate various MacOS ap
 
 DEVONthink is my leading system for email and document management. For email each mail message is treated as document (or record) in DEVONthink. Apple's Mail.app is mostly used under the hood for receiving and for composing and sending emails (technically speaking I only work with Mail.app's message windows - I don't work with the viewer window). This sounds complicated and, of course, working with two apps is more complex than working with one, but, since DEVONthink offers so much featuture which makes me so much more efficient, Mail.app is not an option anymore.
 
-![](Docs/architecture.drawio.svg)
+![alt ><](Docs/architecture.drawio.svg)
 
 ## Methods & Workflows
 
