@@ -5,8 +5,8 @@ using terms from application "Mail"
 
 	on perform mail action with messages theMessages for rule theRule
 
-		set propertiesPath to POSIX path of (path to home folder) & ".applescript/properties-mailscripts.scpt"
-		set mailscriptProperties to (load script propertiesPath)
+		set mailscriptsConfig to POSIX path of (path to home folder) & ".mailscripts/config.scpt"
+		set mailscriptProperties to (load script mailscriptsConfig)
 
 		set mailLibraryPath to (the pMailLibraryPath of mailscriptProperties)
 		set mailboxAccount to (the pMailboxAccount of mailscriptProperties)
@@ -30,3 +30,4 @@ using terms from application "Mail"
 	end perform mail action with messages
 
 end using terms from
+".mailscripts/config.scpt"

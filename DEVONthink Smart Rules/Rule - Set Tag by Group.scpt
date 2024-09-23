@@ -3,7 +3,7 @@
 
 property pScriptName : "Rule - Set Tag by Group"
 
-property pMailPropertiesPath : POSIX path of (path to home folder) & ".applescript/properties-mailscripts.scpt"
+property pMailPropertiesPath : POSIX path of (path to home folder) & ".mailscripts/config.scpt"
 
 on performSmartRule(theRecords)
 
@@ -15,3 +15,4 @@ on performSmartRule(theRecords)
 
 end performSmartRule
 
+".mailscripts/config.scpt"

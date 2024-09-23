@@ -1,8 +1,7 @@
 #@osa-lang:AppleScript
 property pScriptName : "New Markdown Record"
 
-set propertiesPath to POSIX path of (path to home folder) & ".applescript/properties-mailscripts.scpt"
-set mailscriptProperties to (load script propertiesPath)
+set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
 
 set mailLibraryPath to (the pMailLibraryPath of mailscriptProperties)
 set mailLib to (load script mailLibraryPath)

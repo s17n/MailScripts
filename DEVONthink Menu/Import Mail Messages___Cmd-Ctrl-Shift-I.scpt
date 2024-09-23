@@ -1,8 +1,7 @@
 #@osa-lang:AppleScript
 property pScriptName : "Import Mail Messages"
 
-set propertiesPath to POSIX path of (path to home folder) & ".applescript/properties-mailscripts.scpt"
-set mailscriptProperties to (load script propertiesPath)
+set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
 
 tell application "Mail"
 

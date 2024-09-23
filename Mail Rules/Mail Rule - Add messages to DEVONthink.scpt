@@ -1,6 +1,6 @@
 #@osa-lang:AppleScript
 property pScriptName : "Mail Rule"
-property pMailPropertiesPath : POSIX path of (path to home folder) & ".applescript/properties-mailscripts.scpt"
+property mailscriptsConfig : POSIX path of (path to home folder) & ".mailscripts/config.scpt"
 
 using terms from application "Mail"
 
@@ -8,7 +8,7 @@ using terms from application "Mail"
 
 		delay 5
 
-		set scptProp to (load script pMailPropertiesPath)
+		set scptProp to (load script mailscriptsConfig)
 		set mailLibraryPath to (the pMailLibraryPath of scptProp)
 		set mailboxAccount to (the pMailboxAccount of scptProp)
 		set mailboxArchiveFolder to (the pMailboxArchiveFolder of scptProp)
@@ -38,3 +38,4 @@ using terms from application "Mail"
 	end perform mail action with messages
 
 end using terms from
+".mailscripts/config.scpt"

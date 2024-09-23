@@ -3,11 +3,11 @@
 
 property pScriptName : "Rule - Add/Update Contacts"
 
-property pMailPropertiesPath : POSIX path of (path to home folder) & ".applescript/properties-mailscripts.scpt"
+property mailscriptsConfig : POSIX path of (path to home folder) & ".mailscripts/config.scpt"
 
 on performSmartRule(theRecords)
 
-	set scptProp to (load script pMailPropertiesPath)
+	set scptProp to (load script mailscriptsConfig)
 	set mailLibraryPath to (the pMailLibraryPath of scptProp)
 
 	set mailLib to (load script mailLibraryPath)

@@ -1,8 +1,7 @@
 #@osa-lang:AppleScript
 property pScriptName : "Tag by Compare"
 
-set propertiesPath to POSIX path of (path to home folder) & ".applescript/properties-mailscripts.scpt"
-set mailscriptProperties to (load script propertiesPath)
+set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
 
 try
 
@@ -12,13 +11,13 @@ try
 		set databaseName to name of current database
 		set theSelection to the selection
 		if databaseName contains "Mail" then
-			set mailLibraryPath to (the pMailLibraryPath of mailscriptProperties)
+			set mailLibraryPath to (the pMailLibraryPath of mailscriptsConfig)
 			set mailLib to (load script mailLibraryPath)
 			repeat with aRecord in theSelection
 				tell mailLib to tagByCompareRecords(aRecord, pScriptName)
 			end repeat
 		else
-			set docLibraryPath to (the pDocLibraryPath of mailscriptProperties)
+			set docLibraryPath to (the pDocLibraryPath of mailscriptsConfig)
 			set docLib to (load script docLibraryPath)
 			repeat with aRecord in theSelection
 				tell docLib

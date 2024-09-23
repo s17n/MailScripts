@@ -1,13 +1,11 @@
 #@osa-lang:AppleScript
 property pScriptName : "Extract Attachments from Email"
 
-set propertiesPath to POSIX path of (path to home folder)
-set propertiesPath to propertiesPath & ".applescript/properties-mailscripts.scpt"
-set mailscriptProperties to (load script propertiesPath)
+set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
 
 tell application "Mail"
 	try
-		set mailLibraryPath to (the pMailLibraryPath of mailscriptProperties)
+		set mailLibraryPath to (the pMailLibraryPath of mailscriptsConfig)
 
 		set mailLib to (load script file mailLibraryPath)
 		tell mailLib to extractAttachmentsFromEmail()

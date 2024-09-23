@@ -3,9 +3,7 @@
 
 property pScriptName : "Add/Update Contacts"
 
-set propertiesPath to POSIX path of (path to home folder)
-set propertiesPath to propertiesPath & ".applescript/properties-mailscripts.scpt"
-set mailscriptProperties to (load script propertiesPath)
+set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
 
 try
 	set mailLibraryPath to (the pMailLibraryPath of mailscriptProperties)
@@ -18,3 +16,4 @@ try
 on error error_message number error_number
 	if error_number is not -128 then display alert "Mail" message error_message as warning
 end try
+".mailscripts/config.scpt"

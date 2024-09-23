@@ -20,8 +20,8 @@ property pScoreThreshold : 0.05
 on initialize()
 	set log_ctx to pScriptName & "." & "initialize"
 	if baseLib is missing value then
-		set mailScriptsProperties to load script (POSIX path of (path to home folder) & ".applescript/properties-mailscripts.scpt")
-		set baseLib to load script ((pMailScriptsPath of mailScriptsProperties) & "/BaseLibrary.scpt")
+		set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
+		set baseLib to load script ((pBaseLibraryPath of mailscriptsConfig))
 		tell baseLib to initialize()
 		tell baseLib to debug(log_ctx, "baseLib initialized")
 	else

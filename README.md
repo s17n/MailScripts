@@ -5,9 +5,8 @@ MailScripts is a collection of AppleScript scripts to integrate various MacOS ap
 ## Overview
 
 DEVONthink is my leading system for email and document management. For email each mail message is treated as document (or record) in DEVONthink. Apple's Mail.app is mostly used under the hood for receiving and for composing and sending emails (technically speaking I only work with Mail.app's message windows - I don't work with the viewer window). This sounds complicated and, of course, working with two apps is more complex than working with one, but, since DEVONthink offers so much featuture which makes me so much more efficient, Mail.app is not an option anymore.
-<p align="center">
-	<img src="Docs/architecture.drawio.svg">
-</p>
+
+<p align="center"><img src="Docs/architecture.drawio.svg"></p>
 
 ## Methods & Workflows
 
@@ -52,7 +51,7 @@ Mail Database
 │   ├── Engagement E2
 │   ├── ...
 │   └── Engagement En
-├── 01 Project 
+├── 01 Projects 
 │   ├── Project P1
 │   │   ├── Messages.smartSearch
 │   │   ├── Messages-with-comments.smartSearch
@@ -127,12 +126,12 @@ The PARA structure looks like this:
 **01 - 04**: The usual PARA structure folders  
 **05**: Assets (archive)  
 
-When a document will be archived, it is moved to the archive folder. When the document is needed for a project, area or as a resource, it will be referenced as a replicant. 
+When a document will be archived, it is always moved to the archive folder. When the document is needed for a project, area or resource, it will always be referenced as a replicant. 
 
 ```
-Documents Database
+Document Database
 ├── Inbox
-├── 01 Project 
+├── 01 Projects 
 │   ├── Project P1
 │   │   ├── Document 1.pdf
 │   │   ├── Document 2.pdf

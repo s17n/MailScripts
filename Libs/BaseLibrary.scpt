@@ -8,8 +8,8 @@ property LOG_LEVEL_INFO : 2
 property LOG_LEVEL_WARN : 3
 
 on initialize()
-	set mailScriptsProperties to load script (POSIX path of (path to home folder) & ".applescript/properties-mailscripts.scpt")
-	set LOG_LEVEL to (pLogLevel of mailScriptsProperties)
+	set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
+	set LOG_LEVEL to (pLogLevel of mailscriptsConfig)
 end initialize
 
 on showLogLevel()

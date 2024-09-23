@@ -1,9 +1,9 @@
 #@osa-lang:AppleScript
 property pScriptName : "Rename Records"
 
-set mailscriptProperties to load script (POSIX path of (path to home folder) & ".applescript/properties-mailscripts.scpt")
-set docLib to (load script (pDocLibraryPath of mailscriptProperties))
-set mailLib to (load script (pMailLibraryPath of mailscriptProperties))
+set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
+set docLib to (load script (pDocLibraryPath of mailscriptsConfig))
+set mailLib to (load script (pMailLibraryPath of mailscriptsConfig))
 
 tell application id "DNtp"
 
@@ -23,3 +23,4 @@ tell application id "DNtp"
 end tell
 
 
+mailscriptsConfig

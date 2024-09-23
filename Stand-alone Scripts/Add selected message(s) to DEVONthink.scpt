@@ -3,9 +3,7 @@
 
 property pScriptName : "Add Messages to DEVONthink"
 
-set propertiesPath to POSIX path of (path to home folder)
-set propertiesPath to propertiesPath & ".applescript/properties-mailscripts.scpt"
-set mailscriptProperties to (load script propertiesPath)
+set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
 
 tell application "Mail"
 	try
@@ -29,3 +27,4 @@ tell application "Mail"
 		if error_number is not -128 then display alert "Mail" message error_message as warning
 	end try
 end tell
+".mailscripts/config.scpt"
