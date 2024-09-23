@@ -10,7 +10,7 @@ on performSmartRule(theRecords)
 	set scptProp to (load script pMailPropertiesPath)
 	set mailLibraryPath to (the pMailLibraryPath of scptProp)
 
-	set mailLib to (load script file mailLibraryPath)
+	set mailLib to (load script mailLibraryPath)
 	tell mailLib to addOrUpdateContactsByGroup(theRecords, pScriptName)
 
 end performSmartRule

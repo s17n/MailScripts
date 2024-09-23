@@ -12,7 +12,7 @@ try
 
 	tell application id "DNtp" to set theSelection to the selection
 
-	set mailLib to (load script file mailLibraryPath)
+	set mailLib to (load script mailLibraryPath)
 	tell mailLib to addOrUpdateContactsByGroup(theSelection, pScriptName)
 
 on error error_message number error_number
