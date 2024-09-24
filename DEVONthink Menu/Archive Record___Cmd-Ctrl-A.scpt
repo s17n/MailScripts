@@ -14,6 +14,3 @@ tell application id "DNtp"
 		tell docLib to archiveRecords(theSelection, pScriptName)
 	end if
 end tell
-
-
-

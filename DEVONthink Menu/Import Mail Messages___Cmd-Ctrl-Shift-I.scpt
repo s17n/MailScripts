@@ -5,13 +5,13 @@ set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".ma
 
 tell application "Mail"
 
-	set mailLibraryPath to (the pMailLibraryPath of mailscriptProperties)
-	set mailboxAccount to (the pMailboxAccount of mailscriptProperties)
-	set mailboxImportFolder to (the pMailboxImportFolder of mailscriptProperties)
-	set mailboxArchiveFolder to (the pMailboxArchiveFolder of mailscriptProperties)
-	set devonthinkDatabase to (the pDtImportDatabase of mailscriptProperties)
-	set devonthinkInboxFolder to (the pDtImportFolder_1 of mailscriptProperties)
-	set dtSortBySender to (the pDtSortBySender of mailscriptProperties)
+	set mailLibraryPath to (the pMailLibraryPath of mailscriptsConfig)
+	set mailboxAccount to (the pMailboxAccount of mailscriptsConfig)
+	set mailboxImportFolder to (the pMailboxImportFolder of mailscriptsConfig)
+	set mailboxArchiveFolder to (the pMailboxArchiveFolder of mailscriptsConfig)
+	set devonthinkDatabase to (the pDtImportDatabase of mailscriptsConfig)
+	set devonthinkInboxFolder to (the pDtImportFolder_1 of mailscriptsConfig)
+	set dtSortBySender to (the pDtSortBySender of mailscriptsConfig)
 	set mailLib to (load script mailLibraryPath)
 
 	try

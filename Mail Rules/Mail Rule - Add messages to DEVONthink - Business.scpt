@@ -5,16 +5,14 @@ using terms from application "Mail"
 
 	on perform mail action with messages theMessages for rule theRule
 
-		set mailscriptsConfig to POSIX path of (path to home folder) & ".mailscripts/config.scpt"
-		set mailscriptProperties to (load script mailscriptsConfig)
+		set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
 
-		set mailLibraryPath to (the pMailLibraryPath of mailscriptProperties)
-		set mailboxAccount to (the pMailboxAccount of mailscriptProperties)
-		set mailboxArchiveFolder to (the pMailboxArchiveFolder of mailscriptProperties)
-		set devonthinkDatabase to (the pDtImportDatabase of mailscriptProperties)
-		set devonthinkInboxFolder to (the pDtImportFolder_1 of mailscriptProperties)
-		set dtSortBySender to (the pDtSortBySender of mailscriptProperties)
-		set mailLib to (load script mailLibraryPath)
+		set mailLib to load script (pMailLibraryPath of mailscriptsConfig)
+		set mailboxAccount to (the pMailboxAccount of mailscriptsConfig)
+		set mailboxArchiveFolder to (the pMailboxArchiveFolder of mailscriptsConfig)
+		set devonthinkDatabase to (the pDtImportDatabase of mailscriptsConfig)
+		set devonthinkInboxFolder to (the pDtImportFolder_1 of mailscriptsConfig)
+		set dtSortBySender to (the pDtSortBySender of mailscriptsConfig)
 
 		try
 			tell application id "DNtp"
@@ -30,4 +28,3 @@ using terms from application "Mail"
 	end perform mail action with messages
 
 end using terms from
-".mailscripts/config.scpt"
