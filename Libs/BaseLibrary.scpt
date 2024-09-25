@@ -8,8 +8,13 @@ property LOG_LEVEL_INFO : 2
 property LOG_LEVEL_WARN : 3
 
 on initialize()
+	set log_ctx to pScriptName & "." & "initialize"
+	my debug(log_ctx, "enter")
+
 	set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
 	set LOG_LEVEL to (pLogLevel of mailscriptsConfig)
+
+	my debug(log_ctx, "exit")
 end initialize
 
 on showLogLevel()

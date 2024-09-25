@@ -3,13 +3,13 @@ property pScriptName : "New Markdown Record"
 
 set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
 
-set mailLibraryPath to (the pMailLibraryPath of mailscriptProperties)
+set mailLibraryPath to (the pMailLibraryPath of mailscriptsConfig)
 set mailLib to (load script mailLibraryPath)
 
 set markdownMetadata to ""
-set markdownMetadata to markdownMetadata & "subject: " & (the pDocsSubject of mailscriptProperties) & linefeed
-set markdownMetadata to markdownMetadata & "author: " & (the pDocsAuthor of mailscriptProperties) & linefeed
-set inboxFolder to (the pDtImportFolder_2 of mailscriptProperties)
+set markdownMetadata to markdownMetadata & "subject: " & (the pDocsSubject of mailscriptsConfig) & linefeed
+set markdownMetadata to markdownMetadata & "author: " & (the pDocsAuthor of mailscriptsConfig) & linefeed
+set inboxFolder to (the pDtImportFolder_2 of mailscriptsConfig)
 
 set dateTime to do shell script "date +\"%Y%m%d-%H%M\""
 

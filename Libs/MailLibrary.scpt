@@ -1,7 +1,18 @@
 #@osa-lang:AppleScript
-property pScriptName : "Mail Library"
+property pScriptName : "MailLibrary"
+
+property baseLib : missing value
 
 property pScoreThreshold : 0.15
+
+on initialize()
+	set log_ctx to pScriptName & "." & "initialize"
+	if baseLib is missing value then
+		set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
+		set baseLib to load script ((pBaseLibraryPath of mailscriptsConfig))
+		tell baseLib to initialize()
+	end if
+end initialize
 
 on deleteRemindersAndSetLabel(theRecords, theCallerScript)
 	tell application id "DNtp"
@@ -137,7 +148,8 @@ on extractAttachmentsFromEmail()
 									tell application id "DNtp"
 										set theImportedRecord to import theAttachment to theGroup
 										set theEmailCreationDate to get creation date of theRecord
-										set theCmdDate to my formatDateWithDashes(theEmailCreationDate)
+										tell baseLib to set theCmdDate to formatDateWithDashes(theEmailCreationDate)
+										--set theCmdDate to my formatDateWithDashes(theEmailCreationDate)
 										add custom meta data theCmdDate for "Date" to theImportedRecord
 										set name of theImportedRecord to theCmdDate
 										set creation date of theImportedRecord to theCreationDateOfTheEmail
@@ -157,12 +169,15 @@ end extractAttachmentsFromEmail
 -- Erstellt für jeden Record (.eml) einen Kontakt und fügt diesen einer Kontaktgruppe hinzu
 -- ODER aktualiserte die Kontaktgruppe des Kontakts - falls der Kontakt bereits existiert.
 -- Die Kontaktgruppe muss bereits existieren.
--- Die Zuordnung der Kontaktgruppe ergibt sich aus der 'location group' des records in DEVONthink.
+-- Die Zuordnung der Kontaktgruppe ergibt sich aus der 'location group' des records.
 -- Parameter:
 --    theRecords: records
 --    theCallerScript: the caller script (for logging)
 --
 on addOrUpdateContactsByGroup(theRecords, theCallerScript)
+	my initialize()
+	set log_ctx to pScriptName & "." & "addOrUpdateContactsByGroup"
+	tell baseLib to debug(log_ctx, "enter")
 	tell application id "DNtp"
 
 		repeat with theRecord in theRecords
@@ -181,9 +196,9 @@ on addOrUpdateContactsByGroup(theRecords, theCallerScript)
 					set theContactsGroup to group theGroup
 				on error error_message number error_number
 					if error_number = -1728 then
-						my dtLog(theCallerScript, "Kontaktgruppe nicht vorhanden.")
+						-- my dtLog(theCallerScript, "Kontaktgruppe nicht vorhanden.")
 					else
-						my dtLog(theCallerScript, ((error_number as string) & " - " & error_message))
+						-- my dtLog(theCallerScript, ((error_number as string) & " - " & error_message))
 					end if
 				end try
 				set personsWithSameEmail to (every person whose value of emails contains theAuthorEmail)
@@ -194,7 +209,7 @@ on addOrUpdateContactsByGroup(theRecords, theCallerScript)
 						add thePerson to theContactsGroup
 					end if
 					save
-					my dtLog(theCallerScript, "Contact added - Last name: " & theAuthorName & ", email: " & theAuthorEmail & ", group: " & theGroup)
+					-- my dtLog(theCallerScript, "Contact added - Last name: " & theAuthorName & ", email: " & theAuthorEmail & ", group: " & theGroup)
 				else if length of personsWithSameEmail = 1 then
 					set thePerson to first item of personsWithSameEmail
 					set oldGroups to groups of thePerson
@@ -205,14 +220,15 @@ on addOrUpdateContactsByGroup(theRecords, theCallerScript)
 						add thePerson to theContactsGroup
 					end if
 					save
-					my dtLog(theCallerScript, "Contact moved - Last name: " & theAuthorName & ", email: " & theAuthorEmail & ", group: " & theGroup)
+					-- my dtLog(theCallerScript, "Contact moved - Last name: " & theAuthorName & ", email: " & theAuthorEmail & ", group: " & theGroup)
 				else
-					my dtLog(theCallerScript, "Contact not moved - more than one person with same email addess: " & length of personsWithSameEmail as string)
+					-- my dtLog(theCallerScript, "Contact not moved - more than one person with same email addess: " & length of personsWithSameEmail as string)
 				end if
 			end tell
 
 		end repeat
 	end tell
+	tell baseLib to debug(log_ctx, "exit")
 end addOrUpdateContactsByGroup
 
 -- Importiert Mail Messages nach DEVONthink u. verschiebt sie anschließend in das Mailbox-Archiv.
@@ -225,6 +241,9 @@ end addOrUpdateContactsByGroup
 --    theArchiveFolder : Mailbox / Ordner in den die Messages nach dem Import verschoben werden sollen.
 --
 on addMessagesToDevonthink(theMessages, theDatabase, theDefaultImportFolder, sortByEngagementGroup, theMailboxAccount, theArchiveFolder, theCallerScript)
+	my initialize()
+	set log_ctx to pScriptName & "." & "addMessagesToDevonthink"
+	tell baseLib to debug(log_ctx, "enter")
 	tell application "Mail"
 		repeat with theMessage in theMessages
 			try
@@ -233,7 +252,8 @@ on addMessagesToDevonthink(theMessages, theDatabase, theDefaultImportFolder, sor
 						to {the date received, the date sent, the sender, the subject, the source, the read status}
 				end tell
 				set senderAddress to extract address from sender of theMessage
-				set theName to my format(theDateSent)
+
+				tell baseLib to set theName to format(theDateSent)
 				if theSubject is equal to "" then set theSubject to "(no subject)"
 
 				set defaultTags to ""
@@ -258,7 +278,6 @@ on addMessagesToDevonthink(theMessages, theDatabase, theDefaultImportFolder, sor
 					move record theRecord to theImportFolder
 					set unread of theRecord to true
 					set tags of theRecord to defaultTags
-					set theName to my setUniqueCreationDate(theRecord, true)
 					log message info "New Message received at:  " & theDateSent & " from: " & theSender record theRecord
 				end tell
 				set mailbox of theMessage to mailbox theArchiveFolder of account theMailboxAccount
@@ -268,9 +287,13 @@ on addMessagesToDevonthink(theMessages, theDatabase, theDefaultImportFolder, sor
 			end try
 		end repeat
 	end tell
+	tell baseLib to debug(log_ctx, "exit")
 end addMessagesToDevonthink
 
 on renameRecords(theSelection)
+	my initialize()
+	set log_ctx to pScriptName & "." & "renameRecords"
+	tell baseLib to debug(log_ctx, "enter")
 	tell application id "DNtp"
 		repeat with theRecord in theSelection
 			set creationDate to creation date of theRecord
@@ -286,43 +309,16 @@ on renameRecords(theSelection)
 			end if
 		end repeat
 	end tell
+	tell baseLib to debug(log_ctx, "exit")
 end renameRecords
 
-on setUniqueCreationDate(theRecord, checkAndUseAdditionDate)
-	tell application id "DNtp"
-		set creationDate to creation date of theRecord
-		if checkAndUseAdditionDate then
-			set additionDate to addition date of theRecord
-			if additionDate > creationDate then
-				set creationDate to additionDate
-			end if
-		end if
-		set filenameIsUnique to false
-		repeat until filenameIsUnique
-			set filenameIsUnique to my isFilenameUnique(creationDate)
-			if filenameIsUnique is false then
-				set creationDate to creationDate + minutes * 1
-			end if
-		end repeat
-		set creation date of theRecord to creationDate
-		return creationDate
-	end tell
-end setUniqueCreationDate
-
-on isFilenameUnique(theDate)
-	tell application id "DNtp"
-		set theFilename to my format(theDate)
-		set filenameAlreadyExists to exists record with file theFilename
-		if filenameAlreadyExists is false then set filenameAlreadyExists to exists record with file (theFilename & ".md")
-		if filenameAlreadyExists is false then set filenameAlreadyExists to exists record with file (theFilename & ".eml")
-		return (not filenameAlreadyExists)
-	end tell
-end isFilenameUnique
-
 on getContactGroupName(theMailAddress)
+	my initialize()
+	set log_ctx to pScriptName & "." & "getContactGroupName"
+	tell baseLib to debug(log_ctx, "enter")
+	set theGroupName to null
 	tell application "Contacts"
 		activate
-		set theGroupName to null
 		set personsWithSameEmailAddress to (every person whose value of emails contains theMailAddress)
 		if length of personsWithSameEmailAddress > 0 then
 			set firstPerson to first item of personsWithSameEmailAddress
@@ -333,11 +329,15 @@ on getContactGroupName(theMailAddress)
 			end repeat
 		end if
 		close every window
-		return theGroupName
 	end tell
+	tell baseLib to debug(log_ctx, "exit")
+	return theGroupName
 end getContactGroupName
 
 on archiveRecords(theRecords, theCallerScript)
+	my initialize()
+	set log_ctx to pScriptName & "." & "archiveRecords"
+	tell baseLib to debug(log_ctx, "enter")
 	tell application id "DNtp"
 		try
 			repeat with theRecord in theRecords
@@ -354,7 +354,8 @@ on archiveRecords(theRecords, theCallerScript)
 					set archiveFolder to "/06 Notes"
 				end if
 
-				set creationDateAsString to my format(creationDate)
+				tell baseLib to set creationDateAsString to format(creationDate)
+
 				set theYear to texts 1 thru 4 of creationDateAsString
 				set theMonth to texts 5 thru 6 of creationDateAsString
 				set archiveFolder to archiveFolder & "/" & theYear & "/" & theMonth
@@ -368,53 +369,5 @@ on archiveRecords(theRecords, theCallerScript)
 			if error_number is not -128 then display alert "Devonthink" message error_message as warning
 		end try
 	end tell
+	tell baseLib to debug(log_ctx, "exit")
 end archiveRecords
-
--- https://gist.github.com/Glutexo/78c170e2e314f0eacc1a
-on zero_pad(value, string_length)
-	set string_zeroes to ""
-	set digits_to_pad to string_length - (length of (value as string))
-	if digits_to_pad > 0 then
-		repeat digits_to_pad times
-			set string_zeroes to string_zeroes & "0" as string
-		end repeat
-	end if
-	set padded_value to string_zeroes & value as string
-	return padded_value
-end zero_pad
-
-on formatDateWithDashes(theDate)
-	set now to (theDate)
-
-	set result to (year of now as integer) as string
-	set result to result & "-"
-	set result to result & zero_pad(month of now as integer, 2)
-	set result to result & "-"
-	set result to result & zero_pad(day of now as integer, 2)
-
-	return result
-end formatDateWithDashes
-
-on format(theDate)
-	set now to (theDate)
-
-	set result to (year of now as integer) as string
-	set result to result & ""
-	set result to result & zero_pad(month of now as integer, 2)
-	set result to result & ""
-	set result to result & zero_pad(day of now as integer, 2)
-	set result to result & "-"
-	set result to result & zero_pad(hours of now as integer, 2)
-	set result to result & ""
-	set result to result & zero_pad(minutes of now as integer, 2)
-	--set result to result & ":"
-	--set result to result & zero_pad(seconds of now as integer, 2)
-
-	return result
-end format
-
-on dtLog(theScriptName, theInfo)
-	tell application id "DNtp"
-		log message theScriptName info theInfo
-	end tell
-end dtLog
