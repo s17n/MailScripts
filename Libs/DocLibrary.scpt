@@ -176,7 +176,7 @@ on archiveRecords(theRecords, theCallerScript)
 					end if
 					set archiveFolder to archiveFolder & "/" & theYear & "/" & theMonth
 					set theGroup to create location archiveFolder
-					move record theRecord to theGroup
+					move record theRecord to theGroup from incoming group of current database
 					log message info "Record archived to: " & archiveFolder record theRecord
 				end if
 			end repeat

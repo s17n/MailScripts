@@ -270,6 +270,7 @@ on addMessagesToDevonthink(theMessages, theDatabase, theDefaultImportFolder, sor
 					set defaultTags to theDefaultImportFolder
 				end if
 
+				set theArchiveFolderYYYYMM to ""
 				tell application id "DNtp"
 					set theGroup to incoming group of database theDatabase
 					set theRecord to create record with {name:theName & ".eml", type:unknown, creation date:theDateSent, modification date:theDateReceived, URL:theSender, source:(theSource as string), unread:(not theReadFlag)} in theGroup
@@ -279,8 +280,17 @@ on addMessagesToDevonthink(theMessages, theDatabase, theDefaultImportFolder, sor
 					set unread of theRecord to true
 					set tags of theRecord to defaultTags
 					log message info "New Message received at:  " & theDateSent & " from: " & theSender record theRecord
+
+					set theYear to texts 1 thru 4 of theName
+					set theMonth to texts 5 thru 6 of theName
+					set theArchiveFolderYYYYMM to theArchiveFolder & "/" & theYear & "/" & theMonth
 				end tell
-				set mailbox of theMessage to mailbox theArchiveFolder of account theMailboxAccount
+
+				-- make new mailbox with properties {name:(theArchiveFolder)}
+				-- tell account "Google" to make new mailbox with properties {name:theArchiveFolderYYYYMM}
+
+				set mailbox of theMessage to mailbox theArchiveFolderYYYYMM of account theMailboxAccount
+
 			on error error_message number error_number
 				if error_number is not -128 then display alert "Devonthink" message error_message as warning
 				log message error_message
@@ -297,16 +307,8 @@ on renameRecords(theSelection)
 	tell application id "DNtp"
 		repeat with theRecord in theSelection
 			set creationDate to creation date of theRecord
-			set currentName to name of theRecord
-			-- if filename and creation date matches -> nothing to do
-			if currentName = my format(creationDate) then
-				log message info "Record not renamed - name & creation date matches." record theRecord
-			else
-				set creationDate to my setUniqueCreationDate(theRecord, true)
-				set newName to my format(creationDate)
-				set name of theRecord to newName
-				log message info "Record renamed from '" & currentName & "' to '" & newName & "'" record theRecord
-			end if
+			tell baseLib to set creationDateAsString to format(creationDate)
+			set name of theRecord to creationDateAsString
 		end repeat
 	end tell
 	tell baseLib to debug(log_ctx, "exit")
@@ -361,7 +363,7 @@ on archiveRecords(theRecords, theCallerScript)
 				set archiveFolder to archiveFolder & "/" & theYear & "/" & theMonth
 
 				set theGroup to create location archiveFolder
-				move record theRecord to theGroup
+				move record theRecord to theGroup from incoming group of current database
 				log message info "Record archived to: " & archiveFolder record theRecord
 
 			end repeat
