@@ -63,34 +63,36 @@ on getProject(theRecord)
 	end repeat
 end getProject
 
--- Hintergrund: Tags werden zur Basis-Klassifizierung (1. Ebene) und zur PARA-Klassifizierung (2. Ebene) verwendet (01_Projects, 02_Areas...)
---              Die Kennzeichung der konkreten (PARA-)Projekte/Areas erfolgt auf der 3. Ebene.
--- Die Methode liefert alle konkreten PARA-Projekte/-Areas - d.h. alle Tags der 3. Ebene - als Liste.
 on getProjectsAndAreaTags()
+	my initialize()
+	set log_ctx to pScriptName & "." & "getProjectsAndAreaTags"
+	tell baseLib to debug(log_ctx, "enter")
+	set theProjects to {}
 	tell application id "DNtp"
-		set theProjects to {}
 		set theL1TagGroups to children of tags group of current database -- Level 1 Tag Groups: ...
 		repeat with theL1TagGroup in theL1TagGroups
-			set theL2TagGroups to (get children of theL1TagGroup) -- Level 2 Tag Groups: 01_P, 02_A ...
-			repeat with theL2TagGroup in theL2TagGroups
-				if name of theL2TagGroup starts with "0" or name of theL2TagGroup starts with "0" then
-					set theL3TagGroups to (get children of theL2TagGroup)
-					repeat with theL3TagGroup in theL3TagGroups
-						if tag type of theL3TagGroup is not ordinary tag then
-							set theL4TagGroups to (get children of theL3TagGroup)
-							repeat with theL4TagGroup in theL4TagGroups
-								set end of theProjects to name of theL4TagGroup as string
-							end repeat
-						else
-							set end of theProjects to name of theL3TagGroup as string
-						end if
-					end repeat
-				end if
-			end repeat
+			if name of theL1TagGroup does not start with "x" then
+				set theL2TagGroups to (get children of theL1TagGroup) -- Level 2 Tag Groups: 01_P, 02_A ...
+				repeat with theL2TagGroup in theL2TagGroups
+					if name of theL2TagGroup starts with "0" then
+						set theL3TagGroups to (get children of theL2TagGroup)
+						repeat with theL3TagGroup in theL3TagGroups
+							if tag type of theL3TagGroup is not ordinary tag then
+								set theL4TagGroups to (get children of theL3TagGroup)
+								repeat with theL4TagGroup in theL4TagGroups
+									set end of theProjects to name of theL4TagGroup as string
+								end repeat
+							else
+								set end of theProjects to name of theL3TagGroup as string
+							end if
+						end repeat
+					end if
+				end repeat
+			end if
 		end repeat
-		log message pScriptName info "theProjects: " & theProjects
-		return theProjects
 	end tell
+	tell baseLib to debug(log_ctx, "exit")
+	return theProjects
 end getProjectsAndAreaTags
 
 on tagByCompareRecords(theRecord, theCallerScript)
@@ -287,7 +289,7 @@ on addMessagesToDevonthink(theMessages, theDatabase, theDefaultImportFolder, sor
 				end tell
 
 				-- make new mailbox with properties {name:(theArchiveFolder)}
-				-- tell account "Google" to make new mailbox with properties {name:theArchiveFolderYYYYMM}
+				-- tell account "[Name of Account in Mail.app]" to make new mailbox with properties {name:theArchiveFolderYYYYMM}
 
 				set mailbox of theMessage to mailbox theArchiveFolderYYYYMM of account theMailboxAccount
 
@@ -363,9 +365,12 @@ on archiveRecords(theRecords, theCallerScript)
 				set archiveFolder to archiveFolder & "/" & theYear & "/" & theMonth
 
 				set theGroup to create location archiveFolder
-				move record theRecord to theGroup from incoming group of current database
-				log message info "Record archived to: " & archiveFolder record theRecord
 
+				set theLocation to location of theRecord
+				set theLoctionAsRecord to get record at theLocation
+				move record theRecord from theLoctionAsRecord to theGroup
+
+				tell baseLib to info(log_ctx, "Record " & name of theRecord & " archived to: " & archiveFolder)
 			end repeat
 		on error error_message number error_number
 			if error_number is not -128 then display alert "Devonthink" message error_message as warning

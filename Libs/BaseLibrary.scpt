@@ -1,7 +1,7 @@
 #@osa-lang:AppleScript
 property pScriptName : "BaseLibrary"
 
-property LOG_LEVEL : 0
+property LOG_LEVEL : 2
 
 property LOG_LEVEL_DEBUG : 1
 property LOG_LEVEL_INFO : 2
