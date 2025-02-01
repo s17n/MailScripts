@@ -29,4 +29,7 @@ tell application id "DNtp"
 
 	--set theNewRecord to create record with {name:dateTime, type:markdown, content:markdownMetadata, tags:theProject} in theLocation
 	set theNewRecord to create record with {name:dateTime, type:markdown, content:markdownMetadata} in theLocation
+	set theAdditionDate to addition date of theNewRecord
+	set creation date of theRecord to theAdditionDate
+
 end tell

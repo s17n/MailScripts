@@ -308,6 +308,9 @@ on renameRecords(theSelection)
 	tell baseLib to debug(log_ctx, "enter")
 	tell application id "DNtp"
 		repeat with theRecord in theSelection
+			if (name of theRecord contains "copy") then
+				set creation date of theRecord to addition date of theRecord
+			end if
 			set creationDate to creation date of theRecord
 			tell baseLib to set creationDateAsString to format(creationDate)
 			set name of theRecord to creationDateAsString
