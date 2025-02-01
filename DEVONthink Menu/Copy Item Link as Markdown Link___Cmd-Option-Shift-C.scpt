@@ -15,8 +15,9 @@ tell application id "DNtp"
 			set theMarkdownText to ""
 			set theName to name of theRecord
 			set theReferenceURL to reference URL of theRecord
+			set theReferenceURLParam to "?openexternally=1"
 
-			if theDatabase is equal to "Mail" then
+			if theDatabase contains "Mail" then
 
 				tell theRecord
 					set {theId, theName, theFilename, theMetadata} ¬
@@ -28,7 +29,7 @@ tell application id "DNtp"
 				set the formattedDate to my format(get creation date of theRecord)
 				set theMarkdownText to formattedDate & ": " & theAuthorName & ": " & theSubject
 
-			else if theDatabase is equal to "Dokumente-Steffen" then
+			else if theDatabase contains "Dokumente" then
 
 				set theDate to get custom meta data for "Date" from theRecord
 				set theSender to get custom meta data for "Sender" from theRecord
@@ -37,7 +38,7 @@ tell application id "DNtp"
 				set the formattedDate to my format(theDate)
 				set theMarkdownText to formattedDate & ": " & theSender & ": " & theSubject
 			end if
-			set mdLink to "[" & theMarkdownText & "](" & theReferenceURL & ")"
+			set mdLink to "[" & theMarkdownText & "](" & theReferenceURL & theReferenceURLParam & ")"
 		end repeat
 		set the clipboard to {text:(mdLink as string), Unicode text:mdLink}
 	end tell
