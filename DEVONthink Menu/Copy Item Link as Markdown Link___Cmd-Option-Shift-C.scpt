@@ -18,7 +18,7 @@ tell application id "DNtp"
 			set theReferenceURLParam to "?openexternally=1"
 
 			if theDatabase contains "Mail" then
-
+				set theMarkdownText to theMarkdownText & "Email: "
 				tell theRecord
 					set {theId, theName, theFilename, theMetadata} ¬
 						to {the id, the name, the filename, the meta data}
@@ -27,16 +27,21 @@ tell application id "DNtp"
 				end tell
 
 				set the formattedDate to my format(get creation date of theRecord)
-				set theMarkdownText to formattedDate & ": " & theAuthorName & ": " & theSubject
+				set theMarkdownText to theMarkdownText & formattedDate & ": " & theAuthorName & ": " & theSubject
 
-			else if theDatabase contains "Dokumente" then
+			else if (theDatabase contains "Dokumente") or (theDatabase contains "Beleg") then
 
+				if (theDatabase contains "Dokumente") then
+					set theMarkdownText to theMarkdownText & "Dokument: "
+				else if theDatabase contains "Beleg" then
+					set theMarkdownText to theMarkdownText & "Beleg: "
+				end if
 				set theDate to get custom meta data for "Date" from theRecord
 				set theSender to get custom meta data for "Sender" from theRecord
 				set theSubject to get custom meta data for "Subject" from theRecord
 
 				set the formattedDate to my format(theDate)
-				set theMarkdownText to formattedDate & ": " & theSender & ": " & theSubject
+				set theMarkdownText to theMarkdownText & formattedDate & ": " & theSender & ": " & theSubject
 			end if
 			set mdLink to "[" & theMarkdownText & "](" & theReferenceURL & theReferenceURLParam & ")"
 		end repeat
