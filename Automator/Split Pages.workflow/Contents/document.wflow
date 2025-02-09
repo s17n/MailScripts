@@ -66,7 +66,7 @@
 				<key>ActionParameters</key>
 				<dict>
 					<key>outputDirectory</key>
-					<string>~/PARA/00 Inbox/DEVONthink Import</string>
+					<string>~/Documents/DEVONthink Import</string>
 					<key>outputName</key>
 					<string>Split PDF Output</string>
 					<key>outputNamingMode</key>
@@ -105,7 +105,7 @@
 				<key>isViewVisible</key>
 				<true/>
 				<key>location</key>
-				<string>280.000000:180.000000</string>
+				<string>364.000000:180.000000</string>
 				<key>nibPath</key>
 				<string>/System/Library/Automator/Split PDF.action/Contents/Resources/Base.lproj/main.nib</string>
 			</dict>
