@@ -20,11 +20,7 @@ tell application id "DNtp"
 			set theURLParameter to ""
 			set openExternally to "?openexternally=1"
 
-			if theDatabase contains "Assets" then
-				set theClipboardText to "Assets: "
-				set theMdLink to theFilename
-
-			else if theDatabase contains "Mail" then
+			if theDatabase contains "Mail" then
 				set theClipboardText to "Email: "
 				tell theRecord
 					set {theId, theName, theFilename, theMetadata} ¬
@@ -49,6 +45,9 @@ tell application id "DNtp"
 
 				set the formattedDate to my format(theDate, false)
 				set theMdLink to theMdLink & formattedDate & ": " & theSender & ": " & theSubject
+			else
+				set theClipboardText to "Assets: "
+				set theMdLink to theFilename
 			end if
 
 			if (theType as string) is not equal to "group" then
