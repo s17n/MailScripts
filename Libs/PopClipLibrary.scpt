@@ -4,25 +4,63 @@ use scripting additions
 use framework "Foundation"
 use framework "AppKit" -- for NSEvent
 
+property pScriptName : "PopClipLib"
+property baseLib : missing value
+
+on initialize()
+	set log_ctx to pScriptName & "." & "initialize"
+	if baseLib is missing value then
+		set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
+		set baseLib to load script ((pBaseLibraryPath of mailscriptsConfig))
+		tell baseLib to initialize()
+		tell baseLib to debug(log_ctx, "baseLib initialized")
+	else
+		tell baseLib to debug(log_ctx, "baseLib already initialized")
+	end if
+end initialize
+
 on setSubject(theText, theCallerScript)
+	my initialize()
+	set log_ctx to pScriptName & "." & "setSubject"
+	tell baseLib to debug(log_ctx, "enter")
 
 	-- Command key pressed?
 	set cmdKeyStat to (((current application's NSEvent's modifierFlags()) div (current application's NSCommandKeyMask as integer)) mod 2) > 0
 
 	tell application id "DNtp"
 		set theRecord to content record
-		set theOldSubject to get custom meta data for "Subject" from theRecord
+		set theCurrentSubject to get custom meta data for "Subject" from theRecord
+		if theCurrentSubject is missing value then set theCurrentSubject to ""
 		if cmdKeyStat then
-			set theOldSubject to theText
+			tell baseLib to debug(log_ctx, "cmdKeyStat cmd pressed")
 		else
 			set theTrimmedText to my trim(theText)
 			set theSubjectTokenDelimiter to " "
-			if (count of words of theOldSubject) = 1 then set theSubjectTokenDelimiter to " - "
-			set theSubject to theOldSubject & theSubjectTokenDelimiter & theTrimmedText
+			if (count of words of theCurrentSubject) = 1 then set theSubjectTokenDelimiter to ": "
+			set theNewSubject to theCurrentSubject & theSubjectTokenDelimiter & theTrimmedText
 		end if
-		add custom meta data theSubject for "Subject" to theRecord
+		add custom meta data theNewSubject for "Subject" to theRecord
 	end tell
+
+	tell baseLib to debug(log_ctx, "exit")
 end setSubject
+
+on setSender(theText, theCallerScript)
+	my initialize()
+	set log_ctx to pScriptName & "." & "setSender"
+	tell baseLib to debug(log_ctx, "enter")
+
+	-- Command key pressed?
+	set cmdKeyStat to (((current application's NSEvent's modifierFlags()) div (current application's NSCommandKeyMask as integer)) mod 2) > 0
+
+	tell application id "DNtp"
+		set theRecord to content record
+		set theTrimmedText to my trim(theText)
+		add custom meta data theTrimmedText for "Sender" to theRecord
+	end tell
+
+	tell baseLib to debug(log_ctx, "exit")
+end setSender
 
 -- https://www.macscripter.net/t/trim-remove-spaces/45457
 on trim(theText)

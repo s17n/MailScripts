@@ -121,7 +121,7 @@ on setNameAndCustomMetadata(theRecord)
 	tell baseLib to debug(log_ctx, "exit")
 end setNameAndCustomMetadata
 
-on setCustomMetaData(theRecord, theYear, theMonth_MM, theDay, theSender, theSubject, theSentFlag, theCCFlag)
+on setCustomMetaData(theRecord, theYear, theMonth_MM, theDay, theSenderTag, theSubjectTag, theSentFlag, theCCFlag)
 	set log_ctx to pScriptName & "." & "setCustomMetaData"
 	tell baseLib to debug(log_ctx, "enter")
 	tell application id "DNtp"
@@ -132,22 +132,37 @@ on setCustomMetaData(theRecord, theYear, theMonth_MM, theDay, theSender, theSubj
 			add custom meta data cmdDate for "Date" to theRecord
 		end if
 		-- Sender
-		if theSender is not null then
-			set cmdSender to ""
-			if (theSender as string) is equal to pNoSenderTag then
-				set cmdSender to "k.A."
-			else
-				if theSentFlag is true then set cmdSender to "An: "
-				set cmdSender to cmdSender & theSender
-				if theCCFlag is true then set cmdSender to cmdSender & " (in CC)"
+		if theSenderTag is not null then
+			set theSender to get custom meta data for "Sender" from theRecord
+			if theSender is missing value or pSenders contains theSender then
+				set cmdSender to ""
+				if (theSenderTag as string) is equal to pNoSenderTag then
+					set cmdSender to "k.A."
+				else
+					if theSentFlag is true then set cmdSender to "An: "
+					set cmdSender to cmdSender & theSenderTag
+					if theCCFlag is true then set cmdSender to cmdSender & " (in CC)"
+				end if
+				add custom meta data cmdSender for "Sender" to theRecord
 			end if
-			add custom meta data cmdSender for "Sender" to theRecord
 		end if
 		-- Subject
-		if theSubject is not null then
-			add custom meta data theSubject for "Subject" to theRecord
+		if theSubjectTag is not null then
+			set theSubject to get custom meta data for "Subject" from theRecord
+			tell baseLib to debug(log_ctx, "theSubject: " & theSubject)
+			if theSubject is missing value then
+				add custom meta data theSubjectTag for "Subject" to theRecord
+			else
+				set theCustomText to do shell script "str=" & quoted form of theSubject & "; ([[ $str == *\" - \"* ]] && echo \"${str#* - }\") || ([[ $str == *:* ]] && echo \"${str#*:}\") | awk '{$1=$1};1'"
+				tell baseLib to debug(log_ctx, "theCustomText: " & theCustomText)
+				if theCustomText is "" then
+					add custom meta data theSubjectTag for "Subject" to theRecord
+				else
+					add custom meta data theSubjectTag & ": " & theCustomText for "Subject" to theRecord
+				end if
+			end if
 		end if
-		tell baseLib to debug(log_ctx, "cmdDate: " & cmdDate & ", cmdSender: " & cmdSender & ", cmdSubject: " & cmdSubject)
+		tell baseLib to debug(log_ctx, "cmdDate: " & cmdDate & ", cmdSender: " & cmdSender & ", cmdSubject: " & theSubject)
 	end tell
 	tell baseLib to debug(log_ctx, "exit")
 end setCustomMetaData
@@ -164,8 +179,8 @@ on archiveRecords(theRecords, theCallerScript)
 				else
 
 					tell baseLib to set creationDateAsString to format(creationDate)
-					set theYear to texts 1 thru 4 of creationDateAsString
-					set theMonth to texts 5 thru 6 of creationDateAsString
+					set theYear to rich texts 1 thru 4 of creationDateAsString
+					set theMonth to rich texts 5 thru 6 of creationDateAsString
 
 					set archiveFolder to "/05 Assets"
 					set theYearAsInteger to theYear as integer
@@ -196,10 +211,10 @@ on setDateTagsFromRecord(theRecord)
 	tell baseLib to debug(log_ctx, "enter")
 	tell application id "DNtp"
 		try
-			set theDocumentDate to newest document date of theRecord
+			set theDocumentDate to document date of theRecord
 			theDocumentDate
 		on error number -2753
-			tell baseLib to debug(log_ctx, "No 'newest document date' found, 'creation date' will be used instead.")
+			tell baseLib to debug(log_ctx, "No 'document date' found, 'creation date' will be used instead.")
 			set theDocumentDate to creation date of theRecord
 		end try
 		tell baseLib to set theDocumentDateAsString to date_to_iso(theDocumentDate)

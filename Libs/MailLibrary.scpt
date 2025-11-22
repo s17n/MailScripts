@@ -14,87 +14,6 @@ on initialize()
 	end if
 end initialize
 
-on deleteRemindersAndSetLabel(theRecords, theCallerScript)
-	tell application id "DNtp"
-		try
-			repeat with theRecord in theRecords
-				set reminder of theRecord to missing value
-				set label of theRecord to 2
-				my dtLog(theCallerScript, "Reminder deleted: " & name of theRecord)
-			end repeat
-		on error error_message number error_number
-			if error_number is not -128 then display alert "Devonthink" message error_message as warning
-		end try
-	end tell
-end deleteRemindersAndSetLabel
-
-on openXTypeRecord(theXType, theCallerScript)
-	-- das zum Record Tag passende Actions File in neuem Fenster öffnen
-	tell application id "DNtp"
-		set theRecord to content record of think window 1
-		if theRecord is missing value then
-			delay 0.5
-			set search query of viewer windows to "tags:" & theXType & ";"
-			tell application "System Events"
-				keystroke "f" using {command down, option down}
-				keystroke (key code 124)
-			end tell
-		else
-			set theProject to my getProject(theRecord)
-			set theLookupRecords to lookup records with tags {theProject, theXType}
-			if length of theLookupRecords = 0 then
-				log message pScriptName info "No record(s) found for project '" & theProject & "' and type '" & theXType & "'."
-			else if length of theLookupRecords > 1 then
-				log message pScriptName info "More then one records found for project '" & theProject & "' and type '" & theXType & "'."
-			else
-				open window for record the first item of theLookupRecords
-			end if
-		end if
-	end tell
-end openXTypeRecord
-
-on getProject(theRecord)
-	set theProjects to my getProjectsAndAreaTags()
-	tell application id "DNtp" to set theTags to tags of theRecord
-	repeat with theTag in theTags
-		if theProjects contains theTag then
-			return theTag
-		end if
-	end repeat
-end getProject
-
-on getProjectsAndAreaTags()
-	my initialize()
-	set log_ctx to pScriptName & "." & "getProjectsAndAreaTags"
-	tell baseLib to debug(log_ctx, "enter")
-	set theProjects to {}
-	tell application id "DNtp"
-		set theL1TagGroups to children of tags group of current database -- Level 1 Tag Groups: ...
-		repeat with theL1TagGroup in theL1TagGroups
-			if name of theL1TagGroup does not start with "x" then
-				set theL2TagGroups to (get children of theL1TagGroup) -- Level 2 Tag Groups: 01_P, 02_A ...
-				repeat with theL2TagGroup in theL2TagGroups
-					if name of theL2TagGroup starts with "0" then
-						set theL3TagGroups to (get children of theL2TagGroup)
-						repeat with theL3TagGroup in theL3TagGroups
-							if tag type of theL3TagGroup is not ordinary tag then
-								set theL4TagGroups to (get children of theL3TagGroup)
-								repeat with theL4TagGroup in theL4TagGroups
-									set end of theProjects to name of theL4TagGroup as string
-								end repeat
-							else
-								set end of theProjects to name of theL3TagGroup as string
-							end if
-						end repeat
-					end if
-				end repeat
-			end if
-		end repeat
-	end tell
-	tell baseLib to debug(log_ctx, "exit")
-	return theProjects
-end getProjectsAndAreaTags
-
 on tagByCompareRecords(theRecord, theCallerScript)
 	tell application id "DNtp"
 		set theDatabase to current database
@@ -128,11 +47,11 @@ on extractAttachmentsFromEmail()
 		set tmpPath to POSIX path of tmpFolder
 
 		repeat with theRecord in theSelection
-			if (type of theRecord is unknown and path of theRecord ends with ".eml") or (type of the record is formatted note) then
+			if (type of theRecord is unknown and path of theRecord ends with ".eml") or (type of record is formatted note) then
 				set theRTF to convert record theRecord to rich
 
 				try
-					if type of theRTF is rtfd then
+					if type of theRTF is RTFD then
 						set thePath to path of theRTF
 						set theGroup to parent 1 of theRecord
 
@@ -148,7 +67,7 @@ on extractAttachmentsFromEmail()
 									set theAttachment to POSIX path of (theAttachment as string)
 									-- tell application id "DNtp" to import theAttachment to theGroup
 									tell application id "DNtp"
-										set theImportedRecord to import theAttachment to theGroup
+										set theImportedRecord to import path theAttachment to theGroup
 										set theEmailCreationDate to get creation date of theRecord
 										tell baseLib to set theCmdDate to formatDateWithDashes(theEmailCreationDate)
 										--set theCmdDate to my formatDateWithDashes(theEmailCreationDate)
@@ -279,17 +198,16 @@ on addMessagesToDevonthink(theMessages, theDatabase, theDefaultImportFolder, sor
 					perform smart rule trigger import event record theRecord
 					set theImportFolder to create location theImportFolder in database theDatabase
 					move record theRecord to theImportFolder
+
 					set unread of theRecord to true
 					set tags of theRecord to defaultTags
+					my setCustomAttributes(theRecord, senderAddress)
 					log message info "New Message received at:  " & theDateSent & " from: " & theSender record theRecord
 
-					set theYear to texts 1 thru 4 of theName
-					set theMonth to texts 5 thru 6 of theName
+					set theYear to rich texts 1 thru 4 of theName
+					set theMonth to rich texts 5 thru 6 of theName
 					set theArchiveFolderYYYYMM to theArchiveFolder & "/" & theYear & "/" & theMonth
 				end tell
-
-				-- make new mailbox with properties {name:(theArchiveFolder)}
-				-- tell account "[Name of Account in Mail.app]" to make new mailbox with properties {name:theArchiveFolderYYYYMM}
 
 				set mailbox of theMessage to mailbox theArchiveFolderYYYYMM of account theMailboxAccount
 
@@ -302,12 +220,131 @@ on addMessagesToDevonthink(theMessages, theDatabase, theDefaultImportFolder, sor
 	tell baseLib to debug(log_ctx, "exit")
 end addMessagesToDevonthink
 
+on getSender(theMetadata)
+	my initialize()
+	tell baseLib to debug(pScriptName & ". getSender", "enter")
+
+	set {theSender, theFirstname, theLastname, theNickname} to {"", null, null, null}
+	set theMailAddress to kMDItemAuthorEmailAddresses of theMetadata
+
+	-- get names from first Contact with same email address
+	tell application "Contacts"
+		set personsWithSameEmailAddress to (every person whose value of emails contains theMailAddress)
+		if length of personsWithSameEmailAddress > 0 then
+			set firstPerson to first item of personsWithSameEmailAddress
+			set theFirstname to first name of firstPerson
+			set theLastname to last name of firstPerson
+			set theNickname to nickname of firstPerson
+		end if
+	end tell
+
+	if not (theNickname is null or theNickname is missing value or theNickname is "") then
+		set theSender to theNickname
+	else
+		if not (theFirstname is null or theFirstname is missing value or theFirstname is "") then
+			set theSender to theFirstname
+		end if
+		if not (theLastname is null or theLastname is missing value or theLastname is "") then
+			tell baseLib to debug(pScriptName & ". getSender", "----> 2")
+			if length of theSender > 0 then
+				set theSender to theSender & " "
+			end if
+			set theSender to theSender & theLastname
+		end if
+
+		if theSender is null or length of theSender = 0 then
+			try
+				set theSender to kMDItemAuthors of theMetadata
+			on error error_message number error_number
+				if error_number is -1728 then
+					set theSender to "(null)"
+				else
+					display alert "Devonthink" message error_message as warning
+				end if
+			end try
+		end if
+	end if
+	tell baseLib to debug(pScriptName & ". getSender", "exit")
+	return theSender
+end getSender
+
+on getSubject(theMetadata)
+	my initialize()
+	tell baseLib to debug(pScriptName & ". getSubject", "enter")
+
+	try
+		set theSubject to kMDItemSubject of theMetadata
+	on error error_message number error_number
+		if error_number is -1728 then
+			set theSubject to "(null)"
+		else
+			display alert "Devonthink" message error_message as warning
+		end if
+	end try
+
+	tell baseLib to debug(pScriptName & ". getSubject", "exit")
+	return theSubject
+end getSubject
+
+on setCustomAttributes(theSelection)
+	my initialize()
+	tell baseLib to debug(pScriptName & ".setCustomAttributes", "enter")
+
+	tell application id "DNtp"
+		repeat with theRecord in theSelection
+
+			set {theSender, theSubject} to {null, null}
+			set theMetadata to meta data of theRecord
+
+			set theSender to my getSender(theMetadata)
+			set theSubject to my getSubject(theMetadata)
+
+			add custom meta data theSender for "Sender" to theRecord
+			add custom meta data theSubject for "Subject" to theRecord
+
+			tell baseLib to info_r(theRecord, "Sender: " & theSender & "; Subject: " & theSubject)
+
+		end repeat
+	end tell
+	tell baseLib to debug(pScriptName & ".setCustomAttributes", "exit")
+end setCustomAttributes
+
 on renameRecords(theSelection)
+	my setCustomAttributes(theSelection)
+end renameRecords
+
+on renameRecords2(theSelection)
 	my initialize()
 	set log_ctx to pScriptName & "." & "renameRecords"
 	tell baseLib to debug(log_ctx, "enter")
 	tell application id "DNtp"
 		repeat with theRecord in theSelection
+
+			set {theSender, theSubject} to {null, null}
+			set theMetadata to meta data of theRecord
+			try
+				set theSender to kMDItemAuthors of theMetadata
+			on error error_message number error_number
+				if error_number is -1728 then
+					set theSender to "(null)"
+				else
+					display alert "Devonthink" message error_message as warning
+				end if
+			end try
+			try
+				set theSubject to kMDItemSubject of theMetadata
+			on error error_message number error_number
+				if error_number is -1728 then
+					set theSubject to "(null)"
+				else
+					display alert "Devonthink" message error_message as warning
+				end if
+			end try
+
+			add custom meta data theSender for "Sender" to theRecord
+			add custom meta data theSubject for "Subject" to theRecord
+
+			tell baseLib to info(log_ctx, "Sender: " & theSender & ", Subject: " & theSubject)
 			if (name of theRecord contains "copy") then
 				set creation date of theRecord to addition date of theRecord
 			end if
@@ -317,7 +354,7 @@ on renameRecords(theSelection)
 		end repeat
 	end tell
 	tell baseLib to debug(log_ctx, "exit")
-end renameRecords
+end renameRecords2
 
 on getContactGroupName(theMailAddress)
 	my initialize()
@@ -363,8 +400,8 @@ on archiveRecords(theRecords, theCallerScript)
 
 				tell baseLib to set creationDateAsString to format(creationDate)
 
-				set theYear to texts 1 thru 4 of creationDateAsString
-				set theMonth to texts 5 thru 6 of creationDateAsString
+				set theYear to rich texts 1 thru 4 of creationDateAsString
+				set theMonth to rich texts 5 thru 6 of creationDateAsString
 				set archiveFolder to archiveFolder & "/" & theYear & "/" & theMonth
 
 				set theGroup to create location archiveFolder

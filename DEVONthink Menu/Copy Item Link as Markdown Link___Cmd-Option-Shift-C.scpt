@@ -55,7 +55,7 @@ tell application id "DNtp"
 			end if
 			set theClipboardText to theClipboardText & "[" & theMdLink & "](" & theReferenceURL & theURLParameter & ")"
 		end repeat
-		set the clipboard to {text:(theClipboardText as string), Unicode text:theClipboardText}
+		set the clipboard to {rich text:(theClipboardText as string), Unicode text:theClipboardText}
 	end tell
 end tell
 
