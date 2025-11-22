@@ -24,7 +24,7 @@ tell application id "DNtp"
 		end repeat
 
 		-- display dialog theClipboardText
-		set the clipboard to {text:(theClipboardText as string), Unicode text:theClipboardText}
+		set the clipboard to {rich text:(theClipboardText as string), Unicode text:theClipboardText}
 	end tell
 end tell
 

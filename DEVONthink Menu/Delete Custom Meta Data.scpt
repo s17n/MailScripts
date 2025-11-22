@@ -1,7 +1,7 @@
 #@osa-lang:AppleScript
 on run
 
-	tell application "DEVONthink 3"
+	tell application id "DNtp"
 
 		set theSelection to selection
 		repeat with aRecord in theSelection
