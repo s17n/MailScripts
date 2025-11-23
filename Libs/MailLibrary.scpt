@@ -364,17 +364,20 @@ on getContactGroupName(theMailAddress)
 	tell baseLib to debug(log_ctx, "enter")
 	set theGroupName to null
 	tell application "Contacts"
-		activate
+		--activate
 		set personsWithSameEmailAddress to (every person whose value of emails contains theMailAddress)
 		if length of personsWithSameEmailAddress > 0 then
 			set firstPerson to first item of personsWithSameEmailAddress
 			set theGroups to groups of firstPerson
 			repeat with theGroup in theGroups
 				set aGroupName to name of theGroup as string
-				if (aGroupName is not null) and (aGroupName is not "card") then set theGroupName to aGroupName
+				if (aGroupName is not null) and (aGroupName is not "card") then
+					set theGroupName to aGroupName
+					tell baseLib to info(log_ctx, "Contact group found: " & theGroupName)
+				end if
 			end repeat
 		end if
-		close every window
+		--close every window
 	end tell
 	tell baseLib to debug(log_ctx, "exit")
 	return theGroupName
