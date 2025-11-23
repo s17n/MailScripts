@@ -116,42 +116,42 @@ on addOrUpdateContactsByGroup(theRecords, theCallerScript)
 					to {the kMDItemAuthorEmailAddresses of theMetadata, the kMDItemAuthors of theMetadata}
 			end tell
 
-			set theGroup to (name of location group of theRecord as string)
+			set theGroupName to name of location group of theRecord as string
+
 			tell application "Contacts"
-				set theContactsGroup to null
-				try
-					set theContactsGroup to group theGroup
-				on error error_message number error_number
-					if error_number = -1728 then
-						-- my dtLog(theCallerScript, "Kontaktgruppe nicht vorhanden.")
-					else
-						-- my dtLog(theCallerScript, ((error_number as string) & " - " & error_message))
-					end if
-				end try
-				set personsWithSameEmail to (every person whose value of emails contains theAuthorEmail)
-				if length of personsWithSameEmail = 0 then
-					set thePerson to make new person with properties {last name:theAuthorName}
-					make new email at end of emails of thePerson with properties {label:"default", value:theAuthorEmail}
-					if theContactsGroup is not null then
-						add thePerson to theContactsGroup
-					end if
+
+				-- Prüfen, ob die Gruppe existiert, sonst anlegen
+				if not (exists group theGroupName) then
+					make new group with properties {name:theGroupName}
+				end if
+
+				set theGroup to group theGroupName
+
+				-- Alle Kontakte ermitteln, die diese Email-Adresse besitzen
+				set theContacts to (every person whose value of emails contains theAuthorEmail)
+				set countContacts to length of theContacts
+				if countContacts = 0 then
+					set newPerson to make new person with properties {last name:theAuthorName}
+					make new email at end of emails of newPerson with properties {label:"default", value:theAuthorEmail}
+					add newPerson to theGroup
 					save
-					-- my dtLog(theCallerScript, "Contact added - Last name: " & theAuthorName & ", email: " & theAuthorEmail & ", group: " & theGroup)
-				else if length of personsWithSameEmail = 1 then
-					set thePerson to first item of personsWithSameEmail
+					tell baseLib to info(log_ctx, "Neuen Kontakt in Gruppe \"" & theGroupName & "\" erstellt (Last name: " & theAuthorName & ", Email: " & theAuthorEmail & ").")
+				else if countContacts = 1 then
+					set thePerson to first item of theContacts
 					set oldGroups to groups of thePerson
 					repeat with aOldGroup in oldGroups
 						remove thePerson from aOldGroup
+						tell baseLib to info(log_ctx, "Kontakt aus Gruppe \"" & (name of aOldGroup as text) & "\" entfernt.")
 					end repeat
-					if theContactsGroup is not null then
-						add thePerson to theContactsGroup
-					end if
+					add thePerson to theGroup
+					tell baseLib to info(log_ctx, "Kontakt zur Gruppe \"" & (name of theGroup as text) & "\" hinzugefügt.")
 					save
-					-- my dtLog(theCallerScript, "Contact moved - Last name: " & theAuthorName & ", email: " & theAuthorEmail & ", group: " & theGroup)
 				else
-					-- my dtLog(theCallerScript, "Contact not moved - more than one person with same email addess: " & length of personsWithSameEmail as string)
+					-- mehr als ein Contact mit dieser Email-Adresse
+					display dialog (countContacts as text) & " Kontakte mit der gleichen eMail-Adresse vorhanden."
 				end if
 			end tell
+
 
 		end repeat
 	end tell
@@ -183,18 +183,15 @@ on addMessagesToDevonthink(theMessages, theDatabase, theDefaultImportFolder, sor
 				tell baseLib to set theName to format(theDateSent)
 				if theSubject is equal to "" then set theSubject to "(no subject)"
 
-				set defaultTags to ""
 				set theImportFolder to null
 				if sortByEngagementGroup then
-					set theInboxEngagementFolder to my getContactGroupName(senderAddress)
-					if theInboxEngagementFolder is not null then
-						set theImportFolder to "Inbox/" & theInboxEngagementFolder
-						set defaultTags to theInboxEngagementFolder
+					set theImportSubFolder to my getContactGroupName(senderAddress)
+					if theImportSubFolder is not null then
+						set theImportFolder to "Inbox/" & theImportSubFolder
 					end if
 				end if
 				if theImportFolder is null then
 					set theImportFolder to "Inbox/" & theDefaultImportFolder
-					set defaultTags to theDefaultImportFolder
 				end if
 
 				set theArchiveFolderYYYYMM to ""
@@ -206,7 +203,6 @@ on addMessagesToDevonthink(theMessages, theDatabase, theDefaultImportFolder, sor
 					move record theRecord to theImportFolder
 
 					set unread of theRecord to true
-					set tags of theRecord to defaultTags
 					my setCustomAttributes(theRecord, senderAddress)
 					log message info "New Message received at:  " & theDateSent & " from: " & theSender record theRecord
 
