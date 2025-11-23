@@ -14,22 +14,28 @@ on initialize()
 	end if
 end initialize
 
-on tagByCompareRecords(theRecord, theCallerScript)
+on classifyMessages(theRecords)
+	my initialize()
+	set log_ctx to pScriptName & "." & "classifyMessages"
+	tell baseLib to debug(log_ctx, "enter")
 	tell application id "DNtp"
 		set theDatabase to current database
-		set theTags to tags of theRecord
-		set theComparedRecords to compare record theRecord to theDatabase
-		repeat with aCompareRecord in theComparedRecords
-			if location of aCompareRecord does not contain "Inbox" then
-				if score of aCompareRecord ≥ pScoreThreshold then
-					set theTagsFromCompareRecord to tags of aCompareRecord
-					set tags of theRecord to theTagsFromCompareRecord
-					exit repeat
+		repeat with theRecord in theRecords
+			set theTags to tags of theRecord
+			set theComparedRecords to compare record theRecord to theDatabase
+			repeat with aCompareRecord in theComparedRecords
+				if location of aCompareRecord does not contain "Inbox" then
+					if score of aCompareRecord ≥ pScoreThreshold then
+						set theTagsFromCompareRecord to tags of aCompareRecord
+						set tags of theRecord to theTagsFromCompareRecord
+						exit repeat
+					end if
 				end if
-			end if
+			end repeat
 		end repeat
 	end tell
-end tagByCompareRecords
+	tell baseLib to debug(log_ctx, "exit")
+end classifyMessages
 
 on setGroupAsTag(theRecords, theCallerScript)
 	tell application id "DNtp"
