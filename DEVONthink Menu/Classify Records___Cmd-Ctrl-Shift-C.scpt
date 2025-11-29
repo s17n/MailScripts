@@ -13,6 +13,7 @@ tell application id "DNtp"
 
 	if databaseName contains "Mail" then
 		tell mailLib to classifyMessages(theSelection)
+		tell mailLib to createSmartGroup(theSelection)
 	else
 		tell docLib to classifyDocuments(theSelection)
 	end if
