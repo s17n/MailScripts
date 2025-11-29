@@ -1,6 +1,5 @@
 #@osa-lang:AppleScript
 property pScriptName : "Import Mail Messages"
-
 property logger : missing value
 
 on initialize()

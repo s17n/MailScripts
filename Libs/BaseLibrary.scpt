@@ -22,6 +22,28 @@ on showLogLevel()
 	my info(log_ctx, "Current log level is: " & LOG_LEVEL)
 end showLogLevel
 
+-- https://www.macscripter.net/t/trim-remove-spaces/45457
+on trim(theText)
+	repeat until theText does not start with " "
+		set theText to text 2 thru -1 of theText
+	end repeat
+
+	repeat until theText does not end with " "
+		set theText to text 1 thru -2 of theText
+	end repeat
+
+	return theText
+end trim
+
+on replaceText(findText, replaceText, theText)
+	set AppleScript's text item delimiters to findText
+	set theItems to every text item of theText
+	set AppleScript's text item delimiters to replaceText
+	set newText to theItems as string
+	set AppleScript's text item delimiters to ""
+	return newText
+end replaceText
+
 -- https://gist.github.com/Glutexo/78c170e2e314f0eacc1a
 on zero_pad(value, string_length)
 	set string_zeroes to ""
@@ -74,38 +96,3 @@ on date_to_iso(dt)
 	return y & "-" & m & "-" & d
 end date_to_iso
 
-on debug(theMethod, theMessage)
-	if LOG_LEVEL ≤ LOG_LEVEL_DEBUG then
-		tell application id "DNtp"
-			log message "DEBUG: " & theMethod info theMessage --record null
-		end tell
-	end if
-end debug
-
-on debug_r(theRecord, theMessage)
-	if LOG_LEVEL ≤ LOG_LEVEL_DEBUG then
-		tell application id "DNtp" to log message info theMessage record theRecord
-	end if
-end debug_r
-
-on info(theMethod, theMessage)
-	if LOG_LEVEL ≤ LOG_LEVEL_INFO then
-		tell application id "DNtp" to log message theMethod info theMessage
-	end if
-end info
-
-on info_r(theRecord, theMessage)
-	if LOG_LEVEL ≤ LOG_LEVEL_INFO then
-		tell application id "DNtp" to log message info theMessage record theRecord
-	end if
-end info_r
-
-to display given msg:theMsg : "", record:theRecord : missing value
-	tell application id "DNtp"
-		if theRecord is missing value then
-			log message "Info" info theMsg
-		else
-			log message info theMsg record theRecord
-		end if
-	end tell
-end display

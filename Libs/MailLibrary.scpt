@@ -47,30 +47,29 @@ on createSmartGroup(theRecords)
 		repeat with theRecord in theRecords
 
 			set theSender to get custom meta data for "Sender" from theRecord
-			set theSenderEncoded to my replaceText("/", "\\/", theSender)
+			tell baseLib to set theSenderEncoded to replaceText("/", "\\/", theSender)
 
 			set theMetadata to meta data of theRecord
 			set theEmailAddress to kMDItemAuthorEmailAddresses of theMetadata
 			tell logger to debug(pScriptName, "createSmartGroup: theSender: " & theSender & ", theEmailAddress: " & theEmailAddress)
 
 			-- Erstelle Smartgroup für Sender
-			if (exists record at "03 Resources/IBM/by Sender/" & theSenderEncoded) or ¬
-				(exists record at "03 Resources/IBM/by Sender (FID)/" & theSenderEncoded) then
+			if (exists record at "03 Resources/General/by Sender/" & theSenderEncoded) or ¬
+				(exists record at "03 Resources/General/by Sender (FID)/" & theSenderEncoded) then
 				tell logger to debug_r(theRecord, "Smartgroup already exists for Sender: " & theSender)
 			else
 
-				set theGroup to get record at "03 Resources/IBM/by Sender"
+				set theGroup to get record at "03 Resources/General/by Sender"
 				set theSmartGroup to create record with {name:theSender, URL:theEmailAddress, record type:smart group, search predicates:"mdsender:" & theSender} in theGroup
 				tell logger to info_r(theRecord, "Smartgroup created for Sender: " & theSender)
 			end if
 
 			-- Erstelle Smartgroup für Email-Adresse
-			if (exists record at "03 Resources/IBM/by Email/" & theEmailAddress) or ¬
-				(exists record at "03 Resources/IBM/by Email (FID)/" & theEmailAddress) then
-				tell baseLib to debug_r(theRecord, "Smartgroup already exists for Email: " & theEmailAddress)
+			if (exists record at "03 Resources/General/by Email/" & theEmailAddress) then
+				tell logger to debug_r(theRecord, "Smartgroup already exists for Email: " & theEmailAddress)
 			else
 
-				set theGroup to get record at "03 Resources/IBM/by Email"
+				set theGroup to get record at "03 Resources/General/by Email"
 				set theSmartGroup to create record with {name:theEmailAddress, URL:theEmailAddress, record type:smart group, search predicates:"kMDItemAuthorEmailAddresses:" & theEmailAddress} ¬
 					in theGroup
 				tell logger to info_r(theRecord, "Smartgroup created for Email: " & theEmailAddress)
@@ -79,15 +78,6 @@ on createSmartGroup(theRecords)
 	end tell
 	tell logger to debug(pScriptName, "createSmartGroup: exit")
 end createSmartGroup
-
-on replaceText(findText, replaceText, theText)
-	set AppleScript's text item delimiters to findText
-	set theItems to every text item of theText
-	set AppleScript's text item delimiters to replaceText
-	set newText to theItems as string
-	set AppleScript's text item delimiters to ""
-	return newText
-end replaceText
 
 -- Erstellt für jeden Record (.eml) einen Kontakt und fügt diesen einer Kontaktgruppe hinzu
 -- ODER aktualiserte die Kontaktgruppe des Kontakts - falls der Kontakt bereits existiert.
@@ -137,7 +127,7 @@ on addOrUpdateContactsByGroup(theRecords, theCallerScript)
 					set oldGroups to groups of thePerson
 					repeat with aOldGroup in oldGroups
 						remove thePerson from aOldGroup
-						tell baseLib to info(log_ctx, "Kontakt \"" & theAuthorName & "\" aus Gruppe \"" & (name of aOldGroup as text) & "\" entfernt.")
+						tell logger to info(pScriptName, "Kontakt \"" & theAuthorName & "\" aus Gruppe \"" & (name of aOldGroup as text) & "\" entfernt.")
 					end repeat
 					add thePerson to theGroup
 					tell logger to info(pScriptName, "Kontakt \"" & theAuthorName & "\" zur Gruppe \"" & (name of theGroup as text) & "\" hinzugefügt.")

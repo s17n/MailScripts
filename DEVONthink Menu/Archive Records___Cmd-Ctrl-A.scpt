@@ -1,5 +1,5 @@
 #@osa-lang:AppleScript
-property pScriptName : "Rename Records"
+property pScriptName : "Archive Records"
 property logger : missing value
 property mailLib : missing value
 property docLib : missing value
@@ -16,28 +16,24 @@ on initialize()
 	end if
 	if docLib is missing value then
 		set config to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
-		set docLib to load script ((pMailScriptsPath of config) & "/Libs/DocLibrary.scpt")
+		set doclLib to load script ((pMailScriptsPath of config) & "/Libs/DocLibrary.scpt")
 	end if
 end initialize
 
-on renameRecords()
+on archiveRecords()
 	try
-		tell logger to debug(pScriptName, "renameRecords: enter")
+		tell logger to debug(pScriptName, "archiveRecords: enter")
 		tell application id "DNtp"
 
 			set theSelection to the selection
 			if theSelection is {} then error "Please select some contents."
 
-			set currentDatabase to current database
 			set databaseName to name of current database
 
 			if databaseName contains "Mail" then
-				tell mailLib to renameRecords(theSelection)
+				tell mailLib to archiveRecords(theSelection, pScriptName)
 			else
-				tell docLib to initializeTagLists(currentDatabase)
-				repeat with aRecord in theSelection
-					tell docLib to setNameAndCustomMetadata(aRecord)
-				end repeat
+				tell docLib to archiveRecords(theSelection, pScriptName)
 			end if
 		end tell
 	on error error_message number error_number
@@ -49,10 +45,12 @@ on renameRecords()
 			end try
 		end if
 	end try
-	tell logger to debug(pScriptName, "renameRecords: exit")
-end renameRecords
+	tell logger to debug(pScriptName, "archiveRecords: exit")
+end archiveRecords
 
 on run {}
+
 	my initialize()
-	my renameRecords()
+	my archiveRecords()
+
 end run

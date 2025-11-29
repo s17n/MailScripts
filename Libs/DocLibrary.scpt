@@ -2,6 +2,7 @@
 property pScriptName : "DocLibrary"
 
 property baseLib : missing value
+property logger : missing value
 
 property pDays : {}
 property pMonths : {}
@@ -18,14 +19,14 @@ property pMonthsList : {"Januar", "Februar", "März", "April", "Mai", "Juni", "J
 property pScoreThreshold : 0.05
 
 on initialize()
-	set log_ctx to pScriptName & "." & "initialize"
+	if logger is missing value then
+		set config to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
+		set logger to load script ((pMailScriptsPath of config) & "/Libs/Logger.scpt")
+		tell logger to initialize()
+	end if
 	if baseLib is missing value then
-		set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
-		set baseLib to load script ((pBaseLibraryPath of mailscriptsConfig))
-		tell baseLib to initialize()
-		tell baseLib to debug(log_ctx, "baseLib initialized")
-	else
-		tell baseLib to debug(log_ctx, "baseLib already initialized")
+		set config to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
+		set baseLib to load script ((pMailScriptsPath of config) & "/Libs/BaseLibrary.scpt")
 	end if
 end initialize
 
@@ -35,33 +36,31 @@ end showLogLevel
 
 on setBetrag(theRecords)
 	my initialize()
-	set log_ctx to pScriptName & "." & "setBetrag"
-	tell baseLib to debug(log_ctx, "enter")
+	tell logger to debug(pScriptName, "setBetrag: enter")
 	repeat with theRecord in theRecords
 		my setBetragForRecord(theRecord)
 	end repeat
-	tell baseLib to debug(log_ctx, "exit")
+	tell logger to debug(pScriptName, "setBetrag: exit")
 end setBetrag
 
 on setBetragForRecord(theRecord)
-	set log_ctx to pScriptName & "." & "setBetragForRecord"
-	tell baseLib to debug(log_ctx, "enter")
+	my initialize()
+	tell logger to debug(pScriptName, "setBetragForRecord: enter")
 	tell application id "DNtp"
 		try
 			set theDocumentAmount to document amount of theRecord
 			add custom meta data theDocumentAmount for "Betrag" to theRecord
-			tell baseLib to debug_r(theRecord, "Document amount: " & theDocumentAmount)
+			tell logger to debug_r(theRecord, "Document amount: " & theDocumentAmount)
 		on error number -2753
-			tell baseLib to info_r(theRecord, "No 'document amount' found.")
+			tell logger to info_r(theRecord, "No 'document amount' found.")
 		end try
 	end tell
-	tell baseLib to debug(log_ctx, "exit")
+	tell logger to debug(pScriptName, "setBetragForRecord: exit")
 end setBetragForRecord
 
 on classifyDocuments(theRecords)
 	my initialize()
-	set log_ctx to pScriptName & "." & "classifyDocuments"
-	tell baseLib to debug(log_ctx, "enter")
+	tell logger to debug(pScriptName, "classifyDocuments: enter")
 	tell application id "DNtp"
 		repeat with theRecord in theRecords
 			set theDatabase to database of theRecord
@@ -72,10 +71,10 @@ on classifyDocuments(theRecords)
 			if name of theDatabase contains "Belege" then
 				my setBetragForRecord(theRecord)
 			end if
-			tell baseLib to info_r(theRecord, "Document classification finished.")
+			tell logger to info_r(theRecord, "Document classification finished.")
 		end repeat
 	end tell
-	tell baseLib to debug(log_ctx, "exit")
+	tell logger to debug(pScriptName, "classifyDocuments: exit")
 end classifyDocuments
 
 -- Renames the record based on it's tags and updates the custom meta data.
@@ -84,8 +83,7 @@ end classifyDocuments
 -- Optional tags: Subject, Context, SentFlag
 on setNameAndCustomMetadata(theRecord)
 	my initialize()
-	set log_ctx to pScriptName & "." & "setNameAndCustomMetadata"
-	tell baseLib to debug(log_ctx, "enter")
+	tell logger to debug(pScriptName, "setNameAndCustomMetadata: enter")
 	tell application id "DNtp"
 		set {theYear, theMonth, theDay, theSender, theSubject, theContext, theSentFlag, theCCFlag} ¬
 			to {null, null, null, null, null, null, false, false}
@@ -103,7 +101,7 @@ on setNameAndCustomMetadata(theRecord)
 			if (aTag as string) is equal to pCcTag then set theCCFlag to true
 		end repeat
 		if theYear is null or theMonth is null or theDay is null or theSender is null then
-			tell baseLib to info_r(theRecord, "Can't rename record - missing tags.")
+			tell logger to info_r(theRecord, "Can't rename record - missing tags.")
 		else
 			set theOldRecordName to name of theRecord
 			set theRecordName to theYear & "-" & theMonth & "-" & theDay
@@ -114,16 +112,16 @@ on setNameAndCustomMetadata(theRecord)
 			if theSubject is not null then set theRecordName to theRecordName & my tokenForFilename(theSubject)
 			set name of theRecord to theRecordName
 			my setCustomMetaData(theRecord, theYear, theMonth, theDay, theSender, theSubject, theSentFlag, theCCFlag)
-			tell baseLib to debug_r(theRecord, "Record renamed - old name was: " & theOldRecordName)
+			tell logger to debug_r(theRecord, "Record renamed - old name was: " & theOldRecordName)
 			return theRecordName
 		end if
 	end tell
-	tell baseLib to debug(log_ctx, "exit")
+	tell logger to debug(pScriptName, "setNameAndCustomMetadata: exit")
 end setNameAndCustomMetadata
 
 on setCustomMetaData(theRecord, theYear, theMonth_MM, theDay, theSenderTag, theSubjectTag, theSentFlag, theCCFlag)
-	set log_ctx to pScriptName & "." & "setCustomMetaData"
-	tell baseLib to debug(log_ctx, "enter")
+	my initialize()
+	tell logger to debug(pScriptName, "setNameAndCustomMetadata: enter")
 	tell application id "DNtp"
 		set {cmdDate, cmdSender, cmdSubject} to {null, null, null}
 		-- Date
@@ -149,12 +147,12 @@ on setCustomMetaData(theRecord, theYear, theMonth_MM, theDay, theSenderTag, theS
 		-- Subject
 		if theSubjectTag is not null then
 			set theSubject to get custom meta data for "Subject" from theRecord
-			tell baseLib to debug(log_ctx, "theSubject: " & theSubject)
+			tell logger to debug(pScriptName, "theSubject: " & theSubject)
 			if theSubject is missing value then
 				add custom meta data theSubjectTag for "Subject" to theRecord
 			else
 				set theCustomText to do shell script "str=" & quoted form of theSubject & "; ([[ $str == *\" - \"* ]] && echo \"${str#* - }\") || ([[ $str == *:* ]] && echo \"${str#*:}\") | awk '{$1=$1};1'"
-				tell baseLib to debug(log_ctx, "theCustomText: " & theCustomText)
+				tell logger to debug(pScriptName, "theCustomText: " & theCustomText)
 				if theCustomText is "" then
 					add custom meta data theSubjectTag for "Subject" to theRecord
 				else
@@ -162,13 +160,14 @@ on setCustomMetaData(theRecord, theYear, theMonth_MM, theDay, theSenderTag, theS
 				end if
 			end if
 		end if
-		tell baseLib to debug(log_ctx, "cmdDate: " & cmdDate & ", cmdSender: " & cmdSender & ", cmdSubject: " & theSubject)
+		tell logger to debug(pScriptName, "cmdDate: " & cmdDate & ", cmdSender: " & cmdSender & ", cmdSubject: " & theSubject)
 	end tell
-	tell baseLib to debug(log_ctx, "exit")
+	tell logger to debug(pScriptName, "setNameAndCustomMetadata: exit")
 end setCustomMetaData
 
 on archiveRecords(theRecords, theCallerScript)
 	my initialize()
+	tell logger to debug(pScriptName, "archiveRecords: enter")
 	tell application id "DNtp"
 		try
 			repeat with theRecord in theRecords
@@ -200,6 +199,7 @@ on archiveRecords(theRecords, theCallerScript)
 		end try
 
 	end tell
+	tell logger to debug(pScriptName, "archiveRecords: exit")
 end archiveRecords
 
 on tokenForFilename(theTagValue)
@@ -207,14 +207,14 @@ on tokenForFilename(theTagValue)
 end tokenForFilename
 
 on setDateTagsFromRecord(theRecord)
-	set log_ctx to pScriptName & "." & "setDateTagsFromRecord"
-	tell baseLib to debug(log_ctx, "enter")
+	my initialize()
+	tell logger to debug(pScriptName, "setDateTagsFromRecord: enter")
 	tell application id "DNtp"
 		try
 			set theDocumentDate to document date of theRecord
 			theDocumentDate
 		on error number -2753
-			tell baseLib to debug(log_ctx, "No 'document date' found, 'creation date' will be used instead.")
+			tell logger to debug(pScriptName, "No 'document date' found, 'creation date' will be used instead.")
 			set theDocumentDate to creation date of theRecord
 		end try
 		tell baseLib to set theDocumentDateAsString to date_to_iso(theDocumentDate)
@@ -223,14 +223,15 @@ on setDateTagsFromRecord(theRecord)
 		set theMonth to get item theMonthAsString of pMonthsList
 		set theDay to (characters 9 thru 10 of theDocumentDateAsString) as string
 		set tags of theRecord to tags of theRecord & {theYear, theMonth, theDay}
-		tell baseLib to debug_r(theRecord, "Day: " & theDay & ", Month: " & theMonth & ", Year: " & theYear)
+		tell logger to debug_r(theRecord, "Day: " & theDay & ", Month: " & theMonth & ", Year: " & theYear)
 	end tell
-	tell baseLib to debug(log_ctx, "exit")
+	tell logger to debug(pScriptName, "exit")
+	tell logger to debug(pScriptName, "setDateTagsFromRecord: exit")
 end setDateTagsFromRecord
 
 on setNonDateTagsFromCompareRecord(theRecord, theDatabase)
-	set log_ctx to pScriptName & "." & "setNonDateTagsFromCompareRecord"
-	tell baseLib to debug(log_ctx, "enter")
+	my initialize()
+	tell logger to debug(pScriptName, "setNonDateTagsFromCompareRecord: enter")
 	tell application id "DNtp"
 		set theTags to tags of theRecord
 		set theComparedRecords to compare record theRecord to theDatabase
@@ -250,23 +251,23 @@ on setNonDateTagsFromCompareRecord(theRecord, theDatabase)
 					if theContext is not null then set end of nonDateTags to theContext
 					set tags of theRecord to tags of theRecord & nonDateTags
 				else
-					tell baseLib to debug_r(theRecord, "No tags copied - score of best compare record below threshold - score: " & (theScore as string))
+					tell logger to debug_r(theRecord, "No tags copied - score of best compare record below threshold - score: " & (theScore as string))
 				end if
 				exit repeat -- only first record needed
 			end if
 		end repeat
 	end tell
-	tell baseLib to debug(log_ctx, "exit")
+	tell logger to debug(pScriptName, "setNonDateTagsFromCompareRecord: exit")
 end setNonDateTagsFromCompareRecord
 
 on verifyTags(checkDate, checkSender)
-	set log_ctx to pScriptName & "." & "verifyTags"
-	tell baseLib to debug(log_ctx, "enter")
+	my initialize()
+	tell logger to debug(pScriptName, "verifyTags: enter")
 	tell application id "DNtp"
 		set currentDatabase to current database
 		my initializeTagLists(currentDatabase)
 		set theRecords to contents of currentDatabase whose location begins with "/"
-		tell baseLib to info(log_ctx, "Verify tags started for database: " & (name of currentDatabase as string) & ", number of records: " & (length of theRecords as string))
+		tell logger to info(pScriptName, "Verify tags started for database: " & (name of currentDatabase as string) & ", number of records: " & (length of theRecords as string))
 		set issueRecords to 0
 		set {issueRecords, issues} to {0, 0}
 		repeat with theRecord in theRecords
@@ -276,21 +277,21 @@ on verifyTags(checkDate, checkSender)
 				if checkDate is true then
 					if pDays contains aTag then
 						if theDay is not null then
-							tell baseLib to info_r(theRecord, "Another tag of same type found for type: day")
+							tell logger to info_r(theRecord, "Another tag of same type found for type: day")
 							set issueCount to issueCount + 1
 						end if
 						set theDay to aTag
 					end if
 					if pMonths contains aTag then
 						if theMonth is not null then
-							tell baseLib to info_r(theRecord, "Another tag of same type found for type: month")
+							tell logger to info_r(theRecord, "Another tag of same type found for type: month")
 							set issueCount to issueCount + 1
 						end if
 						set theMonth to aTag
 					end if
 					if pYears contains aTag then
 						if theYear is not null then
-							tell baseLib to info_r(theRecord, "Another tag of same type found for type: year")
+							tell logger to info_r(theRecord, "Another tag of same type found for type: year")
 							set issueCount to issueCount + 1
 						end if
 						set theYear to aTag
@@ -299,7 +300,7 @@ on verifyTags(checkDate, checkSender)
 				if checkSender is true then
 					if pSenders contains aTag then
 						if theSender is not null then
-							tell baseLib to info_r(theRecord, "Another tag of same type found for type: sender")
+							tell logger to info_r(theRecord, "Another tag of same type found for type: sender")
 							set issueCount to issueCount + 1
 						end if
 						set theSender to aTag
@@ -308,21 +309,21 @@ on verifyTags(checkDate, checkSender)
 			end repeat
 			if checkDate is true then
 				if theDay is null then
-					tell baseLib to info_r(theRecord, "Tag missing: day")
+					tell logger to info_r(theRecord, "Tag missing: day")
 					set issueCount to issueCount + 1
 				end if
 				if theMonth is null then
-					tell baseLib to info_r(theRecord, "Tag missing: month")
+					tell logger to info_r(theRecord, "Tag missing: month")
 					set issueCount to issueCount + 1
 				end if
 				if theYear is null then
-					tell baseLib to info_r(theRecord, "Tag missing: year")
+					tell logger to info_r(theRecord, "Tag missing: year")
 					set issueCount to issueCount + 1
 				end if
 			end if
 			if checkSender is true then
 				if theSender is null then
-					tell baseLib to info_r(theRecord, "Tag missing: sender")
+					tell logger to info_r(theRecord, "Tag missing: sender")
 					set issueCount to issueCount + 1
 				end if
 			end if
@@ -331,16 +332,16 @@ on verifyTags(checkDate, checkSender)
 				set issues to issues + issueCount
 			end if
 		end repeat
-		tell baseLib to info(log_ctx, "Verify tags finished - Issues: " & (issues as string) & ", Records with issues: " & (issueRecords as string))
+		tell logger to info(pScriptName, "Verify tags finished - Issues: " & (issues as string) & ", Records with issues: " & (issueRecords as string))
 	end tell
-	tell baseLib to debug(log_ctx, "exit")
+	tell logger to debug(pScriptName, "verifyTags: exit")
 end verifyTags
 
 on initializeTagLists(theDatabase)
 	my initialize()
-	set log_ctx to pScriptName & "." & "initializeTagLists"
+	tell logger to debug(pScriptName, "initializeTagLists: enter")
 	tell application id "DNtp"
-		tell baseLib to debug(log_ctx, "Initialize tag lists for database: " & name of theDatabase)
+		tell logger to debug(pScriptName, "Initialize tag lists for database: " & name of theDatabase)
 		set theTopLevelTagGroups to children of tags group of theDatabase --current database
 		repeat with theTopLevelTagGroup in theTopLevelTagGroups
 			set theChildren to get children of theTopLevelTagGroup
@@ -358,11 +359,14 @@ on initializeTagLists(theDatabase)
 				set pContexts to my createTagList(theChildren, {})
 			end if
 		end repeat
-		tell baseLib to debug(log_ctx, "Initialize tag lists finished for database: " & name of theDatabase & ", Days: " & length of pDays & ", Months: " & length of pMonths & ", Years: " & length of pYears & ", Senders: " & length of pSenders & ", Subjects: " & length of pSubjects & ", Contexts: " & length of pContexts)
+		tell logger to debug(pScriptName, "Initialize tag lists finished for database: " & name of theDatabase & ", Days: " & length of pDays & ", Months: " & length of pMonths & ", Years: " & length of pYears & ", Senders: " & length of pSenders & ", Subjects: " & length of pSubjects & ", Contexts: " & length of pContexts)
 	end tell
+	tell logger to debug(pScriptName, "initializeTagLists: exit")
 end initializeTagLists
 
 on createTagList(theTags, resultList)
+	my initialize()
+	-- tell logger to debug(pScriptName, "createTagList: enter")
 	tell application id "DNtp"
 		repeat with tagListItem in theTags
 			set tagTypeOfTagListItem to tag type of tagListItem as string
@@ -374,6 +378,7 @@ on createTagList(theTags, resultList)
 		end repeat
 		return resultList
 	end tell
+	-- tell logger to debug(pScriptName, "createTagList	: exit")
 	return resultList
 end createTagList
 
