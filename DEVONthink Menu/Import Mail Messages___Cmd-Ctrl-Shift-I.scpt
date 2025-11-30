@@ -27,7 +27,7 @@ on importMailMessages()
 		if not (exists current database) then error "No database is in use."
 	end tell
 
-	tell application "Mail" to set theMessages to messages of mailbox mailboxImportFolder of account mailboxAccount
+	tell application id "com.apple.mail" to set theMessages to messages of mailbox mailboxImportFolder of account mailboxAccount
 
 	tell mailLib to importMessages(theMessages, devonthinkDatabase, devonthinkInboxFolder, dtSortBySender, mailboxAccount, mailboxArchiveFolder, pScriptName)
 
