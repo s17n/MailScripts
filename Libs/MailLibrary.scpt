@@ -153,7 +153,7 @@ end addOrUpdateContactsByGroup
 --    theMailboxAccount : Mailbox Account
 --    theArchiveFolder : Mailbox / Ordner in den die Messages nach dem Import verschoben werden sollen.
 --
-on importMessages(theMessages, theDatabase, theDefaultImportFolder, sortByEngagementGroup, theMailboxAccount, theArchiveFolder, theCallerScript)
+on importMessages(theMessages, theDatabase, theDefaultImportFolder, sortByEngagementGroup, theMailboxAccount, theArchiveRootFolder, theCallerScript)
 	my initialize()
 	tell logger to debug(pScriptName, "importMessages: enter")
 	tell application "Mail"
@@ -179,7 +179,6 @@ on importMessages(theMessages, theDatabase, theDefaultImportFolder, sortByEngage
 					set theImportFolder to "Inbox/" & theDefaultImportFolder
 				end if
 
-				set theArchiveFolderYYYYMM to ""
 				tell application id "DNtp"
 					set theGroup to incoming group of database theDatabase
 					set theRecord to create record with {name:theName & ".eml", type:unknown, creation date:theDateSent, modification date:theDateReceived, URL:theSender, source:(theSource as string), unread:(not theReadFlag)} in theGroup
@@ -187,17 +186,28 @@ on importMessages(theMessages, theDatabase, theDefaultImportFolder, sortByEngage
 					set theImportFolder to create location theImportFolder in database theDatabase
 					move record theRecord to theImportFolder
 
-					set unread of theRecord to true
 					my setCustomAttributes(theRecord, senderAddress)
-					tell logger to info_r(theRecord, "New Message imported - received at:  " & theDateSent & " from: " & theSender)
 
-					set theYear to rich texts 1 thru 4 of theName
-					set theMonth to rich texts 5 thru 6 of theName
-					set theArchiveFolderYYYYMM to theArchiveFolder & "/" & theYear & "/" & theMonth
+					set theSender to get custom meta data for "Sender" from theRecord
+					tell baseLib to set theSenderEncoded to replaceText("/", "\\/", theSender)
+					set unread of theRecord to not (exists record at "07 Miscellaneous/Configuration/Import as Read/" & theSenderEncoded)
+
+					tell logger to info_r(theRecord, "New Message imported - received at:  " & theDateSent & " from: " & theSender)
 				end tell
 
+				-- Archiv-Folder zusammenbauen
+				set theArchiveFolder to ""
+				set theYear to rich text 1 thru 4 of theName
+				set theMonth to rich text 5 thru 6 of theName
+				if theMailboxAccount = "Google" then
+					set theArchiveFolder to theArchiveRootFolder & "/" & theYear & "/" & theMonth
+				else
+					set theArchiveFolder to theArchiveRootFolder & "/Year/" & theMonth
+				end if
+
+				-- Email als gelesen markieren und ins Archiv verschieben
 				set read status of theMessage to true
-				set mailbox of theMessage to mailbox theArchiveFolderYYYYMM of account theMailboxAccount
+				set mailbox of theMessage to mailbox theArchiveFolder of account theMailboxAccount
 
 			on error error_message number error_number
 				if error_number is not -128 then display alert "Devonthink" message error_message as warning
