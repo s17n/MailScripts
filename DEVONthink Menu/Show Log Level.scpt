@@ -1,10 +1,11 @@
 #@osa-lang:AppleScript
 property pScriptName : "Classify Document"
 
-set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
-set docLib to (load script (pDocLibraryPath of mailscriptsConfig))
+set config to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
+set logger to load script ((pMailScriptsPath of config) & "/Libs/Logger.scpt")
 
-tell docLib
+
+tell logger
 	initialize()
 	showLogLevel()
 end tell

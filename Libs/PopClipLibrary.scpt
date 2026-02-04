@@ -1,48 +1,43 @@
 #@osa-lang:AppleScript
-use AppleScript version "2.3" -- Mavericks (10.9) or later
+property pScriptName : "PopClipLibrary"
+
+use AppleScript version "2.4"
 use scripting additions
 use framework "Foundation"
 use framework "AppKit" -- for NSEvent
 
-property pScriptName : "PopClipLib"
-property baseLib : missing value
 property logger : missing value
+property docLib : missing value
+property baseLib : missing value
 
-on initialize()
-	if logger is missing value then
+on initialize(loggingContext, enforceInitialize)
+
+	if enforceInitialize or logger is missing value then
+		-- Configuration
 		set config to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
-		set logger to load script ((pMailScriptsPath of config) & "/Libs/Logger.scpt")
+		set mailScriptsDir to pMailScriptsPath of config
+
+		-- Logger & BaseLib
+		set docLib to load script (mailScriptsDir & "/Libs/DocLibrary.scpt")
+		set logger to load script (mailScriptsDir & "/Libs/Logger.scpt")
 		tell logger to initialize()
+		set baseLib to load script (mailScriptsDir & "/Libs/BaseLibrary.scpt")
+
 	end if
-	if baseLib is missing value then
-		set config to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
-		set baseLib to load script ((pMailScriptsPath of config) & "/Libs/BaseLibrary.scpt")
-	end if
+	return pScriptName & " > " & loggingContext
+
 end initialize
 
 on setSubject(theText, theCallerScript)
-	my initialize()
-	tell logger to debug(pScriptName, "setSubject: enter")
+	set logCtx to my initialize("setSubject", true)
+	tell logger to debug(logCtx, "enter => " & theText)
 
 	-- Command key pressed?
 	set cmdKeyStat to (((current application's NSEvent's modifierFlags()) div (current application's NSCommandKeyMask as integer)) mod 2) > 0
 
-	tell application id "DNtp"
-		set theRecord to content record
-		set theCurrentSubject to get custom meta data for "Subject" from theRecord
-		if theCurrentSubject is missing value then set theCurrentSubject to ""
-		if cmdKeyStat then
-			tell logger to debug(pScriptName, "cmdKeyStat cmd pressed")
-		else
-			tell baseLib to set theTrimmedText to trim(theText)
-			set theSubjectTokenDelimiter to " "
-			if (count of words of theCurrentSubject) = 1 then set theSubjectTokenDelimiter to ": "
-			set theNewSubject to theCurrentSubject & theSubjectTokenDelimiter & theTrimmedText
-		end if
-		add custom meta data theNewSubject for "Subject" to theRecord
-	end tell
+	tell docLib to addSubjectText(theText)
 
-	tell logger to debug(pScriptName, "setSubject: exit")
+	tell logger to debug(logCtx, "exit")
 end setSubject
 
 on setSender(theText, theCallerScript)

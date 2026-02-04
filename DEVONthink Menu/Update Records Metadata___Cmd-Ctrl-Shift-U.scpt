@@ -1,5 +1,5 @@
 #@osa-lang:AppleScript
-property pScriptName : "Classify Records"
+property pScriptName : "Update Records Metadata"
 
 property logger : missing value
 property mailLib : missing value
@@ -35,13 +35,11 @@ on processRecords()
 			set databaseName to name of current database
 
 			if databaseName contains "Mail" then
-				mailLib's classifyMessages(theSelection)
-				mailLib's createSmartGroup(theSelection)
+				mailLib's renameRecords(theSelection)
 			else
-				docLib's classifyRecords(currentDatabase, theSelection)
+				docLib's updateRecordsMetadata(currentDatabase, theSelection)
 			end if
 		end tell
-
 	on error error_message number error_number
 		tell logger to info(logCtx, (error_number as text) & ": " & error_message)
 		display alert "DEVONthink" message error_message as warning
