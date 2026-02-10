@@ -1,42 +1,44 @@
 #@osa-lang:AppleScript
 property pScriptName : "Import Mail Messages"
-property logger : missing value
 
-on initialize()
-	if logger is missing value then
-		set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
-		set logger to load script ((pMailScriptsPath of mailscriptsConfig) & "/Libs/Logger.scpt")
+property logger : missing value
+property mailLib : missing value
+
+on initialize(loggingContext, enforceInitialize)
+
+	if enforceInitialize or logger is missing value then
+		set config to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
+		set docLib to load script pDocLibraryPath of config
+		set mailLib to load script pMailLibraryPath of config
+		set logger to load script pLogger of config
 		tell logger to initialize()
+
 	end if
+	return pScriptName & " > " & loggingContext
+
 end initialize
 
 on importMailMessages()
-	my initialize()
-	tell logger to debug(pScriptName, "importMailMessages: enter")
+	set logCtx to my initialize("importMailMessages", false)
+	tell logger to debug(logCtx, "enter")
 
-	set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
-	set mailLib to load script ((pMailScriptsPath of mailscriptsConfig) & "/Libs/MailLibrary.scpt")
-	set mailboxAccount to (the pMailboxAccount of mailscriptsConfig)
-	set mailboxImportFolder to (the pMailboxImportFolder of mailscriptsConfig)
-	set mailboxArchiveFolder to (the pMailboxArchiveFolder of mailscriptsConfig)
-	set devonthinkDatabase to (the pDtImportDatabase of mailscriptsConfig)
-	set devonthinkInboxFolder to (the pDtImportFolder_1 of mailscriptsConfig)
-	set dtSortBySender to (the pDtSortBySender of mailscriptsConfig)
 
-	tell application id "DNtp"
-		if not (exists current database) then error "No database is in use."
+	set config to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
+	set mailLib to load script pMailLibraryPath of config
+
+	tell mailLib
+		set theMessages to getMessagesFromInbox()
+		importMessages(theMessages)
 	end tell
 
-	tell application id "com.apple.mail" to set theMessages to messages of mailbox mailboxImportFolder of account mailboxAccount
-
-	tell mailLib to importMessages(theMessages, devonthinkDatabase, devonthinkInboxFolder, dtSortBySender, mailboxAccount, mailboxArchiveFolder, pScriptName)
-
-	tell logger to debug(pScriptName, "importMailMessages: exit")
+	tell logger to debug(logCtx, "exit")
 end importMailMessages
 
 on run {}
+	set logCtx to my initialize("run", true)
+	tell logger to debug(logCtx, "enter")
 
-	my initialize()
 	my importMailMessages()
 
+	tell logger to debug(logCtx, "exit")
 end run

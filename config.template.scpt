@@ -1,39 +1,24 @@
 #@osa-lang:AppleScript
--- full qualified path to MailLibrary
-property pMailScriptsPath : "/Users/[Username]/Projects/MailScripts"
+-- Note: This file needs to be saved to ~/.mailscripts/config.scpt.
+--       Properties needs to be adjusted.
+
+-- Path to the MailScripts folder
+property pMailScriptsPath : "/Users/.../Projects/MailScripts"
+
+-- Path to Database Configurations
+property pDatabaseConfigurationFolder : "/Users/.../Library/Mobile Documents/com~apple~CloudDocs/MailScripts"
+
+-- Path to exiftool
+property pExiftool : "/opt/homebrew/bin/exiftool"
+
+-- Mail Database
+property pPrimaryEmailDatabase : "Mail"
+
+-- Full qualified path to MailScript's Libraries - this doesn't needs to be changed
+property pLogger : pMailScriptsPath & "/Libs/Logger.scpt"
 property pBaseLibraryPath : pMailScriptsPath & "/Libs/BaseLibrary.scpt"
 property pMailLibraryPath : pMailScriptsPath & "/Libs/MailLibrary.scpt"
 property pDocLibraryPath : pMailScriptsPath & "/Libs/DocLibrary.scpt"
 property pPopClipLibraryPath : pMailScriptsPath & "/Libs/PopClipLibrary.scpt"
 
--- name of the mailbox account in Apple Mail used for import
-property pMailboxAccount : "Google"
-
--- name of the mailbox folder from where the message will be imported in DEVONthink
-property pMailboxImportFolder : "Zu archivieren"
-
--- the mailbox folder where the message will be moved into when imported in DEVONthink
-property pMailboxArchiveFolder : "Archiviert"
-
--- the DEVONthink database the message will be imported into
-property pDtImportDatabase : "Mail"
-
--- the DEVONthink folder the message will be filed; different folder for mail rules
-property pDtImportFolder_1 : "Inbox"
-property pDtImportFolder_2 : ""
-property pDtImportFolder_3 : ""
-property pDtImportFolder_4 : ""
-property pDtImportFolder_5 : ""
-
-property pDtArchiveRoot : ""
-
--- used when a message subject is empty
-property pNoSubjectString : "(no subject)"
-
--- defaut metadata for new markdown documents
-property pDocsAuthor : "[author]"
-property pDocsSubject : "[subject]"
-
-property pDtSortBySender : false
-
-property pLogLevel : 1
+property pLogLevel : 2 -- 1 DEBUG, 2 INFO, 3 ERROR

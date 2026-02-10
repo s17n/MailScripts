@@ -4,19 +4,154 @@ property pScriptName : "MailLibrary"
 property baseLib : missing value
 property logger : missing value
 
+property pDatabaseConfigurationFolder : missing value
+
+property pPrimaryEmailDatabase : missing value
+
+property pMailboxAccount : missing value
+property pMailboxImportFolder : missing value
+property pMailboxArchiveFolder : missing value
+property pDevonthinkInboxFolder : missing value
+property pDevonthinkSortBySender : missing value
+property pDelayBeforeImport : 0
+
 property pScoreThreshold : 0.15
 
-on initialize()
-	if logger is missing value then
-		set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
-		set logger to load script ((pMailScriptsPath of mailscriptsConfig) & "/Libs/Logger.scpt")
+property pIsInitialized : false
+
+on initialize(loggingContext)
+	set logCtx to pScriptName & " > initialize"
+
+	if not pIsInitialized then
+
+		set config to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
+		set logger to load script pLogger of config
 		tell logger to initialize()
+		set baseLib to load script pBaseLibraryPath of config
+
+		set pDatabaseConfigurationFolder to pDatabaseConfigurationFolder of config
+		set pPrimaryEmailDatabase to pPrimaryEmailDatabase of config
+
+		set pIsInitialized to true
+		tell logger to debug(logCtx, "Initialization finished")
 	end if
-	if baseLib is missing value then
-		set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
-		set baseLib to load script ((pMailScriptsPath of mailscriptsConfig) & "/Libs/BaseLibrary.scpt")
-	end if
+	return pScriptName & " > " & loggingContext
 end initialize
+
+on initializeDatabaseConfiguration(theRule)
+	set logCtx to my initialize("initializeDatabaseConfiguration")
+	tell logger to debug(logCtx, "enter")
+
+	set databaseConfigurationFilename to pDatabaseConfigurationFolder & "/Database-Configuration-" & pPrimaryEmailDatabase & ".scpt"
+	set databaseConfiguration to load script databaseConfigurationFilename
+	tell logger to debug(logCtx, "databaseConfigurationFilename: " & databaseConfigurationFilename)
+
+	set pMailboxAccount to pMailboxAccount of databaseConfiguration
+	set pMailboxImportFolder to pMailboxImportFolder of databaseConfiguration
+	set pMailboxArchiveFolder to pMailboxArchiveFolder of databaseConfiguration
+	set pDevonthinkInboxFolder to pDtImportFolder_1 of databaseConfiguration
+	set pDevonthinkSortBySender to pDevonthinkSortBySender of databaseConfiguration
+	set pDelayBeforeImport to pDelayBeforeImport of databaseConfiguration
+
+	-- LOGGER
+	set pLogLevel to pLogLevel of databaseConfiguration
+	logger's setLogLevel(pLogLevel)
+
+	tell logger to debug(logCtx, "exit")
+end initializeDatabaseConfiguration
+
+on importMessages(theMessages)
+	set logCtx to my initialize("importMessages")
+	tell logger to debug(logCtx, "enter")
+
+	my initializeDatabaseConfiguration("")
+
+	tell application "Mail"
+
+		delay pDelayBeforeImport
+		repeat with theMessage in theMessages
+			try
+				tell theMessage
+					set {theDateReceived, theDateSent, theSender, theSubject, theSource, theReadFlag} ¬
+						to {the date received, the date sent, the sender, the subject, the source, the read status}
+				end tell
+				set senderAddress to extract address from sender of theMessage
+
+				tell baseLib to set theName to format(theDateSent)
+				if theSubject is equal to "" then set theSubject to "(no subject)"
+
+				set theImportFolder to null
+				if pDevonthinkSortBySender then
+					set theImportSubFolder to my getContactGroupName(senderAddress)
+					if theImportSubFolder is not null then
+						set theImportFolder to "Inbox/" & theImportSubFolder
+					end if
+				end if
+				if theImportFolder is null then
+					set theImportFolder to "Inbox/" & pDevonthinkInboxFolder
+				end if
+
+				tell application id "DNtp"
+					set theGroup to incoming group of database pPrimaryEmailDatabase
+					set theRecord to create record with {name:theName & ".eml", type:unknown, creation date:theDateSent, modification date:theDateReceived, URL:theSender, source:(theSource as string), unread:(not theReadFlag)} in theGroup
+					perform smart rule trigger import event record theRecord
+					set theImportFolder to create location theImportFolder in database pPrimaryEmailDatabase
+					move record theRecord to theImportFolder
+
+					my setCustomAttributes(theRecord, senderAddress)
+
+					set theSender to get custom meta data for "Sender" from theRecord
+					tell baseLib to set theSenderEncoded to replaceText("/", "\\/", theSender)
+					set unread of theRecord to not (exists record at "07 Miscellaneous/Configuration/Import as Read/" & theSenderEncoded)
+
+					tell logger to info_r(theRecord, "New Message imported - received at:  " & theDateSent & " from: " & theSender)
+				end tell
+
+				-- Archiv-Folder zusammenbauen
+				set theArchiveFolder to ""
+				set theYear to rich text 1 thru 4 of theName
+				set theMonth to rich text 5 thru 6 of theName
+				if pMailboxAccount = "Google" then
+					set theArchiveFolder to pMailboxArchiveFolder & "/" & theYear
+				else
+					set theArchiveFolder to pMailboxArchiveFolder
+				end if
+
+				tell logger to debug(logCtx, "theArchiveFolder: " & theArchiveFolder)
+
+				-- Email als gelesen markieren und ins Archiv verschieben
+				set read status of theMessage to true
+				set mailbox of theMessage to mailbox theArchiveFolder of account pMailboxAccount
+
+			on error error_message number error_number
+				if error_number is not -128 then display alert "Devonthink" message error_message as warning
+				tell logger to error (error_number & " - " & error_message)
+			end try
+		end repeat
+
+		logger's info(logCtx, "Messages imported: " & length of theMessages)
+		-- set theOldMessages to messages of mailbox mailboxImportFolder of account mailboxAccount
+		-- if length of theOldMessages > 0 then
+		--	tell logger to info(pScriptName, ((length of theMessages) as rich text) & " already received message(s) found for import.")
+		--	tell mailLib to importMessages(theOldMessages, devonthinkDatabase, devonthinkInboxFolder, dtSortBySender, mailboxAccount, mailboxArchiveFolder, pScriptName)
+		--end if
+
+	end tell
+
+	tell logger to debug(logCtx, "exit")
+end importMessages
+
+on getMessagesFromInbox()
+	set logCtx to my initialize("getMessagesFromInbox")
+	tell logger to debug(logCtx, "enter")
+
+	my initializeDatabaseConfiguration("")
+
+	tell application id "com.apple.mail" to set theMessages to messages of mailbox pMailboxImportFolder of account pMailboxAccount
+
+	tell logger to debug(logCtx, "exit")
+	return theMessages
+end getMessagesFromInbox
 
 on classifyMessages(theRecords)
 	my initialize()
@@ -144,83 +279,10 @@ on addOrUpdateContactsByGroup(theRecords, theCallerScript)
 	tell logger to debug(pScriptName, "addOrUpdateContactsByGroup: exit")
 end addOrUpdateContactsByGroup
 
--- Importiert Mail Messages nach DEVONthink u. verschiebt sie anschließend in das Mailbox-Archiv.
--- Parameter:
---    theMessages : Die zu importierenden Messages.
---    theDatabase : DEVONthink Datenbank, in die importiert wird.
---    theDefaultImportFolder : DEVONthink Ordner in den importiert wird.
---    sortByEngagementGroup : Kennzeichen, ob die Messages in DEVONthink-Gruppen - identisch zu Contact-Gruppe der Sender-Adresse - verschoben werden soll.
---    theMailboxAccount : Mailbox Account
---    theArchiveFolder : Mailbox / Ordner in den die Messages nach dem Import verschoben werden sollen.
---
-on importMessages(theMessages, theDatabase, theDefaultImportFolder, sortByEngagementGroup, theMailboxAccount, theArchiveRootFolder, theCallerScript)
-	my initialize()
-	tell logger to debug(pScriptName, "importMessages: enter")
-	tell application "Mail"
-		repeat with theMessage in theMessages
-			try
-				tell theMessage
-					set {theDateReceived, theDateSent, theSender, theSubject, theSource, theReadFlag} ¬
-						to {the date received, the date sent, the sender, the subject, the source, the read status}
-				end tell
-				set senderAddress to extract address from sender of theMessage
-
-				tell baseLib to set theName to format(theDateSent)
-				if theSubject is equal to "" then set theSubject to "(no subject)"
-
-				set theImportFolder to null
-				if sortByEngagementGroup then
-					set theImportSubFolder to my getContactGroupName(senderAddress)
-					if theImportSubFolder is not null then
-						set theImportFolder to "Inbox/" & theImportSubFolder
-					end if
-				end if
-				if theImportFolder is null then
-					set theImportFolder to "Inbox/" & theDefaultImportFolder
-				end if
-
-				tell application id "DNtp"
-					set theGroup to incoming group of database theDatabase
-					set theRecord to create record with {name:theName & ".eml", type:unknown, creation date:theDateSent, modification date:theDateReceived, URL:theSender, source:(theSource as string), unread:(not theReadFlag)} in theGroup
-					perform smart rule trigger import event record theRecord
-					set theImportFolder to create location theImportFolder in database theDatabase
-					move record theRecord to theImportFolder
-
-					my setCustomAttributes(theRecord, senderAddress)
-
-					set theSender to get custom meta data for "Sender" from theRecord
-					tell baseLib to set theSenderEncoded to replaceText("/", "\\/", theSender)
-					set unread of theRecord to not (exists record at "07 Miscellaneous/Configuration/Import as Read/" & theSenderEncoded)
-
-					tell logger to info_r(theRecord, "New Message imported - received at:  " & theDateSent & " from: " & theSender)
-				end tell
-
-				-- Archiv-Folder zusammenbauen
-				set theArchiveFolder to ""
-				set theYear to rich text 1 thru 4 of theName
-				set theMonth to rich text 5 thru 6 of theName
-				if theMailboxAccount = "Google" then
-					set theArchiveFolder to theArchiveRootFolder & "/" & theYear & "/" & theMonth
-				else
-					set theArchiveFolder to theArchiveRootFolder & "/Year/" & theMonth
-				end if
-
-				-- Email als gelesen markieren und ins Archiv verschieben
-				set read status of theMessage to true
-				set mailbox of theMessage to mailbox theArchiveFolder of account theMailboxAccount
-
-			on error error_message number error_number
-				if error_number is not -128 then display alert "Devonthink" message error_message as warning
-				tell logger to error (error_number & " - " & error_message)
-			end try
-		end repeat
-	end tell
-	tell logger to debug(pScriptName, "importMessages: exit")
-end importMessages
 
 on getSender(theMetadata)
-	my initialize()
-	tell logger to debug(pScriptName, "getSender: enter")
+	set logCtx to my initialize("getSender")
+	tell logger to debug(logCtx, "enter")
 
 	set {theSender, theFirstname, theLastname, theNickname} to {"", null, null, null}
 	set theMailAddress to kMDItemAuthorEmailAddresses of theMetadata
@@ -261,13 +323,13 @@ on getSender(theMetadata)
 			end try
 		end if
 	end if
-	tell logger to debug(pScriptName, "getSender: exit")
+	tell logger to debug(logCtx, "exit")
 	return theSender
 end getSender
 
 on getSubject(theMetadata)
-	my initialize()
-	tell logger to debug(pScriptName, "getSubject: enter")
+	set logCtx to my initialize("getSubject")
+	tell logger to debug(logCtx, "enter")
 
 	try
 		set theSubject to kMDItemSubject of theMetadata
@@ -279,13 +341,13 @@ on getSubject(theMetadata)
 		end if
 	end try
 
-	tell logger to debug(pScriptName, "getSubject: exit")
+	tell logger to debug(logCtx, "exit")
 	return theSubject
 end getSubject
 
 on setCustomAttributes(theSelection)
-	my initialize()
-	tell logger to debug(pScriptName, "setCustomAttributes: enter")
+	set logCtx to my initialize("setCustomAttributes")
+	tell logger to debug(logCtx, "enter")
 
 	tell application id "DNtp"
 		repeat with theRecord in theSelection
@@ -303,7 +365,7 @@ on setCustomAttributes(theSelection)
 
 		end repeat
 	end tell
-	tell logger to debug(pScriptName, "setCustomAttributes: exit")
+	tell logger to debug(logCtx, "exit")
 end setCustomAttributes
 
 on renameRecords(theSelection)
@@ -311,8 +373,9 @@ on renameRecords(theSelection)
 end renameRecords
 
 on getContactGroupName(theMailAddress)
-	my initialize()
-	tell logger to debug(pScriptName, "getContactGroupName: enter")
+	set logCtx to my initialize("getContactGroupName")
+	tell logger to debug(logCtx, "enter")
+
 	set theGroupName to null
 	tell application "Contacts"
 		--activate
@@ -324,13 +387,14 @@ on getContactGroupName(theMailAddress)
 				set aGroupName to name of theGroup as string
 				if (aGroupName is not null) and (aGroupName is not "card") then
 					set theGroupName to aGroupName
-					tell logger to info(pScriptName, "Contact group found: " & theGroupName)
+					tell logger to debug(pScriptName, "Contact group found: " & theGroupName)
 				end if
 			end repeat
 		end if
 		--close every window
 	end tell
-	tell logger to debug(pScriptName, "getContactGroupName: exit")
+
+	tell logger to debug(logCtx, "exit")
 	return theGroupName
 end getContactGroupName
 
@@ -346,7 +410,7 @@ on archiveRecords(theRecords, theCallerScript)
 
 				set archiveFolder to ""
 				if recordIsEmail then
-					set archiveFolder to "/05 Assets"
+					set archiveFolder to "/05 Files"
 					set modification date of theRecord to current date
 					set locking of theRecord to true
 				else

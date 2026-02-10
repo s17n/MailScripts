@@ -53,6 +53,7 @@ property pSubjectTagGroup : missing value
 property pContextTagGroup : missing value
 
 property pDatabaseConfigurationFolder : missing value
+property pExiftool : missing value
 
 property pClassifyDate : missing value
 property pClassificationDate : missing value
@@ -96,6 +97,7 @@ on initialize(loggingContext)
 		set baseLib to load script (pBaseLibraryPath of config)
 
 		set pDatabaseConfigurationFolder to pDatabaseConfigurationFolder of config
+		set pExiftool to pExiftool of config
 
 		my initializeMonthsDict()
 
@@ -122,6 +124,8 @@ on initializeDatabaseConfiguration(theDatabase)
 			set defaultConfiguration to load script (pDatabaseConfigurationFolder & "/Default-Configuration-Assets.scpt")
 		else if databaseContentType is equal to "EMAILS" then
 			set defaultConfiguration to load script (pDatabaseConfigurationFolder & "/Default-Configuration-Emails.scpt")
+		else if databaseContentType is equal to "BUSINESS-01" then
+			set defaultConfiguration to load script (pDatabaseConfigurationFolder & "/Default-Configuration-Business-01.scpt")
 		end if
 
 		-- TAG GROUP NAMES
@@ -509,7 +513,7 @@ on creationDateFromMetadata(theRecord, theSender)
 		if kind of theRecord contains "PDF" then
 
 			set pdfPath to path of theRecord
-			set command to "/opt/homebrew/bin/exiftool -s -s -s -CreateDate -d '%Y-%m-%d %H:%M:%S' " & quoted form of pdfPath
+			set command to pExiftool & " -s -s -s -CreateDate -d '%Y-%m-%d %H:%M:%S' " & quoted form of pdfPath
 			try
 				set pdfCreateDateString to do shell script command
 			on error errMsg number errNum
@@ -661,7 +665,6 @@ on setCustomMetaData(theRecord, f)
 
 		-- DATE
 		if theYear is not null and theMonth is not null and theDay is not null then
-
 			set currentValue to get custom meta data for "Date" from theRecord
 			if currentValue is not missing value then set currentValue to baseLib's date_to_iso(currentValue)
 			set newValue to theYear & "-" & theMonth & "-" & theDay
@@ -674,7 +677,6 @@ on setCustomMetaData(theRecord, f)
 
 		-- SENDER
 		if theSenderTag is not null then
-
 			set currentValue to get custom meta data for "Sender" from theRecord
 			set newValue to my valueFromCustomMetadataField(theRecord, theSenderTag, "Sender")
 			if newValue as string is not equal to currentValue as string then
@@ -799,12 +801,10 @@ on subjectFromMetadata(theRecord, theSender)
 	set subjectFromPdfTitle to missing value
 	tell application id "DNtp"
 
-		-- if theSender contains "C1" then
-
 		if kind of theRecord contains "PDF" then
 
 			set pdfPath to path of theRecord
-			set cmd to "/opt/homebrew/bin/exiftool -s -s -s -Title " & quoted form of pdfPath
+			set cmd to pExiftool & " -s -s -s -Title " & quoted form of pdfPath
 			try
 				set subjectFromPdfTitle to do shell script cmd
 			on error errMsg number errNum
@@ -812,7 +812,6 @@ on subjectFromMetadata(theRecord, theSender)
 			end try
 		end if
 
-		-- end if
 	end tell
 
 	tell logger to debug(logCtx, "exit => subjectFromPdfTitle: " & subjectFromPdfTitle)
@@ -1116,7 +1115,7 @@ on verifyTags(locationSuffix)
 			end if
 
 		end repeat
-		tell logger to info(logCtx, "Verify Tags finished - Records with issues: " & issueRecords & " Total Issues: " & issues & " Total Pages: " & totalPages)
+		tell logger to info(logCtx, "Verification finished - Records with Issues: " & issueRecords & ", Total Issues: " & issues & ", Total Pages (PDF only): " & totalPages)
 	end tell
 	tell logger to debug(logCtx, "exit")
 end verifyTags
