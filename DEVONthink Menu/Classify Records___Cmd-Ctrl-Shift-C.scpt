@@ -8,14 +8,12 @@ property docLib : missing value
 on initialize(loggingContext, enforceInitialize)
 
 	if enforceInitialize or logger is missing value then
+
 		-- Configuration
 		set config to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
-		set mailScriptsDir to pMailScriptsPath of config
-
-		-- Libraries & Logger
-		set docLib to load script (mailScriptsDir & "/Libs/DocLibrary.scpt")
-		set mailLib to load script (mailScriptsDir & "/Libs/MailLibrary.scpt")
-		set logger to load script (mailScriptsDir & "/Libs/Logger.scpt")
+		set docLib to load script pDocLibraryPath of config
+		set mailLib to load script pMailLibraryPath of config
+		set logger to load script pLogger of config
 		tell logger to initialize()
 	end if
 	return pScriptName & " > " & loggingContext

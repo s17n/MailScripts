@@ -20,17 +20,6 @@ on showLogLevel()
 	tell logger to info(pScriptName, "Current log level is: " & LOG_LEVEL)
 end showLogLevel
 
-on textBeforeFirstBracket(s)
-	set logCtx to my initialize("textBeforeFirstBracket")
-	tell logger to debug(logCtx, "enter => " & s)
-
-	set p to offset of "[" in s
-	if p > 0 then return text 1 thru (p - 1) of s
-
-	tell logger to debug(logCtx, "exit => " & s)
-	return s
-end textBeforeFirstBracket
-
 on text2List(theText, theDelimiter)
 	set logCtx to my initialize("text2list")
 	tell logger to debug(logCtx, "enter")
@@ -44,7 +33,6 @@ on text2List(theText, theDelimiter)
 	-- Trimmen
 	set trimmedItems to {}
 	repeat with anItem in rawItems
-		--set end of trimmedItems to my trim(anItem as text)
 		set anItem to my textBeforeFirstBracket(anItem as text)
 		set end of trimmedItems to my trim(anItem)
 	end repeat
@@ -52,6 +40,45 @@ on text2List(theText, theDelimiter)
 	tell logger to debug(logCtx, "exit =>" & trimmedItems)
 	return trimmedItems
 end text2List
+
+on textBeforeFirstBracket(s)
+	set logCtx to my initialize("textBeforeFirstBracket")
+	tell logger to debug(logCtx, "enter => " & s)
+
+	set p to offset of "[" in s
+	if p > 0 then
+		if p > 1 then
+			set s to text 1 thru (p - 1) of s
+		else
+			set s to ""
+		end if
+	end if
+	tell logger to debug(logCtx, "exit => " & s)
+	return s
+end textBeforeFirstBracket
+
+-- https://www.macscripter.net/t/trim-remove-spaces/45457
+on trim(theText)
+	set logCtx to my initialize("trim")
+	tell logger to debug(logCtx, "enter => '" & theText & "'")
+
+	try
+		repeat until theText does not start with " "
+			set theText to text 2 thru -1 of theText
+		end repeat
+
+		repeat until theText does not end with " "
+			set theText to text 1 thru -2 of theText
+		end repeat
+
+	on error error_message number error_number
+		tell logger to info(logCtx, (error_number as text) & ": " & error_message)
+		set theText to ""
+	end try
+
+	tell logger to debug(logCtx, "exit => '" & theText & "'")
+	return theText
+end trim
 
 on configValue(theFile, theKey)
 	set logCtx to my initialize("configValue")
@@ -83,18 +110,6 @@ on decodeBase64(encodedString)
 	return decodedString
 end decodeBase64
 
--- https://www.macscripter.net/t/trim-remove-spaces/45457
-on trim(theText)
-	repeat until theText does not start with " "
-		set theText to text 2 thru -1 of theText
-	end repeat
-
-	repeat until theText does not end with " "
-		set theText to text 1 thru -2 of theText
-	end repeat
-
-	return theText
-end trim
 
 on replaceText(findText, replaceText, theText)
 	set AppleScript's text item delimiters to findText

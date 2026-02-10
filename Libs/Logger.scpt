@@ -16,6 +16,11 @@ on initialize()
 	my debug(pScriptName, "initialize: exit")
 end initialize
 
+on setLogLevel(logLevel)
+	set LOG_LEVEL to logLevel
+	my debug(pScriptName, "setLogLevel to " & logLevel)
+end setLogLevel
+
 on showLogLevel()
 	set log_ctx to pScriptName & "." & "showLogLevel"
 	my info(log_ctx, "Current log level is: " & LOG_LEVEL)

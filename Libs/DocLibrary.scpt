@@ -18,7 +18,6 @@ property pSentTag : missing value
 property pCcTag : missing value
 property pScoreThreshold : missing value
 
-property pWorkflowScriptsBaseFolder : missing value
 property pSubjectsWithBetrag : missing value
 
 property pCustomMetadataFieldSeparator : missing value
@@ -80,6 +79,11 @@ property NAME_DOCUMENT : "NAME_DOCUMENT"
 property FINDERCOMMENTS_ASSET : "FINDERCOMMENTS_ASSET"
 property FINDERCOMMENTS_DOCUMENT : "FINDERCOMMENTS_DOCUMENT"
 
+-- Verification
+property pVerifyDate : missing value
+property pVerifySender : missing value
+property pVerifySubject : missing value
+
 on initialize(loggingContext)
 	set logCtx to pScriptName & " > initialize"
 
@@ -87,42 +91,13 @@ on initialize(loggingContext)
 
 		-- Configuration
 		set config to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
-		set mailScriptsDir to pMailScriptsPath of config
-
-		-- Logger & BaseLib
-		set logger to load script (mailScriptsDir & "/Libs/Logger.scpt")
+		set logger to load script pLogger of config
 		tell logger to initialize()
-		set baseLib to load script (mailScriptsDir & "/Libs/BaseLibrary.scpt")
+		set baseLib to load script (pBaseLibraryPath of config)
 
-		-- Properties
-		set pWorkflowScriptsBaseFolder to mailScriptsDir & "/../WorkflowScripts/"
-		set pCaptureContextConfig to pCaptureContextConfig of config
-		set pFolderConfig to pFolderConfig of config
-		set pCustomMetadataFieldSeparator to pCustomMetadataFieldSeparator of config
-		set pScoreThreshold to pScoreThreshold of config
-		set pSentTag to pSentTag of config
-		set pCcTag to pCcTag of config
 		set pDatabaseConfigurationFolder to pDatabaseConfigurationFolder of config
 
-		set pDayTagGroup to pDayTagGroup of config
-		set pMonthTagGroup to pMonthTagGroup of config
-		set pYearTagGroup to pYearTagGroup of config
-		set pSenderTagGroup to pSenderTagGroup of config
-		set pSubjectTagGroup to pSubjectTagGroup of config
-		set pContextTagGroup to pContextTagGroup of config
-
-		set pAssetsBaseFolder to pAssetsBaseFolder of config
-		set pAblageLookupLocation to pAblageLookupLocation of config
-		set pAblageLatestFolder to pAblageLatestFolder of config
-		set pCameraCaptureSender to pCameraCaptureSender of config
-		set pCameraCaptureSubject to pCameraCaptureSubject of config
-		set pAblageSender to pAblageSender of config
-		set pAblageSubject to pAblageSubject of config
-		set pObjectSender to pObjectSender of config
-		set pObjectSubject to pObjectSubject of config
-
 		my initializeMonthsDict()
-		set pSubjectsWithBetrag to words of (pSubjectsWithBetrag of config)
 
 		set pIsInitialized to true
 		tell logger to debug(logCtx, "Initialization finished")
@@ -138,24 +113,73 @@ on initializeDatabaseConfiguration(theDatabase)
 
 		set databaseName to name of theDatabase
 
-		-- Classification
-		set dbConfig to load script (pDatabaseConfigurationFolder & "/" & databaseName & ".scpt")
+		set databaseConfigurationFilename to pDatabaseConfigurationFolder & "/Database-Configuration-" & databaseName & ".scpt"
+		set databaseConfiguration to load script databaseConfigurationFilename
+		set databaseContentType to pContentType of databaseConfiguration
+		if databaseContentType is equal to "DOCUMENTS" then
+			set defaultConfiguration to load script (pDatabaseConfigurationFolder & "/Default-Configuration-Documents.scpt")
+		else if databaseContentType is equal to "ASSETS" then
+			set defaultConfiguration to load script (pDatabaseConfigurationFolder & "/Default-Configuration-Assets.scpt")
+		else if databaseContentType is equal to "EMAILS" then
+			set defaultConfiguration to load script (pDatabaseConfigurationFolder & "/Default-Configuration-Emails.scpt")
+		end if
 
-		set pClassifyDate to pClassifyDate of dbConfig
-		set pClassificationDate to pClassificationDate of dbConfig
+		-- TAG GROUP NAMES
+		set pDayTagGroup to pDayTagGroup of defaultConfiguration
+		set pMonthTagGroup to pMonthTagGroup of defaultConfiguration
+		set pYearTagGroup to pYearTagGroup of defaultConfiguration
+		set pSenderTagGroup to pSenderTagGroup of defaultConfiguration
+		set pSubjectTagGroup to pSubjectTagGroup of defaultConfiguration
+		set pContextTagGroup to pContextTagGroup of defaultConfiguration
 
-		set pClassifySender to pClassifySender of dbConfig
-		set pClassifySubject to pClassifySubject of dbConfig
-		set pClassifyContext to pClassifyContext of dbConfig
+		-- CLASSIFICATION
+		set pClassifyDate to pClassifyDate of defaultConfiguration
+		set pClassificationDate to pClassificationDate of defaultConfiguration
 
-		-- Metadata
-		set pMdSetName to pMdSetName of dbConfig
-		set pNameFormat to pNameFormat of dbConfig
+		set pClassifySender to pClassifySender of defaultConfiguration
+		set pClassifySubject to pClassifySubject of defaultConfiguration
+		set pClassifyContext to pClassifyContext of defaultConfiguration
 
-		set pMdSetCustomMetadata to pMdSetCustomMetadata of dbConfig
+		-- METADATA
+		set pMdSetName to pMdSetName of defaultConfiguration
+		set pNameFormat to pNameFormat of defaultConfiguration
 
-		set pMdSetFinderComments to pMdSetFinderComments of dbConfig
-		set pFinderCommentsFormat to pFinderCommentsFormat of dbConfig
+		set pMdSetCustomMetadata to pMdSetCustomMetadata of defaultConfiguration
+
+		set pMdSetFinderComments to pMdSetFinderComments of defaultConfiguration
+		set pFinderCommentsFormat to pFinderCommentsFormat of defaultConfiguration
+
+		-- VERIFICATION
+		set pVerifyDate to pVerifyDate of defaultConfiguration
+		set pVerifySender to pVerifySender of defaultConfiguration
+		set pVerifySubject to pVerifySubject of defaultConfiguration
+
+		-- LOGGER
+		set pLogLevel to pLogLevel of defaultConfiguration
+		logger's setLogLevel(pLogLevel)
+
+		if databaseContentType is equal to "DOCUMENTS" then
+
+			set pScoreThreshold to pScoreThreshold of defaultConfiguration
+			set pSentTag to pSentTag of defaultConfiguration
+			set pCcTag to pCcTag of defaultConfiguration
+			set pSubjectsWithBetrag to words of (pSubjectsWithBetrag of defaultConfiguration)
+			set pCustomMetadataFieldSeparator to pCustomMetadataFieldSeparator of defaultConfiguration
+
+		else if databaseContentType is equal to "ASSETS" then
+
+			set pAssetsBaseFolder to pAssetsBaseFolder of defaultConfiguration
+			set pAblageLookupLocation to pAblageLookupLocation of defaultConfiguration
+			set pAblageLatestFolder to pAblageLatestFolder of defaultConfiguration
+			set pCaptureContextConfig to pCaptureContextConfig of defaultConfiguration
+			set pCameraCaptureSender to pCameraCaptureSender of defaultConfiguration
+			set pCameraCaptureSubject to pCameraCaptureSubject of defaultConfiguration
+			set pAblageSender to pAblageSender of defaultConfiguration
+			set pAblageSubject to pAblageSubject of defaultConfiguration
+			set pObjectSender to pObjectSender of defaultConfiguration
+			set pObjectSubject to pObjectSubject of defaultConfiguration
+
+		end if
 
 		my initializeTagLists(theDatabase)
 	end tell
@@ -617,7 +641,7 @@ on valueFromCustomMetadataField(theRecord, theTag, theCustomMetadataField)
 
 		-- New Value erstellen
 		set newValue to theTag
-		if secondValue is not missing value then
+		if secondValue is not missing value and secondValue is not "" then
 			set newValue to newValue & pCustomMetadataFieldSeparator & secondValue
 		end if
 	end tell
@@ -1005,19 +1029,19 @@ end setNonDateTagsFromCompareRecord
 
 
 
-on verifyTags(checkDate, checkSender, checkSubject, locationSuffix)
+on verifyTags(locationSuffix)
 	set logCtx to my initialize("verifyTags")
 	tell logger to debug(logCtx, "enter")
 
 	tell application id "DNtp"
 		set currentDatabase to current database
-		my initializeTagLists(currentDatabase)
+		my initializeDatabaseConfiguration(currentDatabase)
 
 		set theLocation to "/05 Files"
 		if locationSuffix is not null then set theLocation to theLocation & "/" & locationSuffix
 		set theRecords to contents of currentDatabase whose location begins with theLocation
-		tell logger to info(logCtx, "Verification started for Database: " & (name of currentDatabase as string) & " and Location: " & theLocation & ". " & ¬
-			"Number of Records: " & (length of theRecords as string))
+		tell logger to info(logCtx, "Verification started for Database: " & (name of currentDatabase as string) & ", Location: " & theLocation & ¬
+			", Date: " & pVerifyDate & ", Sender: " & pVerifySender & ", Subject: " & pVerifySubject & ". Number of Records: " & (length of theRecords as string))
 
 		set {issueRecords, issues, totalPages} to {0, 0, 0}
 		repeat with theRecord in theRecords
@@ -1028,7 +1052,7 @@ on verifyTags(checkDate, checkSender, checkSubject, locationSuffix)
 			set theSenderText to get custom meta data for "Sender" from theRecord
 			set theSubjectText to get custom meta data for "Subject" from theRecord
 			repeat with aTag in theTags
-				if checkDate is true then
+				if pVerifyDate then
 					if pDays contains aTag then
 						if theDay is not null then my logIssue(theRecord, true, "Another tag of same type found for type: Day")
 						set theDay to aTag
@@ -1042,31 +1066,31 @@ on verifyTags(checkDate, checkSender, checkSubject, locationSuffix)
 						set theYear to aTag
 					end if
 				end if
-				if checkSender is true then
+				if pVerifySender then
 					if pSenders contains aTag then
 						if theSender is not null then my logIssue(theRecord, true, "Another tag of same type found for type: Sender")
 						set theSender to aTag
 					end if
 				end if
-				if checkSubject is true then
+				if pVerifySubject then
 					if pSubjects contains aTag then
 						if theSubject is not null then my logIssue(theRecord, true, "Another tag of same type found for type: Subject")
 						set theSubject to aTag
 					end if
 				end if
 			end repeat
-			if checkDate is true then
+			if pVerifyDate then
 				if theDay is null then my logIssue(theRecord, true, "Missing tag: Day")
 				if theMonth is null then my logIssue(theRecord, true, "Missing tag: Month")
 				if theYear is null then my logIssue(theRecord, true, "Missing tag: Year")
 			end if
-			if checkSender is true then
+			if pVerifySender is true then
 				if theSender is null then my logIssue(theRecord, true, "Tag missing: Sender")
 				if theSenderText is not missing value and theSenderText as rich text does not start with theSender as rich text then
 					my logIssue(theRecord, true, "Issue with Sender - Tag and Field doesn't match. Tag: " & theSender & ", Field: " & theSenderText)
 				end if
 			end if
-			if checkSubject is true then
+			if pVerifySubject is true then
 				if theSubject is null then logIssue(theRecord, true, "Tag missing: Subject")
 				if theSubjectText is not missing value and length of theSubjectText > 0 then
 
