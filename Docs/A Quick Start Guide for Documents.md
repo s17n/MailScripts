@@ -1,4 +1,4 @@
-# Quick Start Guide for Documents
+# A Quick Start Guide for Documents
 
 ## Purpose and main principles
 
@@ -148,7 +148,8 @@ The Custom Metadata field 'Betrag' will be set to the document amount, but only 
 
 The video shows the classification, name & custom metadata update, and the PopClip script to add text to the subject field in action. The subject will be updated two times: first after the import and the second time triggered by the PopClip action.
 
-![Import Demo](images/import-demo.mov)
+<iframe src="https://player.vimeo.com/video/1164940198?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479" width="1024" height="629" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" referrerpolicy="strict-origin-when-cross-origin" title="import-demo"></iframe>
+
 
 The classification and the name & custom metadata udpate was triggered by an 'on import' Smart Rule. For paper scans this is quite similar, except that in paper scenarios all scans arrive in the Global Inbox and will be moved to the Inbox of the destination database by Smart Rule that checks for specific keywords.
 
