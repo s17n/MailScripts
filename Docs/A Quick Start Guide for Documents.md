@@ -8,7 +8,7 @@ The solution can be best described as a DEVONthink-centric classification system
 
 A document in the context here can be best described as a typical letter-format postal document or a digital equivalent of it. This kind of documents usually comes from a specific sender, does have a specific date as well as your name and your address as the recipient on it - in opposite to some other kind of documents like e.g. e-books, magazines, manuals, Office documents, emails etc. 
 
-The solution supports and encourages the usage in combination with [Inbox Zero](https://www.youtube.com/watch?v=z9UjeTMb3Yk) and the [PARA method](https://fortelabs.com/blog/para/).
+The solution supports and encourages the usage in combination with [Inbox Zero](https://www.youtube.com/watch?v=z9UjeTMb3Yk) and the [PARA Method](https://fortelabs.com/blog/para/).
 
 ## Database layout and top level folder structure
 
@@ -111,7 +111,6 @@ The application and integration logic are contained in the following script libr
 - **PopClipLibrary** This library contains integration logic with PopClip.
 - **Logger**: A very simple logger.
 
-
 ## Naming Schema and Custom Metadata Field Formats
 
 When a document is tagged according to the classification system, the file name will be set in this format: 
@@ -143,15 +142,18 @@ The Custom Metadata field 'Date' will always be set to the document date from th
 
 The Custom Metadata field 'Betrag' will be set to the document amount, but only when empty. 
 
-
 ## This is how it looks like
 
-The video shows the classification, name & custom metadata update, and the PopClip script to add text to the subject field in action. The subject will be updated two times: first after the import and the second time triggered by the PopClip action.
+The following video shows the classification, name & custom metadata update and the PopClip script to add text to the subject field in action. The subject will be updated two times: first after the import and the second time triggered by the PopClip action.
 
 [![Video Preview](https://vumbnail.com/1164940198.jpg)](https://vimeo.com/1164940198)
 
-The classification and the name & custom metadata udpate was triggered by an 'on import' Smart Rule. For paper scans this is quite similar, except that in paper scenarios all scans arrive in the Global Inbox and will be moved to the Inbox of the destination database by Smart Rule that checks for specific keywords.
+The classification and the name & custom metadata udpate was triggered by an 'on import' Smart Rule. For paper scans this is quite similar, except that in paper scenarios all scans arrive in the Global Inbox and will be moved to the Inbox of the destination database by Smart Rules which checks for specific keywords.
 
 ## Setup and initial configuration
 
+[tbd]
 
+## And what about the PARA folders?
+
+[tbd]
