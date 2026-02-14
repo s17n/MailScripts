@@ -6,7 +6,7 @@
 property pMailScriptsPath : "/Users/.../Projects/MailScripts"
 
 -- Database Configuration folder
-property pDatabaseConfigurationFolder : "/Users/.../Library/Mobile Documents/com~apple~CloudDocs/MailScripts"
+property pDatabaseConfigurationFolder : "/Users/.../Projects/MailScripts/Configuration"
 
 -- Path to exiftool
 property pExiftool : "/opt/homebrew/bin/exiftool"
