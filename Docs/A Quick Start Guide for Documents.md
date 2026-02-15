@@ -150,9 +150,31 @@ The following video shows the classification, name & custom metadata update and 
 
 The classification and the name & custom metadata udpate was triggered by an 'on import' Smart Rule. For paper scans this is quite similar, except that in paper scenarios all scans arrive in the Global Inbox and will be moved to the Inbox of the destination database by Smart Rules which checks for specific keywords.
 
-## Setup and initial configuration
+## Installation and initial configuration
 
-[tbd]
+In order to install the solution you need to clone the repo, set the path on your local environment and configure a database.
+
+**Prerequistes**: If osagitfilter isn't installed, this needs to be installed first. [Osagitfilter](https://github.com/doekman/osagitfilter) is required to work with AppleScript files through git. When osagitfilter is installed continue as described in the following.
+
+1. Clone the MailScripts repository to any folder on your machine:
+
+	``` bash
+	git clone https://github.com/s17n/MailScripts.git
+	```
+
+2. Configure the MailScript path according to your local installation:
+
+	- Copy `Configuration/config.scpt` to `~/.mailscripts/config.scpt`  
+	- Change the following line in  ~/.mailscripts/config.scpt to your local installation: 
+
+		``` AppleScript
+		property pMailScriptsPath : "/Users/.../Projects/MailScripts"  
+		```
+
+3. Mark the database you want to use according to the solution: 
+
+	- Copy/Paste `Template-Documents.scpt` to same folder and
+	- Rename it to `Database-Configuration-YOUR_DATABASE_NAME.scpt`
 
 ## And what about the PARA folders?
 

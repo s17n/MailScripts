@@ -1,12 +1,12 @@
 #@osa-lang:AppleScript
--- NOTE: This file needs to be saved to ~/.mailscripts/config.scpt
---       and properties needs to be checked and adjusted.
+-- NOTE: This file needs to be stored at ~/.mailscripts/config.scpt
+--       Property pMailScriptsPath must be set to your installation folder.
 
 -- Path to the MailScripts folder
 property pMailScriptsPath : "/Users/.../Projects/MailScripts"
 
--- Database Configuration folder
-property pDatabaseConfigurationFolder : "/Users/.../Projects/MailScripts/Configuration"
+-- Database Configuration folder - per default this is MailScript's Configuration folder
+property pDatabaseConfigurationFolder : pMailScriptsPath & "/Configuration"
 
 -- Path to exiftool
 property pExiftool : "/opt/homebrew/bin/exiftool"
