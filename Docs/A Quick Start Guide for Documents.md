@@ -162,7 +162,7 @@ In order to install the solution you need to clone the repo, set the path on you
 	git clone https://github.com/s17n/MailScripts.git
 	```
 
-2. Configure the MailScript path according to your local installation:
+2. Set the MailScripts path according to your local installation:
 
 	- Copy `Configuration/config.scpt` to `~/.mailscripts/config.scpt`  
 	- Change the following line in  ~/.mailscripts/config.scpt to your local installation: 
@@ -171,11 +171,15 @@ In order to install the solution you need to clone the repo, set the path on you
 		property pMailScriptsPath : "/Users/.../Projects/MailScripts"  
 		```
 
-3. Mark the database you want to use according to the solution: 
+3. Mark the database you want to use according to the Documents solution: 
 
 	- Copy/Paste `Template-Documents.scpt` to same folder and
 	- Rename it to `Database-Configuration-YOUR_DATABASE_NAME.scpt`
 
 ## And what about the PARA folders?
 
-[tbd]
+In a nutshell, a good fit for me is working with:
+
+- `Replicants` for Projects and
+- `Smart Groups`for Areas 
+
