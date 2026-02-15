@@ -150,7 +150,7 @@ The following video shows the classification, name & custom metadata update and 
 
 The classification and the name & custom metadata udpate was triggered by an 'on import' Smart Rule. For paper scans this is quite similar, except that in paper scenarios all scans arrive in the Global Inbox and will be moved to the Inbox of the destination database by Smart Rules which checks for specific keywords.
 
-## Installation and initial configuration
+## Installation and configuration
 
 In order to install the solution you need to clone the repo, set the path on your local environment and configure a database.
 
