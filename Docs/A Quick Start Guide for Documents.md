@@ -12,14 +12,14 @@ The solution supports and encourages the usage in combination with [Inbox Zero](
 
 ## Database layout and top level folder structure
 
-The solution has no specific requirements on database setup or layout (like the number of databases or the functional configuration of the databases) but it works on database level and it requires two specific folders:
+The solution does not have any special requirements on database structure or layout (like the number of databases or the functional configuration of the databases) but it works on database level and it requires two specific folders:
 
-- an **Inbox folder**, where all the documents comes in. In terms of DEVONthink, the Inbox folder of a database is the best choice for it (but not the Global Inbox).
+- an **Inbox folder**, where the documents comes in and where a Smart Rule can be attached. In terms of DEVONthink, the Inbox folder of a database is the best choice for it (but not the Global Inbox).
 - a **Files folder**, where all documents will be filed when leaving the Inbox. Your can think about it as an archive folder, but I don't want to name it archive because of the second A in PARA.
 
-When practicing PARA the top level group structure in DEVONthink could looks like this:
+When practicing PARA the top level groups structure in DEVONthink could look like this:
 
-![Top level group structure with PARA](images/database-structure.png)
+![Top level groups structure with PARA](images/database-structure.png)
 
 ## The workflow in a nutshell 
 
@@ -62,11 +62,13 @@ Tags are used to implement a (multi-dimensional) classification system where Tag
 - **Context**: Contexts are used as an additional piece of information for cases where Sender and Subject are not unique for a specific time period (e.g. when you get more than one monthly invoice from the same sender) or when a different view is helpful (e.g. a contract number or a license plate).
 	- like senders and subjects, contexts can be named any way
 
-The Day, Month and Year dimensions will be also refered as Date some times in the following. One note on this: The reason to implement a Date that way is quite simple and does have a historical background. DEVONthink's document date feature was not there at the time where I went paperless for all(most all) of my documents - but they have always been filed by date somehow, physically. Scanning a chuck of documents for a known time period and tagging it accordingly, maybe only with a valid year and month in a first iteration, was super fast. Over time a stucked with that structure.
+The Day, Month and Year dimensions will be also refered as Date dimension in the following. 
+
+Note: The reason to implement a Date that way is quite simple and does have a historical background. DEVONthink's document date feature was not there at the time where I went paperless for all(most all) of my documents - but they have always been filed by date somehow, physically. Scanning a chuck of documents for a known time period and tagging it accordingly, maybe only with the right year and month in a first iteration, was super fast. Over time I stucked with that structure.
 
 The dimension tag groups are excluded from tagging. The name of the dimentsion tag groups can be configured. 
 
-The top level Tags group in DEVONthink could looks like this:
+According to the classification system the top level Tags group in DEVONthink could looks like this:
 
 ![Top level Tags group](images/tags-structure.png)
 
@@ -154,7 +156,7 @@ The classification and the name & custom metadata udpate was triggered by an 'on
 
 In order to install the solution you need to clone the repo, set the path on your local environment and configure a database.
 
-**Prerequistes**: If osagitfilter isn't installed, this needs to be installed first. [Osagitfilter](https://github.com/doekman/osagitfilter) is required to work with AppleScript files through git. When osagitfilter is installed continue as described in the following.
+**Prerequisites**: If osagitfilter isn't installed yet, this needs to be done first. [Osagitfilter](https://github.com/doekman/osagitfilter) is required in order to work with AppleScript files in git. When osagitfilter is installed continue as described in the following.
 
 1. Clone the MailScripts repository to any folder on your machine:
 
@@ -164,16 +166,16 @@ In order to install the solution you need to clone the repo, set the path on you
 
 2. Set the MailScripts path according to your local installation:
 
-	- Copy `Configuration/config.scpt` to `~/.mailscripts/config.scpt`  
+	- Copy `Configuration/config.scpt` to `~/.mailscripts/config.scpt`  and
 	- Change the following line in  ~/.mailscripts/config.scpt to your local installation: 
 
 		``` AppleScript
 		property pMailScriptsPath : "/Users/.../Projects/MailScripts"  
 		```
 
-3. Mark the database you want to use according to the Documents solution: 
+3. Set the database you want to use: 
 
-	- Copy/Paste `Template-Documents.scpt` to same folder and
+	- Make a copy of `Template-Documents.scpt` to the same folder and
 	- Rename it to `Database-Configuration-YOUR_DATABASE_NAME.scpt`
 
 ## And what about the PARA folders?
