@@ -1,30 +1,21 @@
 #@osa-lang:AppleScript
-property pContentType : "DOCUMENTS"
+-- Dimensions
+property pDimensionsHome : "/Tags"
+property pDateDimensions : {"03 Year", "02 Month", "01 Day"} -- Reihenfolge ist wichtig: Jahr, Monat, Tag
+property pCompareDimensions : {"04 Sender", "05 Subject", "06 Context"}
 
--- TAG GROUP NAMES
-property pDayTagGroup : "01 Tag"
-property pMonthTagGroup : "02 Monat"
-property pYearTagGroup : "03 Jahr"
-property pSenderTagGroup : "04 Sender"
-property pSubjectTagGroup : "05 Subject"
-property pContextTagGroup : "06 Context"
-
--- CLASSIFICATION
-property pClassifyDate : true
+-- Date for auto-classificaton. Leave empty when auto-classification for date is not required.
 property pClassificationDate : "DATE_DOCUMENT"
 
-property pClassifySender : true
-property pClassifySubject : true
-property pClassifyContext : true
+-- Filename format. Leave empty when filename is not required.
+property pNameFormat : "[03 Year]-[02 Month]-[01 Day]_[04 Sender]_[05 Subject]"
 
--- METADATA
-property pMdSetName : true
-property pNameFormat : "NAME_DOCUMENT"
+property pCustomMetadataFields : {"Betrag", "Date", "Sender", "Subject"} -- Betrag muss als erstes stehen
+property pCustomMetadataDimensions : {"", pDateDimensions, "04 Sender", "05 Subject"}
+property pCustomMetadataTypes : {"AMOUNT", "DATE", "TEXT", "TEXT"}
+property pCustomMetadataTemplates : {"", "", "[04 Sender]{Text}", "[05 Subject]{Text}{Amount}[06 Context][[09 Marker]]"}
 
-property pMdSetCustomMetadata : true
-
-property pMdSetFinderComments : true
-property pFinderCommentsFormat : "FINDERCOMMENTS_DOCUMENT"
+property pCommentsFields : {"Sender", "Subject"}
 
 -- VERIFICATION
 property pVerifyDate : true
@@ -32,11 +23,12 @@ property pVerifySender : true
 property pVerifySubject : true
 
 --- OTHER
-property pScoreThreshold : 0.05
-property pSentTag : "Postausgang"
-property pCcTag : "In-Kopie"
-property pSubjectsWithBetrag : "Beleg Rechnung Quittung"
+property pScoreThreshold : 0.25
+property pAmountCategories : "Beleg Rechnung Quittung Kostenbescheid"
 property pCustomMetadataFieldSeparator : ": "
 
--- 1 DEBUG, 2 INFO, 3 ERROR
+property pMonths : {{"01", "Januar"}, {"02", "Februar"}, {"03", "März"}, {"04", "April"}, {"05", "Mai"}, {"06", "Juni"}, ¬
+	{"07", "Juli"}, {"08", "August"}, {"09", "September"}, {"10", "Oktober"}, {"11", "November"}, {"12", "Dezember"}}
+
+-- 0 TRACE, 1 DEBUG, 2 INFO, 3 ERROR
 property pLogLevel : 2

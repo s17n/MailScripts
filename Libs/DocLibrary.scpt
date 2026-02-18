@@ -8,19 +8,49 @@ property pScriptName : "DocLibrary"
 property logger : missing value
 property baseLib : missing value
 
+property pIsInitialized : false
+property pDimensionsDictionary : missing value
+property pAmountFormatter : missing value
+property pIssueCount : 0
+
+--- DATABASE CONFIGURATION PROPERTIES: START
+
+-- Dimensions
+property pDimensionsHome : missing value
+property pDateDimensions : missing value
+property pCompareDimensions : missing value
+
+property pClassificationDate : missing value
+
+property pNameFormat : missing value
+
+property pCustomMetadataFields : missing value
+property pCustomMetadataDimensions : missing value
+property pCustomMetadataTypes : missing value
+property pCustomMetadataTemplates : missing value
+
+property pCommentsFields : missing value
+
+-- Verification
+property pVerifyDate : missing value
+property pVerifySender : missing value
+property pVerifySubject : missing value
+
+--- Other
+property pScoreThreshold : missing value
+property pAmountCategories : missing value
+property pCustomMetadataFieldSeparator : missing value
+
+--- DATABASE CONFIGURATION PROPERTIES: END
+
 property pDays : missing value
 property pMonths : missing value
 property pYears : missing value
 property pSenders : missing value
 property pSubjects : missing value
 property pContexts : missing value
-property pSentTag : missing value
-property pCcTag : missing value
-property pScoreThreshold : missing value
+property pMarkers : missing value
 
-property pSubjectsWithBetrag : missing value
-
-property pCustomMetadataFieldSeparator : missing value
 
 property monthsByName : missing value
 property monthsByDigit : missing value
@@ -41,49 +71,9 @@ property pAblageSubject : missing value
 property pObjectSender : missing value
 property pObjectSubject : missing value
 
-property pIssueCount : 0
-
-property pIsInitialized : false
-
-property pDayTagGroup : missing value
-property pMonthTagGroup : missing value
-property pYearTagGroup : missing value
-property pSenderTagGroup : missing value
-property pSubjectTagGroup : missing value
-property pContextTagGroup : missing value
 
 property pDatabaseConfigurationFolder : missing value
 property pExiftool : missing value
-
-property pClassifyDate : missing value
-property pClassificationDate : missing value
-
-property pClassifySender : missing value
-property pClassifySubject : missing value
-property pClassifyContext : missing value
-
-property pMdSetName : missing value
-property pNameFormat : missing value
-
-property pMdSetCustomMetadata : missing value
-
-property pMdSetFinderComments : missing value
-property pFinderCommentsFormat : missing value
-
-property DATE_CREATED : "DATE_CREATED"
-property DATE_MODIFIED : "DATE_MODIFIED"
-property DATE_DOCUMENT : "DATE_DOCUMENT"
-
-property NAME_ASSET : "NAME_ASSET"
-property NAME_DOCUMENT : "NAME_DOCUMENT"
-
-property FINDERCOMMENTS_ASSET : "FINDERCOMMENTS_ASSET"
-property FINDERCOMMENTS_DOCUMENT : "FINDERCOMMENTS_DOCUMENT"
-
--- Verification
-property pVerifyDate : missing value
-property pVerifySender : missing value
-property pVerifySubject : missing value
 
 on initialize(loggingContext)
 	set logCtx to pScriptName & " > initialize"
@@ -99,8 +89,6 @@ on initialize(loggingContext)
 		set pDatabaseConfigurationFolder to pDatabaseConfigurationFolder of config
 		set pExiftool to pExiftool of config
 
-		my initializeMonthsDict()
-
 		set pIsInitialized to true
 		tell logger to debug(logCtx, "Initialization finished")
 	end if
@@ -109,87 +97,133 @@ end initialize
 
 on initializeDatabaseConfiguration(theDatabase)
 	set logCtx to my initialize("initializeDatabaseConfiguration")
-	tell logger to debug(logCtx, "enter")
+	logger's trace(logCtx, "enter")
 
 	tell application id "DNtp"
-
 		set databaseName to name of theDatabase
-
-		set databaseConfigurationFilename to pDatabaseConfigurationFolder & "/Database-Configuration-" & databaseName & ".scpt"
-		set databaseConfiguration to load script databaseConfigurationFilename
-		set databaseContentType to pContentType of databaseConfiguration
-		if databaseContentType is equal to "DOCUMENTS" then
-			set defaultConfiguration to load script (pDatabaseConfigurationFolder & "/Default-Configuration-Documents.scpt")
-		else if databaseContentType is equal to "ASSETS" then
-			set defaultConfiguration to load script (pDatabaseConfigurationFolder & "/Default-Configuration-Assets.scpt")
-		else if databaseContentType is equal to "EMAILS" then
-			set defaultConfiguration to load script (pDatabaseConfigurationFolder & "/Default-Configuration-Emails.scpt")
-		else if databaseContentType is equal to "BUSINESS-01" then
-			set defaultConfiguration to load script (pDatabaseConfigurationFolder & "/Default-Configuration-Business-01.scpt")
-		end if
-
-		-- TAG GROUP NAMES
-		set pDayTagGroup to pDayTagGroup of defaultConfiguration
-		set pMonthTagGroup to pMonthTagGroup of defaultConfiguration
-		set pYearTagGroup to pYearTagGroup of defaultConfiguration
-		set pSenderTagGroup to pSenderTagGroup of defaultConfiguration
-		set pSubjectTagGroup to pSubjectTagGroup of defaultConfiguration
-		set pContextTagGroup to pContextTagGroup of defaultConfiguration
-
-		-- CLASSIFICATION
-		set pClassifyDate to pClassifyDate of defaultConfiguration
-		set pClassificationDate to pClassificationDate of defaultConfiguration
-
-		set pClassifySender to pClassifySender of defaultConfiguration
-		set pClassifySubject to pClassifySubject of defaultConfiguration
-		set pClassifyContext to pClassifyContext of defaultConfiguration
-
-		-- METADATA
-		set pMdSetName to pMdSetName of defaultConfiguration
-		set pNameFormat to pNameFormat of defaultConfiguration
-
-		set pMdSetCustomMetadata to pMdSetCustomMetadata of defaultConfiguration
-
-		set pMdSetFinderComments to pMdSetFinderComments of defaultConfiguration
-		set pFinderCommentsFormat to pFinderCommentsFormat of defaultConfiguration
-
-		-- VERIFICATION
-		set pVerifyDate to pVerifyDate of defaultConfiguration
-		set pVerifySender to pVerifySender of defaultConfiguration
-		set pVerifySubject to pVerifySubject of defaultConfiguration
-
-		-- LOGGER
-		set pLogLevel to pLogLevel of defaultConfiguration
-		logger's setLogLevel(pLogLevel)
-
-		if databaseContentType is equal to "DOCUMENTS" then
-
-			set pScoreThreshold to pScoreThreshold of defaultConfiguration
-			set pSentTag to pSentTag of defaultConfiguration
-			set pCcTag to pCcTag of defaultConfiguration
-			set pSubjectsWithBetrag to words of (pSubjectsWithBetrag of defaultConfiguration)
-			set pCustomMetadataFieldSeparator to pCustomMetadataFieldSeparator of defaultConfiguration
-
-		else if databaseContentType is equal to "ASSETS" then
-
-			set pAssetsBaseFolder to pAssetsBaseFolder of defaultConfiguration
-			set pAblageLookupLocation to pAblageLookupLocation of defaultConfiguration
-			set pAblageLatestFolder to pAblageLatestFolder of defaultConfiguration
-			set pCaptureContextConfig to pCaptureContextConfig of defaultConfiguration
-			set pCameraCaptureSender to pCameraCaptureSender of defaultConfiguration
-			set pCameraCaptureSubject to pCameraCaptureSubject of defaultConfiguration
-			set pAblageSender to pAblageSender of defaultConfiguration
-			set pAblageSubject to pAblageSubject of defaultConfiguration
-			set pObjectSender to pObjectSender of defaultConfiguration
-			set pObjectSubject to pObjectSubject of defaultConfiguration
-
-		end if
-
-		my initializeTagLists(theDatabase)
 	end tell
 
-	tell logger to debug(logCtx, "exit")
+	set databaseConfigurationFilename to pDatabaseConfigurationFolder & "/Database-Configuration-" & databaseName & ".scpt"
+	set databaseConfiguration to load script databaseConfigurationFilename
+	set databaseContentType to pContentType of databaseConfiguration
+	set defaultConfigurationName to pDefaultConfiguration of databaseConfiguration
+	set defaultConfiguration to load script (pDatabaseConfigurationFolder & "/" & defaultConfigurationName)
+
+	-- Dimensions
+	set pDimensionsHome to pDimensionsHome of defaultConfiguration
+	set pDateDimensions to pDateDimensions of defaultConfiguration
+	set pCompareDimensions to pCompareDimensions of defaultConfiguration
+
+	-- Date for auto-classificaton. Leave empty when auto-classification for date is not required.
+	set pClassificationDate to pClassificationDate of defaultConfiguration
+
+	-- Filename format. Leave empty when filename is not required.
+	set pNameFormat to pNameFormat of defaultConfiguration
+
+	set pCustomMetadataFields to pCustomMetadataFields of defaultConfiguration
+	set pCustomMetadataDimensions to pCustomMetadataDimensions of defaultConfiguration
+	set pCustomMetadataTypes to pCustomMetadataTypes of defaultConfiguration
+	set pCustomMetadataTemplates to pCustomMetadataTemplates of defaultConfiguration
+
+	set pCommentsFields to pCommentsFields of defaultConfiguration
+
+	-- Verification
+	set pVerifyDate to pVerifyDate of defaultConfiguration
+	set pVerifySender to pVerifySender of defaultConfiguration
+	set pVerifySubject to pVerifySubject of defaultConfiguration
+
+	-- Other
+	set pScoreThreshold to pScoreThreshold of defaultConfiguration
+	set pAmountCategories to words of (pAmountCategories of defaultConfiguration)
+	set pCustomMetadataFieldSeparator to pCustomMetadataFieldSeparator of defaultConfiguration
+
+	set theMonths to pMonths of defaultConfiguration
+	set monthsByDigit to current application's NSMutableDictionary's dictionary()
+	set monthsByName to current application's NSMutableDictionary's dictionary()
+	repeat with aMonth in theMonths
+		set theNumber to first item of aMonth as string
+		set theName to second item of aMonth as string
+		logger's debug(logCtx, "theNumber: " & theNumber)
+		(monthsByDigit's setObject:theName forKey:theNumber)
+		(monthsByName's setObject:theNumber forKey:theName)
+	end repeat
+
+	-- Logger
+	set pLogLevel to pLogLevel of defaultConfiguration
+	logger's setLogLevel(pLogLevel)
+
+	if databaseContentType is equal to "DOCUMENTS" then
+
+	else if databaseContentType is equal to "BUSINESS-01" then
+
+	else if databaseContentType is equal to "ASSETS" then
+
+		set pAssetsBaseFolder to pAssetsBaseFolder of defaultConfiguration
+		set pAblageLookupLocation to pAblageLookupLocation of defaultConfiguration
+		set pAblageLatestFolder to pAblageLatestFolder of defaultConfiguration
+		set pCaptureContextConfig to pCaptureContextConfig of defaultConfiguration
+		set pCameraCaptureSender to pCameraCaptureSender of defaultConfiguration
+		set pCameraCaptureSubject to pCameraCaptureSubject of defaultConfiguration
+		set pAblageSender to pAblageSender of defaultConfiguration
+		set pAblageSubject to pAblageSubject of defaultConfiguration
+		set pObjectSender to pObjectSender of defaultConfiguration
+		set pObjectSubject to pObjectSubject of defaultConfiguration
+
+	end if
+
+	set pAmountFormatter to current application's NSNumberFormatter's new()
+	pAmountFormatter's setMinimumFractionDigits:2
+	pAmountFormatter's setMaximumFractionDigits:2
+	pAmountFormatter's setNumberStyle:(current application's NSNumberFormatterDecimalStyle)
+
+	my initializeDimensions(theDatabase)
+
+	logger's trace(logCtx, "exit")
 end initializeDatabaseConfiguration
+
+on initializeDimensions(theDatabase)
+	set logCtx to my initialize("initializeDimensions")
+	logger's trace(logCtx, "enter")
+
+	set pDimensionsDictionary to current application's NSMutableDictionary's dictionary()
+	tell application id "DNtp"
+
+		set dimensionHome to get record at pDimensionsHome
+		set theDimensions to children of dimensionHome
+		repeat with aDimension in theDimensions
+
+			set dimensionName to name of aDimension
+			set categories to my createTagList(get children of aDimension, {})
+			(pDimensionsDictionary's setObject:categories forKey:dimensionName)
+
+			tell logger to debug(logCtx, "Dimension '" & dimensionName & "' initialized with " & length of categories & " categories.")
+		end repeat
+
+	end tell
+
+	logger's trace(logCtx, "exit")
+end initializeDimensions
+
+on createTagList(theTags, resultList)
+	tell application id "DNtp"
+		repeat with tagListItem in theTags
+			set theTagType to tag type of tagListItem
+			if theTagType is ordinary tag then
+				set resultList to my addToTagList(resultList, tagListItem)
+			else
+				set resultList to my createTagList(children of tagListItem, resultList)
+			end if
+		end repeat
+		return resultList
+	end tell
+	return resultList
+end createTagList
+
+on addToTagList(theTagList, theRecord)
+	set end of theTagList to name of theRecord as string
+	return theTagList
+end addToTagList
+
 
 -- Vorverarbeitung für Camera-Captures. Klassifizierung und Metadaten-Verarbeitung muss folgen.
 -- Aufbau des Dateinamen:
@@ -200,7 +234,7 @@ end initializeDatabaseConfiguration
 --
 on processCameraCapture(theRecords)
 	set logCtx to my initialize("processCameraCapture")
-	tell logger to debug(logCtx, "enter")
+	logger's trace(logCtx, "enter")
 
 	tell application id "DNtp"
 		repeat with theRecord in theRecords
@@ -221,7 +255,7 @@ on processCameraCapture(theRecords)
 		end repeat
 	end tell
 
-	tell logger to debug(logCtx, "exit")
+	logger's trace(logCtx, "exit")
 end processCameraCapture
 
 -- Vorverarbeitung für Ablage/Objekt-Records. Klassifizierung und Metadaten-Verarbeitung muss folgen.
@@ -231,7 +265,7 @@ end processCameraCapture
 --
 on processInventoryRecords(theRecords)
 	set logCtx to my initialize("processInventoryRecords")
-	tell logger to debug(logCtx, "enter")
+	logger's trace(logCtx, "enter")
 
 	tell application id "DNtp"
 		repeat with theRecord in theRecords
@@ -248,6 +282,7 @@ on processInventoryRecords(theRecords)
 				-- latest.txt
 				set filePath to pAssetsBaseFolder & "/" & pAblageLatestFolder & "/" & theFolderName
 				set theReferenceURL to reference URL of theRecord
+
 				do shell script "mkdir -p " & quoted form of filePath
 				do shell script "printf " & quoted form of theReferenceURL & " > " & quoted form of filePath & "/latest.txt"
 
@@ -274,12 +309,12 @@ on processInventoryRecords(theRecords)
 		end repeat
 	end tell
 
-	tell logger to debug(logCtx, "exit")
+	logger's trace(logCtx, "exit")
 end processInventoryRecords
 
 on getFolderRecord(theName)
 	set logCtx to my initialize("getFolderRecord")
-	tell logger to debug(logCtx, "enter => " & theName)
+	logger's trace(logCtx, "enter => " & theName)
 
 	tell application id "DNtp"
 
@@ -288,24 +323,23 @@ on getFolderRecord(theName)
 
 	end tell
 
-	tell logger to debug(logCtx, "exit")
+	logger's trace(logCtx, "exit")
 	return theRecord
 end getFolderRecord
 
 on processDocuments(theDatabase, theRecords)
 	set logCtx to my initialize("processDocuments")
-	tell logger to debug(logCtx, "enter")
+	logger's trace(logCtx, "enter")
 
 	my classifyRecords(theDatabase, theRecords)
 	my updateRecordsMetadata(theDatabase, theRecords)
 
-	tell logger to debug(logCtx, "exit")
+	logger's trace(logCtx, "exit")
 end processDocuments
-
 
 on classifyRecords(theDatabase, theRecords)
 	set logCtx to my initialize("classifyRecords")
-	tell logger to debug(logCtx, "enter")
+	logger's trace(logCtx, "enter")
 
 	tell application id "DNtp"
 
@@ -315,34 +349,31 @@ on classifyRecords(theDatabase, theRecords)
 			set recordsSelected to recordsSelected + 1
 			if type of theRecord is not group and type of theRecord is not smart group then
 				set recordsProcessed to recordsProcessed + 1
+
 				set tagFields to my fieldsFromTags(theRecord)
 
-				if pClassifyDate then
-					if pClassificationDate is equal to DATE_MODIFIED then
-						my setDateTagsFromModificationDate(theRecord, tagFields)
-					else if pClassificationDate is equal to DATE_CREATED then
-						my setDateTagsFromCreationDate(theRecord, tagFields)
-					else if pClassificationDate is equal to DATE_DOCUMENT then
-						my setDateTagsFromDocumentDate(theRecord, tagFields)
-					else
-						error "Unknown Classification Date Field Identifier: " & pClassificationDate
-					end if
+				-- Date, wenn ClassificationDate gesetzt
+				if pClassificationDate is not missing value and pClassificationDate is not "" then
+					my setDateTags(theRecord, tagFields, pClassificationDate)
 				end if
-				if pClassifySender then
-					my setNonDateTagsFromCompareRecord(theRecord, theDatabase, tagFields)
-				end if
+
+				-- restliche Dimensionen
+				repeat with aCompareDimension in pCompareDimensions
+					my setTagFromCompareRecord(theRecord, theDatabase, tagFields, aCompareDimension)
+				end repeat
+
 			end if
 		end repeat
 		tell logger to info(logCtx, "Records selected: " & recordsSelected & ", Records processed:  " & recordsProcessed)
 	end tell
 
-	tell logger to debug(logCtx, "exit")
+	logger's trace(logCtx, "exit")
 end classifyRecords
 
 
 on updateRecordsMetadata(theDatabase, theRecords)
 	set logCtx to my initialize("updateRecordsMetadata")
-	tell logger to debug(logCtx, "enter")
+	logger's trace(logCtx, "enter")
 
 	tell application id "DNtp"
 
@@ -355,23 +386,29 @@ on updateRecordsMetadata(theDatabase, theRecords)
 			else
 				set tagFields to my fieldsFromTags(theRecord)
 
-				-- erforderliche Tags: Year, Month, Day
-				if (tagYear of tagFields is null) or (tagMonth of tagFields is null) or (tagDay of tagFields is null) then
+				if not my existDimension(tagFields, pDateDimensions) then
 					tell logger to info_r(theRecord, "Can't update metadata due to missing Date tag(s).")
 				else
 					set recordsProcessed to recordsProcessed + 1
-					if pMdSetName then
-						if pNameFormat is equal to NAME_ASSET then
-							my setNameForAsset(theRecord, tagFields)
-						else if pNameFormat is equal to NAME_DOCUMENT then
-							my setNameForDocument(theRecord, tagFields)
-						end if
+
+					-- Set Name
+					if pNameFormat is not missing value and pNameFormat is not "" then
+						my setName(theRecord, tagFields)
 					end if
-					if pMdSetCustomMetadata then
-						my setCustomMetaData(theRecord, tagFields)
-					end if
-					if pMdSetFinderComments then
-						my setFinderComment(theRecord, pFinderCommentsFormat, tagFields)
+
+					-- Set Custom Metadata
+					set customMetadataFieldIndex to 0
+					repeat with aCustomMetadataField in pCustomMetadataFields
+						set customMetadataFieldIndex to customMetadataFieldIndex + 1
+						my setCustomMetadata(customMetadataFieldIndex, theRecord, tagFields)
+					end repeat
+
+					-- Set Comments
+					if length of pCommentsFields > 0 then
+						set comment of theRecord to ""
+						repeat with aFinderCommentsField in pCommentsFields
+							my setFinderComment(aFinderCommentsField, theRecord)
+						end repeat
 					end if
 				end if
 			end if
@@ -380,117 +417,141 @@ on updateRecordsMetadata(theDatabase, theRecords)
 		tell logger to info(logCtx, "Records selected: " & recordsSelected & ", Records processed:  " & recordsProcessed)
 	end tell
 
-	tell logger to debug(logCtx, "exit")
+	logger's trace(logCtx, "exit")
 end updateRecordsMetadata
+
+on existDimension(theFields, theDimensions)
+	set logCtx to my initialize("existDimension")
+	logger's trace(logCtx, "enter")
+
+	repeat with aDimension in theDimensions
+		set theValue to (theFields's objectForKey:aDimension)
+		if theValue is missing value then
+			logger's trace(logCtx, "No value found for dimension '" & aDimensions & "'.")
+			logger's trace(logCtx, "exit > false")
+			return false
+		end if
+	end repeat
+
+	logger's trace(logCtx, "exit > true")
+	return true
+end existDimension
 
 on fieldsFromTags(theRecord)
 	set logCtx to my initialize("fieldsFromTags")
-	tell logger to debug(logCtx, "enter")
+	logger's trace(logCtx, "enter")
 
-	set fields to {tagYear:null, tagMonth:null, tagDay:null, tagSender:null, tagSubject:null, tagContext:null, tagSent:null, tagCC:null}
-
+	set fields to current application's NSMutableDictionary's dictionary()
 	tell application id "DNtp"
 
 		set theTags to tags of theRecord
 		repeat with aTag in theTags
-			set theResult to my fieldFromTag(aTag, fields)
+			set theResult to my setField(aTag, fields)
 			set hasFieldBeenSet to first item of theResult
 			set fields to second item of theResult
 			if not hasFieldBeenSet then
 				my handleUncategorizedTag(aTag)
-				set fields to second item of my fieldFromTag(aTag, fields)
+				set fields to second item of my setField(aTag, fields)
 			end if
 		end repeat
 	end tell
 
-	tell logger to debug(logCtx, "fieldsFromTags =>  tagYear: " & tagYear of fields & ", tagMonth: " & tagMonth of fields & ", tagDay: " & tagDay of fields & ", tagSender: " & tagSender of fields & ", tagSubject: " & tagSubject of fields & ", tagContext: " & tagContext of fields & ", tagSent: " & tagSent of fields & ", tagCC: " & tagCC of fields)
-	tell logger to debug(logCtx, "fieldsFromTags: exit")
+	logger's trace(logCtx, "exit")
 	return fields
 end fieldsFromTags
 
-on fieldFromTag(theTag, theFields)
-	set logCtx to my initialize("fieldFromTag")
-	tell logger to debug(logCtx, "enter => " & theTag)
+on setField(theTag, theFields)
+	set logCtx to my initialize("setField")
+	logger's trace(logCtx, "entry")
 
 	set hasFieldBeenSet to false
+	tell application id "DNtp"
 
-	if pDays contains theTag then
-		set tagDay of theFields to theTag
-		set hasFieldBeenSet to true
-	else if pMonths contains theTag then
-		set tagMonth of theFields to (monthsByName's objectForKey:theTag) as string
-		set hasFieldBeenSet to true
-	else if pYears contains theTag then
-		set tagYear of theFields to theTag
-		set hasFieldBeenSet to true
-	else if pSenders contains theTag then
-		set tagSender of theFields to theTag as string
-		set hasFieldBeenSet to true
-	else if pSubjects contains theTag then
-		set tagSubject of theFields to theTag
-		set hasFieldBeenSet to true
-	else if pContexts contains theTag then
-		set tagContext of theFields to theTag
-		set hasFieldBeenSet to true
-	else if (theTag as string) is equal to pSentTag then
-		set tagSent of theFields to true
-		set hasFieldBeenSet to true
-	else if (theTag as string) is equal to pCcTag then
-		set theCC of theFields to true
-		set hasFieldBeenSet to true
-	end if
+		set allDimensions to pDimensionsDictionary's allKeys()
+		repeat with aDimension in allDimensions
+			set categories to (pDimensionsDictionary's objectForKey:aDimension) as list
+			if categories contains theTag then
+				set setCurrentValue to (theFields's objectForKey:aDimension)
+				if setCurrentValue is missing value then
+					(theFields's setObject:theTag forKey:aDimension)
+				else
+					(theFields's setObject:{setCurrentValue, theTag} forKey:aDimension)
+				end if
+				set hasFieldBeenSet to true
+			end if
+		end repeat
 
-	tell logger to debug(logCtx, "exit")
+	end tell
+
+	logger's trace(logCtx, "exit")
 	return {hasFieldBeenSet, theFields}
-end fieldFromTag
+end setField
 
 on handleUncategorizedTag(theTag)
 	set logCtx to my initialize("handleUncategorizedTag")
-	tell logger to debug(logCtx, "enter")
+	logger's trace(logCtx, "enter")
 
 	tell application id "DNtp"
 
-		set theUncategorizedTagRecord to get record at "/Tags/" & theTag
-		set theItem to choose from list {pDayTagGroup, pMonthTagGroup, pYearTagGroup, pSenderTagGroup, pSubjectTagGroup, pContextTagGroup} ¬
-			with title "Uncategorized Tag" with prompt "Tag '" & theTag & "' is not categorized yet. You can categorize it now to one of the following categories or leave it as is." default items pSubjectTagGroup OK button name "Catagorize" cancel button name "Cancel" without multiple selections allowed
+		set theUncategorizedRecord to get record at "/Tags/" & theTag
 
-		-- Tag in Tag Group verschieben und Tag Liste aktualisieren
-		if theItem is not {} and theItem is not false then
-			set theTagCategoryRecord to get record at "/Tags/" & theItem
-			move record theUncategorizedTagRecord to theTagCategoryRecord
-			if theItem as string is equal to pDayTagGroup as string then
-				my addToTagList(pDays, theUncategorizedTagRecord)
-			else if theItem as string is equal to pMonthTagGroup as string then
-				my addToTagList(pMonths, theUncategorizedTagRecord)
-			else if theItem as string is equal to pYearTagGroup as string then
-				my addToTagList(pYears, theUncategorizedTagRecord)
-			else if theItem as string is equal to pSenderTagGroup as string then
-				my addToTagList(pSenders, theUncategorizedTagRecord)
-			else if theItem as string is equal to pSubjectTagGroup as string then
-				my addToTagList(pSubjects, theUncategorizedTagRecord)
-			else if theItem as string is equal to pContextTagGroup as string then
-				my addToTagList(pContexts, theUncategorizedTagRecord)
+		set allKeysAsList to {}
+		repeat with aKey in pDimensionsDictionary's allKeys()
+			if aKey as string is not equal to theTag as string then
+				set end of allKeysAsList to aKey as string
 			end if
+		end repeat
+
+		set sortedList to (current application's NSArray's arrayWithArray:allKeysAsList)'s ¬
+			sortedArrayUsingSelector:"localizedCaseInsensitiveCompare:"
+		set sortedList to sortedList as list
+
+		set theItem to choose from list sortedList ¬
+			with title "Uncategorized Tag: " & theTag with prompt "The Tag '" & theTag & "' is not categorized yet. You can categorize it now to one of the following dimensions or leave it as is." default items "05 Subject" OK button name "Catagorize" cancel button name "Cancel" without multiple selections allowed
+
+		-- Tag zu Categories der entsprechenden Dimension hinzufügen
+		if theItem is not {} and theItem is not false then
+
+			-- Dictionary
+			set theCategories to (pDimensionsDictionary's objectForKey:theItem) as list
+			set end of theCategories to name of theUncategorizedRecord as string
+			(pDimensionsDictionary's setObject:theCategories forKey:theItem)
+
+			-- Tag Group
+			set theDimensionRecord to get record at pDimensionsHome & "/" & theItem
+			move record theUncategorizedRecord to theDimensionRecord
 		end if
 
 	end tell
-	tell logger to debug(logCtx, "exit")
+	logger's trace(logCtx, "exit")
 end handleUncategorizedTag
 
 
-on setNameForDocument(theRecord, f)
-	set logCtx to my initialize("setNameForDocument")
-	tell logger to debug(logCtx, "enter")
+on setName(theRecord, theFields)
+	set logCtx to my initialize("setName")
+	logger's trace(logCtx, "enter")
 
-	set {theYear, theMonth, theDay, theSender, theSubject, theContext, theSent, theCC} ¬
-		to {tagYear of f, tagMonth of f, tagDay of f, tagSender of f, tagSubject of f, tagContext of f, tagSent of f, tagCC of f}
 
-	set theName to theYear & "-" & theMonth & "-" & theDay
-	if theSent is true then set theName to theName & my tokenForFilename("AN")
-	if theCC is true then set theName to theName & my tokenForFilename("CC")
-	if theSender is not null then set theName to theName & my tokenForFilename(theSender)
-	-- if theContext is not null then set theName to theName & my tokenForFilename(theContext)
-	if theSubject is not null then set theName to theName & my tokenForFilename(theSubject)
+	set theName to pNameFormat
+
+	set allDimensions to pDimensionsDictionary's allKeys()
+	repeat with aDimension in allDimensions
+
+		if (theName as string) contains ("[" & aDimension & "]" as string) then
+
+			tell logger to debug(logCtx, "aDimension: " & aDimension)
+
+			set theValue to (theFields's objectForKey:aDimension) as string
+
+			-- Replace Month to double-digit
+			set theReplacedValue to (monthsByName's objectForKey:theValue)
+			if theReplacedValue is not missing value then set theValue to theReplacedValue as string
+
+			if theValue is missing value then set theValue to ""
+			set thePlaceholder to "[" & aDimension & "]"
+			set theName to my replaceText(thePlaceholder, theValue, theName)
+		end if
+	end repeat
 
 	set currentName to name of theRecord
 	if theName as string is not equal to currentName as string then
@@ -498,17 +559,15 @@ on setNameForDocument(theRecord, f)
 		set name of theRecord to theName
 	end if
 
-	tell logger to debug(logCtx, "exit")
-end setNameForDocument
+	logger's trace(logCtx, "exit")
+end setName
 
-on creationDateFromMetadata(theRecord, theSender)
+on creationDateFromMetadata(theRecord)
 	set logCtx to my initialize("creationDateFromMetadata")
-	tell logger to debug(logCtx, "enter")
+	logger's trace(logCtx, "enter")
 
 	set {creationDate, pdfCreateDate, pdfCreateDateString} to {missing value, missing value, missing value}
 	tell application id "DNtp"
-
-		-- if theSender contains "C1" then
 
 		if kind of theRecord contains "PDF" then
 
@@ -523,17 +582,16 @@ on creationDateFromMetadata(theRecord, theSender)
 
 		end if
 
-		-- end if
 		if creationDate is missing value then set creationDate to creation date of theRecord
 	end tell
 
-	tell logger to debug(logCtx, "exit => creationDate: " & creationDate)
+	logger's trace(logCtx, "exit => creationDate: " & creationDate)
 	return creationDate
 end creationDateFromMetadata
 
 on setNameForAsset(theRecord, f)
 	set logCtx to my initialize("setNameForAsset")
-	tell logger to debug(logCtx, "enter")
+	logger's trace(logCtx, "enter")
 
 	set {logicalYear, logicalMonth, logicalDay, theSender} to {tagYear of f, tagMonth of f, tagDay of f, tagSender of f}
 	set {theName, technicalDate, logicalDate} to {missing value, missing value, missing value}
@@ -564,7 +622,7 @@ on setNameForAsset(theRecord, f)
 		set {incrementalCounter, availableNumber} to {0, missing value}
 		repeat while (availableNumber is missing value and incrementalCounter < 100)
 			set theEvaluationFilename to theName & "-" & my twoDigit(incrementalCounter) & "." & theExtension
-			tell the logger to debug(logCtx, "theEvaluationFilename: " & theEvaluationFilename)
+			tell the logger to trace(logCtx, "theEvaluationFilename: " & theEvaluationFilename)
 			if not (exists record with file theEvaluationFilename) then
 				set availableNumber to my twoDigit(incrementalCounter)
 				tell logger to debug(logCtx, "No record found with this ending number - set availableNumber to: " & availableNumber)
@@ -582,175 +640,166 @@ on setNameForAsset(theRecord, f)
 		set name of theRecord to theName
 	end tell
 
-	tell logger to debug(logCtx, "exit")
+	logger's trace(logCtx, "exit")
 end setNameForAsset
 
-on setFinderComment(theRecord, theFormat, f)
+on setFinderComment(theField, theRecord)
 	set logCtx to my initialize("setFinderComment")
-	tell logger to debug(logCtx, "enter: theFormat: " & theFormat)
+	logger's trace(logCtx, "enter > " & theField)
 
 	tell application id "DNtp"
 
-		set theSenderText to get custom meta data for "Sender" from theRecord
-		set theSubjectText to get custom meta data for "Subject" from theRecord
-		set theBetrag to get custom meta data for "Betrag" from theRecord
-		set theItemLinkText to get custom meta data for "Itemlink" from theRecord
+		set theValue to get custom meta data for theField from theRecord
 
-		if type of theRecord is group or type of theRecord is smart group then
-			set finderComment to theSubjectText
-		else
-			set {theSenderTag, theSubjectTag, theContextTag} to {tagSender of f, tagSubject of f, tagContext of f}
-			set finderComment to ""
-
-			if theFormat is equal to FINDERCOMMENTS_ASSET then
-				if theSubjectText is not missing value then
-					if finderComment is not "" then set finderComment to finderComment & ", " & linefeed
-					set finderComment to theSubjectText
-				end if
-				if theItemLinkText is not missing value then
-					if finderComment is not "" then set finderComment to finderComment & ", " & linefeed
-					set finderComment to finderComment & "Abgelegt in: " & name of (get record with uuid theItemLinkText)
-				end if
-			else if theFormat is equal to FINDERCOMMENTS_DOCUMENT then
-				if theSenderTag as string is not equal to theSenderText then
-					if finderComment is not "" then set finderComment to finderComment & ", " & linefeed
-					set finderComment to finderComment & theSenderText as string
-				end if
-				if theSubjectTag as string is not equal to theSubjectText then
-					if finderComment is not "" then set finderComment to finderComment & ", " & linefeed
-					set finderComment to finderComment & theSubjectText as string
-				end if
+		set wordCount to count of words of theValue
+		if wordCount > 1 then
+			set finderComment to comment of theRecord
+			if finderComment is not "" then
+				set finderComment to finderComment & ", " & linefeed
 			end if
+			set finderComment to theValue
+			set comment of theRecord to finderComment
 		end if
-		set comment of theRecord to finderComment
+
 	end tell
 
-	tell logger to debug(logCtx, "exit")
+	logger's trace(logCtx, "exit")
 end setFinderComment
 
-on valueFromCustomMetadataField(theRecord, theTag, theCustomMetadataField)
-	set logCtx to my initialize("valueFromCustomMetadataField")
-	tell logger to debug(logCtx, "enter: theCustomMetadataField: " & theCustomMetadataField)
+on replaceText(findText, replaceText, sourceText)
+	set logCtx to my initialize("replaceText")
+	logger's trace(logCtx, "enter > " & findText & ", " & replaceText & ", " & sourceText)
+
+	set oldTIDs to AppleScript's text item delimiters
+	set AppleScript's text item delimiters to findText
+	set textItems to text items of sourceText
+	set AppleScript's text item delimiters to replaceText
+	set newText to textItems as text
+	set AppleScript's text item delimiters to oldTIDs
+
+	logger's trace(logCtx, "exit > " & newText)
+	return newText
+end replaceText
+
+on setCustomMetadata(theIndex, theRecord, theFields)
+	set logCtx to my initialize("setCustomMetadata")
+	logger's trace(logCtx, "enter > " & theIndex)
+
+	set theField to item theIndex of pCustomMetadataFields
+	set theDimension to item theIndex of pCustomMetadataDimensions
+	set theType to item theIndex of pCustomMetadataTypes
+	set theTemplate to item theIndex of pCustomMetadataTemplates
+
+	tell application id "DNtp"
+		set currentValue to get custom meta data for theField from theRecord
+		set currentAmount to get custom meta data for first item of pCustomMetadataFields from theRecord
+		if currentAmount is not missing value then set currentAmount to (pAmountFormatter's stringFromNumber:currentAmount) as rich text
+	end tell
 
 	set newValue to missing value
-	tell application id "DNtp"
+	if theType is equal to "DATE" then
 
-		set currentValue to get custom meta data for theCustomMetadataField from theRecord
+		set currentValue to baseLib's date_to_iso(currentValue)
+
+		set theYearDimension to first item of theDimension
+		set theMonthDimension to second item of theDimension
+		set theDayDimension to third item of theDimension
+
+		set theYear to theFields's objectForKey:theYearDimension
+		set theMonth to theFields's objectForKey:theMonthDimension
+		set theMonth to monthsByName's objectForKey:theMonth
+		set theDay to theFields's objectForKey:theDayDimension
+
+		set newValue to (theYear as string) & "-" & (theMonth as string) & "-" & (theDay as string)
+
+	else if theType is equal to "AMOUNT" then
+
+		set newValue to currentValue
+		if currentValue is missing value then
+
+			set allValues to theFields's allValues()
+			repeat with aValue in allValues
+				if pAmountCategories contains aValue then
+					tell application id "DNtp"
+						set newValue to document amount of theRecord
+					end tell
+				end if
+			end repeat
+		end if
+
+	else if theType is equal to "TEXT" then
+
+		set theCategory to theFields's objectForKey:theDimension
+		if theCategory is missing value then set theCategory to ""
+
+		set theModifiedTemplate to theTemplate
+
+		repeat with aDimension in pDimensionsDictionary's allKeys()
+			if (theModifiedTemplate as string) contains ("[[" & aDimension & "]]" as string) then
+				set theReplaceText to ""
+				set theTag to (theFields's objectForKey:aDimension)
+				if theTag is missing value then
+				else if (theTag's isKindOfClass:(current application's NSString)) as boolean then
+					set theReplaceText to theReplaceText & " [" & theTag & "]"
+				else if (theTag's isKindOfClass:(current application's NSArray)) as boolean then
+					repeat with aTag in theTag
+						set theReplaceText to theReplaceText & " [" & aTag & "]"
+					end repeat
+				end if
+				set thePlaceholder to "[[" & aDimension & "]]"
+				set theModifiedTemplate to my replaceText(thePlaceholder as string, theReplaceText as string, theModifiedTemplate as string)
+			end if
+		end repeat
+
+		repeat with aDimension in pDimensionsDictionary's allKeys()
+			if (theModifiedTemplate as string) contains ("[" & aDimension & "]" as string) then
+				set theReplaceText to (theFields's objectForKey:aDimension)
+				if aDimension as string is equal to theDimension as string then
+					set theReplaceText to theCategory
+				else
+					if theReplaceText is missing value then
+						set theReplaceText to ""
+					else
+						set theReplaceText to " [" & theReplaceText & "]"
+					end if
+				end if
+				set thePlaceholder to "[" & aDimension & "]"
+				set theModifiedTemplate to my replaceText(thePlaceholder as string, theReplaceText as string, theModifiedTemplate as string)
+			end if
+		end repeat
+		logger's trace(logCtx, "theModifiedTemplate " & theModifiedTemplate)
 
 		-- Current Value parsen
-		set {fieldList, firstValue, secondValue} to {missing value, missing value, missing value}
+		set {fieldList, secondValue} to {missing value, missing value}
 		if currentValue is not missing value then tell baseLib to set fieldList to text2List(currentValue, pCustomMetadataFieldSeparator)
-		if fieldList is not missing value and length of fieldList > 0 then set firstValue to first item of fieldList
 		if fieldList is not missing value and length of fieldList > 1 then set secondValue to second item of fieldList
 
-		-- New Value erstellen
-		set newValue to theTag
+		set customText to ""
 		if secondValue is not missing value and secondValue is not "" then
-			set newValue to newValue & pCustomMetadataFieldSeparator & secondValue
+			set customText to pCustomMetadataFieldSeparator & secondValue
 		end if
-	end tell
+		set theModifiedTemplate to my replaceText("{Text}", customText, theModifiedTemplate as string)
 
-	tell logger to debug(logCtx, "exit => " & newValue)
-	return newValue
-end valueFromCustomMetadataField
+		set amountText to ""
+		if currentAmount is not missing value then set amountText to " [EUR " & currentAmount & "]"
+		set theModifiedTemplate to my replaceText("{Amount}", amountText, theModifiedTemplate as string)
 
-on setCustomMetaData(theRecord, f)
-	set logCtx to my initialize("setCustomMetaData")
-	tell logger to debug(logCtx, "enter")
+		set newValue to theModifiedTemplate
+	end if
 
-	set {theYear, theMonth, theDay, theSenderTag, theSubjectTag, theContext, theSentFlag, theCCFlag} ¬
-		to {tagYear of f, tagMonth of f, tagDay of f, tagSender of f, tagSubject of f, tagContext of f, tagSent of f, tagCC of f}
+	if newValue is not equal to currentValue then
+		tell logger to info_r(theRecord, "Field '" & theField & "' changed from: " & currentValue & " to: " & newValue)
+		tell application id "DNtp"
+			add custom meta data newValue for theField to theRecord
+		end tell
+	end if
 
-	tell application id "DNtp"
-
-		-- DATE
-		if theYear is not null and theMonth is not null and theDay is not null then
-			set currentValue to get custom meta data for "Date" from theRecord
-			if currentValue is not missing value then set currentValue to baseLib's date_to_iso(currentValue)
-			set newValue to theYear & "-" & theMonth & "-" & theDay
-
-			if newValue is not equal to currentValue then
-				tell logger to info_r(theRecord, "Field 'Date' changed from: " & currentValue & " to: " & newValue)
-				add custom meta data newValue for "Date" to theRecord
-			end if
-		end if
-
-		-- SENDER
-		if theSenderTag is not null then
-			set currentValue to get custom meta data for "Sender" from theRecord
-			set newValue to my valueFromCustomMetadataField(theRecord, theSenderTag, "Sender")
-			if newValue as string is not equal to currentValue as string then
-				tell logger to info_r(theRecord, "Field 'Sender' changed from: " & currentValue & " to: " & newValue)
-				add custom meta data newValue for "Sender" to theRecord
-			end if
-		end if
-
-		-- BETRAG
-		if my isBetragRequired(theRecord, theSubjectTag) then
-			set theDocumentAmount to document amount of theRecord
-			if theDocumentAmount is not missing value then
-				add custom meta data theDocumentAmount for "Betrag" to theRecord
-			end if
-		end if
-
-		-- SUBJECT
-		if theSubjectTag is not null then
-			set newValue to my subjectText(theRecord, f, "")
-			add custom meta data newValue for "Subject" to theRecord
-		end if
-
-	end tell
-	tell logger to debug(logCtx, "exit")
-end setCustomMetaData
-
-on subjectText(theRecord, f, additionalText)
-	set logCtx to my initialize("subjectText")
-	tell logger to debug(logCtx, "enter")
-
-	set {theYear, theMonth, theDay, theSenderTag, theSubjectTag, theContext, theSentFlag, theCCFlag} ¬
-		to {tagYear of f, tagMonth of f, tagDay of f, tagSender of f, tagSubject of f, tagContext of f, tagSent of f, tagCC of f}
-
-	set newValue to missing value
-	tell application id "DNtp"
-		set currentValue to get custom meta data for "Subject" from theRecord
-		set betrag to get custom meta data for "Betrag" from theRecord
-
-		-- Subject noch nicht gesetzt ist -> versuchen den Subject-Text initial aus den (PDF-)Metadaten auszulesen
-		if currentValue is missing value then
-			set newValue to theSubjectTag
-			set subjectFromMetadata to my subjectFromMetadata(theRecord, theSubjectTag)
-			if subjectFromMetadata is not missing value and subjectFromMetadata is not equal to "" then
-				set newValue to newValue & pCustomMetadataFieldSeparator & subjectFromMetadata
-			end if
-		else
-			set newValue to my valueFromCustomMetadataField(theRecord, theSubjectTag, "Subject")
-		end if
-
-		if additionalText is not missing value and length of additionalText > 0 then
-			if newValue is not missing value and length of additionalText > 0 then
-				if not my hasCustomText(newValue) then set newValue to newValue & ":"
-				set newValue to newValue & " " & additionalText
-			end if
-		end if
-		set addtitionalTags to ""
-		if betrag is not missing value then set addtitionalTags to addtitionalTags & "[EUR " & betrag & "]"
-		if theContext is not null then set addtitionalTags to addtitionalTags & "[" & theContext & "]"
-		if theSentFlag is not null and theSentFlag is true then set addtitionalTags to addtitionalTags & "[Sent]"
-		if theCCFlag is not null and theCCFlag is true then set addtitionalTags to addtitionalTags & "[CC]"
-		if length of addtitionalTags > 0 then set newValue to newValue & " " & addtitionalTags
-
-		if newValue as string is not equal to currentValue as string then
-			tell logger to info_r(theRecord, "Field 'Subject' changed from: " & currentValue & " to: " & newValue)
-		end if
-	end tell
-
-	tell logger to debug(logCtx, "exit => " & newValue)
-	return newValue
-end subjectText
+	logger's trace(logCtx, "exit")
+end setCustomMetadata
 
 on addSubjectText(additionalText)
 	set logCtx to my initialize("addSubjectText")
-	tell logger to debug(logCtx, "enter: additionalText: " & additionalText)
+	logger's trace(logCtx, "enter: additionalText: " & additionalText)
 
 	tell application id "DNtp"
 
@@ -764,39 +813,13 @@ on addSubjectText(additionalText)
 		add custom meta data newValue for "Subject" to theRecord
 
 	end tell
-	tell logger to debug(logCtx, "exit")
+	logger's trace(logCtx, "exit")
 end addSubjectText
 
-on hasCustomText(theString)
-	set p to offset of ":" in theString
-	if p > 0 then
-		return true
-	else
-		return false
-	end if
-end hasCustomText
-
-on isBetragRequired(theRecord, theSubjectTag)
-	set logCtx to my initialize("isBetragRequired")
-	tell logger to debug(logCtx, "enter")
-
-	set theResult to false
-	tell application id "DNtp"
-
-		if theSubjectTag is in pSubjectsWithBetrag then
-			set currentValue to get custom meta data for "Betrag" from theRecord
-			if currentValue is missing value then set theResult to true
-		end if
-
-	end tell
-
-	tell logger to debug(logCtx, "exit => " & theResult)
-	return theResult
-end isBetragRequired
 
 on subjectFromMetadata(theRecord, theSender)
 	set logCtx to my initialize("subjectFromMetadata")
-	tell logger to debug(logCtx, "enter")
+	logger's trace(logCtx, "enter")
 
 	set subjectFromPdfTitle to missing value
 	tell application id "DNtp"
@@ -814,13 +837,13 @@ on subjectFromMetadata(theRecord, theSender)
 
 	end tell
 
-	tell logger to debug(logCtx, "exit => subjectFromPdfTitle: " & subjectFromPdfTitle)
+	logger's trace(logCtx, "exit => subjectFromPdfTitle: " & subjectFromPdfTitle)
 	return subjectFromPdfTitle
 end subjectFromMetadata
 
 on archiveRecords(theRecords)
 	set logCtx to my initialize("archiveRecords")
-	tell logger to debug(logCtx, "enter")
+	logger's trace(logCtx, "enter")
 
 	tell application id "DNtp"
 		try
@@ -869,168 +892,122 @@ on archiveRecords(theRecords)
 		end try
 
 	end tell
-	tell logger to debug(logCtx, "exit")
+	logger's trace(logCtx, "exit")
 end archiveRecords
 
-on tokenForFilename(theTagValue)
-	return ("_" & theTagValue as string)
-end tokenForFilename
+on setDateTags(theRecord, theFields, theClassificationDate)
+	set logCtx to my initialize("setDateTags")
+	logger's trace(logCtx, "enter")
 
-on setDateTagsFromDocumentDate(theRecord, f)
-	set logCtx to my initialize("setDateTagsFromDocumentDate")
-	tell logger to debug(logCtx, "enter")
+	set theYear to theFields's objectForKey:(first item of pDateDimensions)
+	set theMonth to theFields's objectForKey:(second item of pDateDimensions)
+	set theDay to theFields's objectForKey:(third item of pDateDimensions)
+	-- tell logger to trace(logCtx, "theYear: " & theYear & ", theMonth: " & theMonth & ", theDay: " & theDay)
 
-	set {theYear, theMonth, theDay} ¬
-		to {tagYear of f, tagMonth of f, tagDay of f}
+	-- Date Tags will not be set if Year, Month or Day is already set
+	if theYear is not missing value or theMonth is not missing value or theDay is not missing value then
 
-	if theYear is not null then tell logger to debug(logCtx, "Nothing to do for Year - tag already set to: " & theYear)
-	if theMonth is not null then tell logger to debug(logCtx, "Nothing to do for Month - tag already set to: " & theMonth)
-	if theDay is not null then tell logger to debug(logCtx, "Nothing to do for Day - tag already set to: " & theDay)
+		if theYear is missing value then tell logger to debug(logCtx, "Year already set to: " & theYear)
+		if theMonth is missing value then tell logger to debug(logCtx, "Month already set to: " & theMonth)
+		if theDay is missing value then tell logger to debug(logCtx, "Day already set to: " & theDay)
+	else
 
-	tell application id "DNtp"
-		set theDocumentDate to missing value
-		try
-			set theDocumentDate to document date of theRecord
-			if theDocumentDate is missing value then
-				set theDocumentDate to creation date of theRecord
+		tell application id "DNtp"
+
+			set theDate to missing value
+
+			if theClassificationDate is equal to "DATE_DOCUMENT" then
+
+				try
+					set theDate to document date of theRecord
+					if theDate is missing value then
+						tell logger to info(logCtx, "No 'document date' found, 'creation date' will be used instead.")
+						set theDate to creation date of theRecord
+					end if
+				on error number -2753
+					tell logger to info(logCtx, "No 'document date' found, 'creation date' will be used instead.")
+					set theDate to creation date of theRecord
+				end try
+
+			else if theClassificationDate is equal to "DATE_MODIFIED" then
+
+				set recordName to name of theRecord
+				set theDate to modification date of theRecord
+
+			else if theClassificationDate is equal to "DATE_CREATED" then
+
+				set recordName to name of theRecord
+				set theDate to my creationDateFromMetadata(theRecord)
+
+			else
+				error "Unknown Classification Date Field Identifier: " & pClassificationDate
 			end if
-		on error number -2753
-			tell logger to info(logCtx, "No 'document date' found, 'creation date' will be used instead.")
-			set theDocumentDate to creation date of theRecord
-		end try
-		tell baseLib to set theDocumentDateAsString to date_to_iso(theDocumentDate)
-		tell logger to debug(logCtx, "theDocumentDateAsString: " & theDocumentDateAsString)
-		if theYear is null then
-			set theYear to (characters 1 thru 4 of theDocumentDateAsString) as string
-			set tags of theRecord to tags of theRecord & theYear
-		end if
-		if theMonth is null then
-			set theMonth to (characters 6 thru 7 of theDocumentDateAsString) as string
-			set theMonthAsString to (monthsByDigit's objectForKey:theMonth) as string
-			set tags of theRecord to tags of theRecord & theMonthAsString
-		end if
-		if theDay is null then
-			set theDay to (characters 9 thru 10 of theDocumentDateAsString) as string
-			set tags of theRecord to tags of theRecord & theDay
-		end if
-	end tell
 
-	tell logger to debug(logCtx, "exit")
-end setDateTagsFromDocumentDate
+			-- tell baseLib to set theDateAsString to date_to_iso(theDate)
+			tell logger to debug(logCtx, "theDate: " & theDate)
 
-
-on setDateTagsFromCreationDate(theRecord, f)
-	set logCtx to my initialize("setDateTagsFromCreationDate")
-	tell logger to debug(logCtx, "enter")
-
-	set {theYear, theMonth, theDay, theSender} ¬
-		to {tagYear of f, tagMonth of f, tagDay of f, tagSender of f}
-
-	if theYear is not null or theMonth is not null or theDay is not null then
-		tell logger to debug(logCtx, "Nothing to do, date already set.")
-	else
-		tell application id "DNtp"
-
-			set recordName to name of theRecord
-			set creationDate to my creationDateFromMetadata(theRecord, theSender)
-			set theDay to my twoDigit(day of creationDate)
-			set theMonth to my twoDigit(month of creationDate as integer)
-			set theYear to year of creationDate as rich text
+			set theDay to my twoDigit(day of theDate)
+			set theMonth to my twoDigit(month of theDate as integer)
+			set theYear to year of theDate as rich text
 
 			set theMonthAsSting to (monthsByDigit's objectForKey:theMonth) as rich text
 			set tags of theRecord to tags of theRecord & {theDay, theMonthAsSting, theYear}
+
 		end tell
+
 	end if
 
-	tell logger to debug(logCtx, "exit")
-end setDateTagsFromCreationDate
-
-on setDateTagsFromModificationDate(theRecord, f)
-	set logCtx to my initialize("setDateTagsFromModificationDate")
-	tell logger to debug(logCtx, "enter")
-
-	set {theYear, theMonth, theDay, theSender} ¬
-		to {tagYear of f, tagMonth of f, tagDay of f, tagSender of f}
-
-	if theYear is not null or theMonth is not null or theDay is not null then
-		tell logger to debug(logCtx, "Nothing to do, date already set.")
-	else
-		tell application id "DNtp"
-
-			set recordName to name of theRecord
-			set modificationDate to modification date of theRecord
-			logger's debug(logCtx, "modificationDate: " & modificationDate)
-
-			set theDay to my twoDigit(day of modificationDate)
-			set theMonth to my twoDigit(month of modificationDate as integer)
-			set theYear to year of modificationDate as rich text
-
-			set theMonthAsSting to (monthsByDigit's objectForKey:theMonth) as rich text
-			set tags of theRecord to tags of theRecord & {theDay, theMonthAsSting, theYear}
-		end tell
-	end if
-
-	tell logger to debug(logCtx, "exit")
-end setDateTagsFromModificationDate
+	logger's trace(logCtx, "exit")
+end setDateTags
 
 on twoDigit(d)
 	return text -2 thru -1 of ("00" & d)
 end twoDigit
 
-on setNonDateTagsFromCompareRecord(theRecord, theDatabase, f)
-	set logCtx to my initialize("setNonDateTagsFromCompareRecord")
-	tell logger to debug(logCtx, "enter")
+on setTagFromCompareRecord(theRecord, theDatabase, theFields, theDimension)
+	set logCtx to my initialize("setTagFromCompareRecord")
+	logger's trace(logCtx, "enter")
 
-	set {theExistingSender, theExistingSubject, theExistingContext} ¬
-		to {tagSender of f, tagSubject of f, tagContext of f}
+	set theValue to theFields's objectForKey:theDimension
+	if theValue is not missing value then
+		tell logger to debug(logCtx, "Dimension '" & theDimension & "' already set to: " & theValue)
 
-	if theExistingSender is not null then tell logger to debug(logCtx, "Nothing to do for Sender - tag already set to: " & theExistingSender)
-	if theExistingSubject is not null then tell logger to debug(logCtx, "Nothing to do for Subject - tag already set to: " & theExistingSubject)
-	if theExistingContext is not null then tell logger to debug(logCtx, "Nothing to do for Context - tag already set to: " & theExistingContext)
+	else
+		tell application id "DNtp"
 
-	tell application id "DNtp"
+			set theComparedRecords to compare record theRecord to theDatabase
+			repeat with aCompareRecord in theComparedRecords
 
-		set theComparedRecords to compare record theRecord to theDatabase
-		repeat with aCompareRecord in theComparedRecords
+				if location of aCompareRecord starts with "/05" and (uuid of theRecord is not equal to uuid of aCompareRecord) then
+					set theScore to score of aCompareRecord
+					if theScore < pScoreThreshold then
+						tell logger to debug_r(theRecord, "No tags copied - score of best compare record below threshold - score: " & (theScore as string))
+					else
+						set theCompareRecordTags to tags of aCompareRecord
+						set theTag to missing value
 
-			if location of aCompareRecord starts with "/05" and (uuid of theRecord is not equal to uuid of aCompareRecord) then
-				set theScore to score of aCompareRecord
-				if theScore < pScoreThreshold then
-					tell logger to debug_r(theRecord, "No tags copied - score of best compare record below threshold - score: " & (theScore as string))
-				else
-					set theCompareRecordTags to tags of aCompareRecord
-					set {theSender, theSubject, theContext} to {null, null, null}
-					repeat with aCompareRecordTag in theCompareRecordTags
-						if pSenders contains aCompareRecordTag then set theSender to aCompareRecordTag
-						if pSubjects contains aCompareRecordTag then set theSubject to aCompareRecordTag
-						if pContexts contains aCompareRecordTag then set theContext to aCompareRecordTag
-					end repeat
-					if theExistingSender is null and theSender is not null then
-						-- logger to debug(logCtx, "Sender Tag set to: ")
-						set tags of theRecord to tags of theRecord & theSender
+						set categories to (pDimensionsDictionary's objectForKey:theDimension) as list
+
+						repeat with aCompareRecordTag in theCompareRecordTags
+							if categories contains aCompareRecordTag then set theTag to aCompareRecordTag
+						end repeat
+						if theTag is not missing value then
+							tell logger to debug(logCtx, "theTag: " & theTag)
+							set tags of theRecord to tags of theRecord & theTag
+						end if
 					end if
-					if theExistingSubject is null and theSubject is not null then
-						set tags of theRecord to tags of theRecord & theSubject
-						--logger to debug(logCtx, "Subject Tags set to: " & name of theSubject)
-					end if
-					if theExistingContext is null and theContext is not null then
-						set tags of theRecord to tags of theRecord & theContext
-						--logger to debug(logCtx, "Context Tags set to: " & name of theContext)
-					end if
+					exit repeat -- only first record needed
 				end if
-				exit repeat -- only first record needed
-			end if
-		end repeat
-	end tell
+			end repeat
+		end tell
+	end if
 
-	tell logger to debug(logCtx, "exit")
-end setNonDateTagsFromCompareRecord
-
-
+	logger's trace(logCtx, "exit")
+end setTagFromCompareRecord
 
 on verifyTags(locationSuffix)
 	set logCtx to my initialize("verifyTags")
-	tell logger to debug(logCtx, "enter")
+	logger's trace(logCtx, "enter")
 
 	tell application id "DNtp"
 		set currentDatabase to current database
@@ -1117,7 +1094,7 @@ on verifyTags(locationSuffix)
 		end repeat
 		tell logger to info(logCtx, "Verification finished - Records with Issues: " & issueRecords & ", Total Issues: " & issues & ", Total Pages (PDF only): " & totalPages)
 	end tell
-	tell logger to debug(logCtx, "exit")
+	logger's trace(logCtx, "exit")
 end verifyTags
 
 on logIssue(theRecord, setRecordLabel, theMessage)
@@ -1129,83 +1106,3 @@ on logIssue(theRecord, setRecordLabel, theMessage)
 		end if
 	end tell
 end logIssue
-
-on initializeTagLists(theDatabase)
-	set logCtx to my initialize("initializeTagLists")
-	tell logger to debug(logCtx, "enter")
-
-	tell application id "DNtp"
-		tell logger to debug(logCtx, "Initialize tag lists for database: " & name of theDatabase)
-		set theTopLevelTagGroups to children of tags group of theDatabase --current database
-		repeat with theTopLevelTagGroup in theTopLevelTagGroups
-			set theChildren to get children of theTopLevelTagGroup
-			if name of theTopLevelTagGroup starts with "01" then
-				set pDays to my createTagList(theChildren, {})
-			else if name of theTopLevelTagGroup starts with "02" then
-				set pMonths to my createTagList(theChildren, {})
-			else if name of theTopLevelTagGroup starts with "03" then
-				set pYears to my createTagList(theChildren, {})
-			else if name of theTopLevelTagGroup starts with "04" then
-				set pSenders to my createTagList(theChildren, {})
-			else if name of theTopLevelTagGroup starts with "05" then
-				set pSubjects to my createTagList(theChildren, {})
-			else if name of theTopLevelTagGroup starts with "06" then
-				set pContexts to my createTagList(theChildren, {})
-			end if
-		end repeat
-		tell logger to debug(logCtx, "Initialize tag lists finished for database: " & name of theDatabase & ", Days: " & length of pDays & ", Months: " & length of pMonths & ", Years: " & length of pYears & ", Senders: " & length of pSenders & ", Subjects: " & length of pSubjects & ", Contexts: " & length of pContexts)
-	end tell
-	tell logger to debug(logCtx, "exit")
-end initializeTagLists
-
-on createTagList(theTags, resultList)
-	tell application id "DNtp"
-		repeat with tagListItem in theTags
-			set theTagType to tag type of tagListItem
-			if theTagType is ordinary tag then
-				set resultList to my addToTagList(resultList, tagListItem)
-			else
-				set resultList to my createTagList(children of tagListItem, resultList)
-			end if
-		end repeat
-		return resultList
-	end tell
-	return resultList
-end createTagList
-
-on addToTagList(theTagList, theRecord)
-	set end of theTagList to name of theRecord as string
-	return theTagList
-end addToTagList
-
-on initializeMonthsDict()
-
-	set monthsByDigit to current application's NSMutableDictionary's dictionary()
-	monthsByDigit's setObject:"Januar" forKey:"01"
-	monthsByDigit's setObject:"Februar" forKey:"02"
-	monthsByDigit's setObject:"März" forKey:"03"
-	monthsByDigit's setObject:"April" forKey:"04"
-	monthsByDigit's setObject:"Mai" forKey:"05"
-	monthsByDigit's setObject:"Juni" forKey:"06"
-	monthsByDigit's setObject:"Juli" forKey:"07"
-	monthsByDigit's setObject:"August" forKey:"08"
-	monthsByDigit's setObject:"September" forKey:"09"
-	monthsByDigit's setObject:"Oktober" forKey:"10"
-	monthsByDigit's setObject:"November" forKey:"11"
-	monthsByDigit's setObject:"Dezember" forKey:"12"
-
-	set monthsByName to my reverseDictionary(monthsByDigit)
-end initializeMonthsDict
-
-on reverseDictionary(origDict)
-	set reversedDict to current application's NSMutableDictionary's dictionary()
-
-	set allKeys to origDict's allKeys()
-	repeat with aKey in allKeys
-		set aValue to (origDict's objectForKey:aKey)
-		(reversedDict's setObject:(aKey) forKey:(aValue))
-	end repeat
-
-	return reversedDict
-end reverseDictionary
-
