@@ -31,12 +31,13 @@ on processRecords()
 			set theSelection to the selection
 			if theSelection is {} then error "Please select some contents."
 
+			set currentDatabase to current database
 			set databaseName to name of current database
 
 			if databaseName contains "Mail" then
 				mailLib's archiveRecords(theSelection, pScriptName)
 			else
-				docLib's archiveRecords(theSelection)
+				docLib's archiveRecords(currentDatabase, theSelection)
 			end if
 		end tell
 
