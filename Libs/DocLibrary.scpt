@@ -12,11 +12,13 @@ property pIsInitialized : false
 property pDimensionsDictionary : missing value
 property pDimensionConstraintsDictionary : missing value
 property pAmountFormatter : missing value
+property tagAliases : missing value
+property monthsByName : missing value
+property monthsByDigit : missing value
 property pIssueCount : 0
 
 --- DATABASE CONFIGURATION PROPERTIES: START
 
--- Dimensions
 property pDimensionsHome : missing value
 property pDateDimensions : missing value
 property pCompareDimensions : missing value
@@ -40,19 +42,6 @@ property pDimensionConstraints : missing value
 property pTagAliases : missing value
 
 --- DATABASE CONFIGURATION PROPERTIES: END
-
-property pDays : missing value
-property pMonths : missing value
-property pYears : missing value
-property pSenders : missing value
-property pSubjects : missing value
-property pContexts : missing value
-property pMarkers : missing value
-
-
-property tagAliases : missing value
-property monthsByName : missing value
-property monthsByDigit : missing value
 
 property pAssetsBaseFolder : missing value
 property pAblageLookupLocation : missing value
@@ -436,24 +425,24 @@ on archiveRecords(theDatabase, theRecords)
 
 		my initializeDatabaseConfiguration(theDatabase)
 		set allDimensions to pDimensionsDictionary's allKeys()
-
+		(*
 		set defaultAblage to missing value
 		set configRecords to lookup records with file "Default-Ablage.txt"
 		repeat with theRecord in (configRecords)
 			set defaultAblage to plain text of theRecord
 		end repeat
-
+*)
 		repeat with theRecord in theRecords
 			set tagFields to my fieldsFromTags(theRecord, true)
 
 			if not my existDimension(tagFields, pDateDimensions) then
 				display dialog "Can't update metadata due to missing Date tag(s)."
 			else
-
+				(*
 				set ablage to get custom meta data for "itemlink" from theRecord
 				if ablage is missing value and defaultAblagege is not missing value then ¬
 					add custom meta data defaultAblage for "itemlink" to theRecord
-
+*)
 				set theFilesHome to my replacePlaceholders(allDimensions, tagFields, pFilesHome)
 				set theFilesHome to my replaceFieldPlaceholder("{Decades}", tagFields, theFilesHome)
 
