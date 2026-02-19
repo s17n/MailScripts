@@ -32,9 +32,7 @@ property pCustomMetadataTemplates : missing value
 property pCommentsFields : missing value
 
 -- Verification
-property pVerifyDate : missing value
-property pVerifySender : missing value
-property pVerifySubject : missing value
+property pVerificationFields : missing value
 
 --- Other
 property pScoreThreshold : missing value
@@ -128,9 +126,7 @@ on initializeDatabaseConfiguration(theDatabase)
 	set pCommentsFields to pCommentsFields of defaultConfiguration
 
 	-- Verification
-	set pVerifyDate to pVerifyDate of defaultConfiguration
-	set pVerifySender to pVerifySender of defaultConfiguration
-	set pVerifySubject to pVerifySubject of defaultConfiguration
+	set pVerificationFields to pVerificationFields of defaultConfiguration
 
 	-- Other
 	set pScoreThreshold to pScoreThreshold of defaultConfiguration
