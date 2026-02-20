@@ -10,7 +10,7 @@ property baseLib : missing value
 
 property pIsInitialized : false
 property pDimensionsDictionary : missing value
-property pDimensionConstraintsDictionary : missing value
+property pDimensionsConstraintsDictionary : missing value
 property pAmountFormatter : missing value
 property tagAliases : missing value
 property monthsByName : missing value
@@ -20,6 +20,7 @@ property pIssueCount : 0
 --- DATABASE CONFIGURATION PROPERTIES: START
 
 property pDimensionsHome : missing value
+property pDimensionsConstraints : missing value
 property pDateDimensions : missing value
 property pCompareDimensions : missing value
 property pCompareDimensionsScoreThreshold : missing value
@@ -38,7 +39,6 @@ property pCommentsFields : missing value
 
 property pAmountLookupCategories : missing value
 property pFilesHome : missing value
-property pDimensionConstraints : missing value
 property pTagAliases : missing value
 
 --- DATABASE CONFIGURATION PROPERTIES: END
@@ -119,12 +119,12 @@ on initializeDatabaseConfiguration(theDatabase)
 	set pAmountLookupCategories to words of (pAmountLookupCategories of defaultConfiguration)
 	set pFilesHome to pFilesHome of defaultConfiguration
 
-	set pDimensionConstraints to pDimensionConstraints of defaultConfiguration
-	set pDimensionConstraintsDictionary to current application's NSMutableDictionary's dictionary()
-	repeat with aDimensionConstraint in pDimensionConstraints
+	set pDimensionsConstraints to pDimensionsConstraints of defaultConfiguration
+	set pDimensionsConstraintsDictionary to current application's NSMutableDictionary's dictionary()
+	repeat with aDimensionConstraint in pDimensionsConstraints
 		set theDimensionName to first item of aDimensionConstraint as string
 		set theCardinality to second item of aDimensionConstraint as integer
-		(pDimensionConstraintsDictionary's setObject:theCardinality forKey:theDimensionName)
+		(pDimensionsConstraintsDictionary's setObject:theCardinality forKey:theDimensionName)
 	end repeat
 
 	set pTagAliases to pTagAliases of defaultConfiguration
@@ -513,7 +513,7 @@ on verifyTags(theLocation)
 
 			set theFields to my fieldsFromTags(theRecord, false)
 			(*
-			set allDimensionConstraints to pDimensionConstraintsDictionary's allKeys()
+			set allDimensionConstraints to pDimensionsConstraintsDictionary's allKeys()
 			repeat with aDimensionName in allDimensionConstraints
 				set theCardinality to (pConstraintsDictionary's objectForKey:aDimensionName)
 				set theCategories to (theFields's objectForKey:aDimensionName)
@@ -586,7 +586,7 @@ on setField(theTag, theFields, interactiveMode, theRecord)
 		repeat with aDimension in allDimensions
 			set categories to (pDimensionsDictionary's objectForKey:aDimension) as list
 			if categories contains theTag then
-				set theCardinality to (pDimensionConstraintsDictionary's objectForKey:aDimension)
+				set theCardinality to (pDimensionsConstraintsDictionary's objectForKey:aDimension)
 				logger's debug(logCtx, "theCardinality: " & theCardinality)
 
 				set setCurrentValue to (theFields's objectForKey:aDimension)

@@ -1,6 +1,7 @@
 #@osa-lang:AppleScript
 -- Dimensions
 property pDimensionsHome : "/Tags"
+property pDimensionsConstraints : {{"01 Day", "1"}, {"02 Month", "1"}, {"03 Year", "1"}, {"04 Sender", "1"}, {"05 Subject", "1"}}
 property pDateDimensions : {"03 Year", "02 Month", "01 Day"} -- Reihenfolge ist wichtig: Jahr, Monat, Tag
 property pCompareDimensions : {"04 Sender", "05 Subject", "06 Context"}
 property pCompareDimensionsScoreThreshold : 0.25
@@ -25,9 +26,6 @@ property pCommentsFields : {"Sender", "Subject"}
 property pAmountLookupCategories : "Rechnung"
 
 property pFilesHome : "/05 Files/{Decades}[03 Year]/[02 Month]"
-
--- Verification
-property pDimensionConstraints : {{"01 Day", "1"}, {"02 Month", "1"}, {"03 Year", "1"}, {"04 Sender", "1"}, {"05 Subject", "1"}}
 
 property pTagAliases : {{"analog", "A"}, {"digital", "D"}}
 
