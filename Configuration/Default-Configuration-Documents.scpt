@@ -9,7 +9,7 @@ property pCompareDimensionsScoreThreshold : 0.25
 property pClassificationDate : "DATE_DOCUMENT"
 
 -- Name format. Leave empty when filename doesn't needs to be set.
-property pNameFormat : "[03 Year]-[02 Month]-[01 Day]_[04 Sender]_[05 Subject]"
+property pNameTemplate : "[03 Year]-[02 Month]-[01 Day]_[04 Sender]_[05 Subject]"
 
 -- Custom Metadata Definition
 property pCustomMetadataFields : {"Betrag", "Date", "Sender", "Subject"} -- Betrag muss als erstes stehen

@@ -26,7 +26,7 @@ property pCompareDimensionsScoreThreshold : missing value
 
 property pClassificationDate : missing value
 
-property pNameFormat : missing value
+property pNameTemplate : missing value
 
 property pCustomMetadataFields : missing value
 property pCustomMetadataDimensions : missing value
@@ -106,7 +106,7 @@ on initializeDatabaseConfiguration(theDatabase)
 	set pClassificationDate to pClassificationDate of defaultConfiguration
 
 	-- Filename format. Leave empty when filename is not required.
-	set pNameFormat to pNameFormat of defaultConfiguration
+	set pNameTemplate to pNameTemplate of defaultConfiguration
 
 	set pCustomMetadataFields to pCustomMetadataFields of defaultConfiguration
 	set pCustomMetadataDimensions to pCustomMetadataDimensions of defaultConfiguration
@@ -389,7 +389,7 @@ on updateRecordsMetadata(theDatabase, theRecords)
 					set recordsProcessed to recordsProcessed + 1
 
 					-- Set Name
-					if pNameFormat is not missing value and pNameFormat is not "" then
+					if pNameTemplate is not missing value and pNameTemplate is not "" then
 						my setName(theRecord, tagFields)
 					end if
 
@@ -671,7 +671,7 @@ on setName(theRecord, theFields)
 	logger's trace(logCtx, "enter")
 
 	set allDimensions to pDimensionsDictionary's allKeys()
-	set theName to my replacePlaceholders(allDimensions, theFields, pNameFormat)
+	set theName to my replacePlaceholders(allDimensions, theFields, pNameTemplate)
 
 	set currentName to name of theRecord
 	if theName as string is not equal to currentName as string then
