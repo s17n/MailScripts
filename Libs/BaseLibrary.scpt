@@ -33,7 +33,7 @@ on text2List(theText, theDelimiter)
 	-- Trimmen
 	set trimmedItems to {}
 	repeat with anItem in rawItems
-		set anItem to my textBeforeFirstBracket(anItem as text)
+		set anItem to anItem as text
 		set end of trimmedItems to my trim(anItem)
 	end repeat
 
@@ -46,6 +46,7 @@ on textBeforeFirstBracket(s)
 	tell logger to debug(logCtx, "enter => " & s)
 
 	set p to offset of "[" in s
+	tell logger to info(logCtx, "p: " & p)
 	if p > 0 then
 		if p > 1 then
 			set s to text 1 thru (p - 1) of s
@@ -72,7 +73,7 @@ on trim(theText)
 		end repeat
 
 	on error error_message number error_number
-		tell logger to info(logCtx, (error_number as text) & ": " & error_message)
+		-- tell logger to info(logCtx, (error_number as text) & ": " & error_message)
 		set theText to ""
 	end try
 

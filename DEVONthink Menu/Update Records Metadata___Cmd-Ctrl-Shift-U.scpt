@@ -35,7 +35,8 @@ on processRecords()
 			set databaseName to name of current database
 
 			if databaseName contains "Mail" then
-				mailLib's renameRecords(theSelection)
+				docLib's updateRecordsMetadata(currentDatabase, theSelection)
+				--mailLib's renameRecords(theSelection)
 			else
 				docLib's updateRecordsMetadata(currentDatabase, theSelection)
 			end if

@@ -33,8 +33,9 @@ on processRecords()
 			set databaseName to name of current database
 
 			if databaseName contains "Mail" then
-				mailLib's classifyMessages(theSelection)
-				mailLib's createSmartGroup(theSelection)
+				--mailLib's classifyMessages(theSelection)
+				docLib's classifyRecords(currentDatabase, theSelection)
+				--mailLib's createSmartGroup(theSelection)
 			else
 				docLib's classifyRecords(currentDatabase, theSelection)
 			end if

@@ -40,7 +40,7 @@ end initialize
 
 on initializeDatabaseConfiguration(theRule)
 	set logCtx to my initialize("initializeDatabaseConfiguration")
-	tell logger to debug(logCtx, "enter")
+	logger's trace(logCtx, "enter")
 
 	set databaseConfigurationFilename to pDatabaseConfigurationFolder & "/Database-Configuration-" & pPrimaryEmailDatabase & ".scpt"
 	set databaseConfiguration to load script databaseConfigurationFilename
@@ -57,12 +57,12 @@ on initializeDatabaseConfiguration(theRule)
 	set pLogLevel to pLogLevel of databaseConfiguration
 	logger's setLogLevel(pLogLevel)
 
-	tell logger to debug(logCtx, "exit")
+	logger's trace(logCtx, "exit")
 end initializeDatabaseConfiguration
 
 on importMessages(theMessages)
 	set logCtx to my initialize("importMessages")
-	tell logger to debug(logCtx, "enter")
+	logger's trace(logCtx, "enter")
 
 	my initializeDatabaseConfiguration("")
 
@@ -138,24 +138,25 @@ on importMessages(theMessages)
 
 	end tell
 
-	tell logger to debug(logCtx, "exit")
+	logger's trace(logCtx, "exit")
 end importMessages
 
 on getMessagesFromInbox()
 	set logCtx to my initialize("getMessagesFromInbox")
-	tell logger to debug(logCtx, "enter")
+	logger's trace(logCtx, "enter")
 
 	my initializeDatabaseConfiguration("")
 
 	tell application id "com.apple.mail" to set theMessages to messages of mailbox pMailboxImportFolder of account pMailboxAccount
 
-	tell logger to debug(logCtx, "exit")
+	logger's trace(logCtx, "exit")
 	return theMessages
 end getMessagesFromInbox
 
 on classifyMessages(theRecords)
-	my initialize()
-	tell logger to debug(pScriptName, "classifyMessages.enter")
+	set logCtx to my initialize("classifyMessages")
+	logger's trace(logCtx, "enter")
+
 	tell application id "DNtp"
 		set theDatabase to current database
 		repeat with theRecord in theRecords
@@ -172,12 +173,14 @@ on classifyMessages(theRecords)
 			end repeat
 		end repeat
 	end tell
-	tell logger to debug(pScriptName, "classifyMessages.exit")
+
+	logger's trace(logCtx, "exit")
 end classifyMessages
 
 on createSmartGroup(theRecords)
-	my initialize()
-	tell logger to debug(pScriptName, "createSmartGroup: enter")
+	set logCtx to my initialize("createSmartGroup")
+	logger's trace(logCtx, "enter")
+
 	tell application id "DNtp"
 		repeat with theRecord in theRecords
 
@@ -211,7 +214,8 @@ on createSmartGroup(theRecords)
 			end if
 		end repeat
 	end tell
-	tell logger to debug(pScriptName, "createSmartGroup: exit")
+
+	logger's trace(logCtx, "exit")
 end createSmartGroup
 
 -- Erstellt für jeden Record (.eml) einen Kontakt und fügt diesen einer Kontaktgruppe hinzu
@@ -223,8 +227,9 @@ end createSmartGroup
 --    theCallerScript: the caller script (for logging)
 --
 on addOrUpdateContactsByGroup(theRecords, theCallerScript)
-	my initialize()
-	tell logger to debug(pScriptName, "addOrUpdateContactsByGroup: enter")
+	set logCtx to my initialize("addOrUpdateContactsByGroup")
+	logger's trace(logCtx, "enter")
+
 	tell application id "DNtp"
 
 		repeat with theRecord in theRecords
@@ -276,13 +281,14 @@ on addOrUpdateContactsByGroup(theRecords, theCallerScript)
 
 		end repeat
 	end tell
-	tell logger to debug(pScriptName, "addOrUpdateContactsByGroup: exit")
+
+	logger's trace(logCtx, "exit")
 end addOrUpdateContactsByGroup
 
 
 on getSender(theMetadata)
 	set logCtx to my initialize("getSender")
-	tell logger to debug(logCtx, "enter")
+	logger's trace(logCtx, "enter")
 
 	set {theSender, theFirstname, theLastname, theNickname} to {"", null, null, null}
 	set theMailAddress to kMDItemAuthorEmailAddresses of theMetadata
@@ -323,13 +329,14 @@ on getSender(theMetadata)
 			end try
 		end if
 	end if
-	tell logger to debug(logCtx, "exit")
+
+	logger's trace(logCtx, "enter")
 	return theSender
 end getSender
 
 on getSubject(theMetadata)
 	set logCtx to my initialize("getSubject")
-	tell logger to debug(logCtx, "enter")
+	logger's trace(logCtx, "enter")
 
 	try
 		set theSubject to kMDItemSubject of theMetadata
@@ -365,7 +372,7 @@ on setCustomAttributes(theSelection)
 
 		end repeat
 	end tell
-	tell logger to debug(logCtx, "exit")
+	logger's trace(logCtx, "exit")
 end setCustomAttributes
 
 on renameRecords(theSelection)
@@ -374,7 +381,7 @@ end renameRecords
 
 on getContactGroupName(theMailAddress)
 	set logCtx to my initialize("getContactGroupName")
-	tell logger to debug(logCtx, "enter")
+	tell logger to trace(logCtx, "enter")
 
 	set theGroupName to null
 	tell application "Contacts"
@@ -394,13 +401,14 @@ on getContactGroupName(theMailAddress)
 		--close every window
 	end tell
 
-	tell logger to debug(logCtx, "exit")
+	logger's trace(logCtx, "exit")
 	return theGroupName
 end getContactGroupName
 
 on archiveRecords(theRecords, theCallerScript)
-	my initialize()
-	tell logger to debug(pScriptName, "archiveRecords: enter")
+	set logCtx to my initialize("archiveRecords")
+	logger's trace(logCtx, "enter")
+
 	tell application id "DNtp"
 		try
 			repeat with theRecord in theRecords
@@ -435,7 +443,8 @@ on archiveRecords(theRecords, theCallerScript)
 			if error_number is not -128 then display alert "Devonthink" message error_message as warning
 		end try
 	end tell
-	tell logger to debug(pScriptName, "archiveRecords: exit")
+
+	logger's trace(logCtx, "exit")
 end archiveRecords
 
 on extractAttachmentsFromEmail()

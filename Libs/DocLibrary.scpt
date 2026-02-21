@@ -9,6 +9,7 @@ property logger : missing value
 property baseLib : missing value
 
 property pIsInitialized : false
+property pContentType : missing value
 property pDimensionsDictionary : missing value
 property pDimensionsConstraintsDictionary : missing value
 property pAmountFormatter : missing value
@@ -92,7 +93,7 @@ on initializeDatabaseConfiguration(theDatabase)
 
 	set databaseConfigurationFilename to pDatabaseConfigurationFolder & "/Database-Configuration-" & databaseName & ".scpt"
 	set databaseConfiguration to load script databaseConfigurationFilename
-	set databaseContentType to pContentType of databaseConfiguration
+	set pContentType to pContentType of databaseConfiguration
 	set defaultConfigurationName to pDefaultConfiguration of databaseConfiguration
 	set defaultConfiguration to load script (pDatabaseConfigurationFolder & "/" & defaultConfigurationName)
 
@@ -141,7 +142,6 @@ on initializeDatabaseConfiguration(theDatabase)
 	repeat with aMonth in theMonths
 		set theNumber to first item of aMonth as string
 		set theName to second item of aMonth as string
-		logger's debug(logCtx, "theNumber: " & theNumber)
 		(monthsByDigit's setObject:theName forKey:theNumber)
 		(monthsByName's setObject:theNumber forKey:theName)
 	end repeat
@@ -150,11 +150,14 @@ on initializeDatabaseConfiguration(theDatabase)
 	set pLogLevel to pLogLevel of defaultConfiguration
 	logger's setLogLevel(pLogLevel)
 
-	if databaseContentType is equal to "DOCUMENTS" then
+	if pContentType is equal to "DOCUMENTS" then
 
-	else if databaseContentType is equal to "BUSINESS-01" then
+	else if pContentType is equal to "BUSINESS-01" then
 
-	else if databaseContentType is equal to "ASSETS" then
+	else if pContentType is equal to "EMAILS" then
+
+
+	else if pContentType is equal to "ASSETS" then
 
 		set pAssetsBaseFolder to pAssetsBaseFolder of defaultConfiguration
 		set pAblageLookupLocation to pAblageLookupLocation of defaultConfiguration
@@ -393,11 +396,11 @@ on updateRecordsMetadata(theDatabase, theRecords)
 						my setName(theRecord, tagFields)
 					end if
 
-					-- Set CustomMetadata
+					-- Set Custom Metadata
 					set customMetadataFieldIndex to 0
 					repeat with aCustomMetadataField in pCustomMetadataFields
 						set customMetadataFieldIndex to customMetadataFieldIndex + 1
-						my setCustomMetadata(customMetadataFieldIndex, theRecord, tagFields, "")
+						my setCustomMetadata(customMetadataFieldIndex, theRecord, tagFields, "", "")
 					end repeat
 
 					-- Set Comments
@@ -474,10 +477,13 @@ on addTextToCustomMetadata(theCustomMetadataField, theText)
 		set theRecord to content record
 		set tagFields to my fieldsFromTags(theRecord, false)
 
+		set theAction to "ADD"
 		tell baseLib to set theTimmedText to trim(theText)
 
-		-- Command key pressed?
-		set cmdKeyStat to (((current application's NSEvent's modifierFlags()) div (current application's NSCommandKeyMask as integer)) mod 2) > 0
+		-- Command-Key
+		set cmdKeyStat to (((current application's NSEvent's modifierFlags()) div ¬
+			(current application's NSCommandKeyMask as integer)) mod 2) > 0
+		if cmdKeyStat then set theAction to "REPLACE"
 
 		set customMetadataFieldIndex to 0
 		repeat with aCustomMetadataField in pCustomMetadataFields
@@ -486,7 +492,7 @@ on addTextToCustomMetadata(theCustomMetadataField, theText)
 		end repeat
 		logger's debug(logCtx, "customMetadataFieldIndex: " & customMetadataFieldIndex)
 
-		my setCustomMetadata(customMetadataFieldIndex, theRecord, tagFields, theTimmedText)
+		my setCustomMetadata(customMetadataFieldIndex, theRecord, tagFields, theTimmedText, theAction)
 
 	end tell
 	logger's trace(logCtx, "exit")
@@ -801,15 +807,17 @@ on replaceText(findText, replaceText, sourceText)
 	return newText
 end replaceText
 
-on setCustomMetadata(theIndex, theRecord, theFields, theSupplemental)
+-- theSupplementalAction:
+-- theSupplementalAction: ADD, REPLACE
+on setCustomMetadata(theIndex, theRecord, theFields, theSupplemental, theSupplementalAction)
 	set logCtx to my initialize("setCustomMetadata")
-	logger's trace(logCtx, "enter > " & theIndex)
+	logger's trace(logCtx, "enter > theIndex: " & theIndex & "; theSupplemental: " & theSupplemental & "; theSupplementalAction: " & theSupplementalAction)
 
 	set theField to item theIndex of pCustomMetadataFields
 	set theDimension to item theIndex of pCustomMetadataDimensions
 	set theType to item theIndex of pCustomMetadataTypes
 	set theTemplate to item theIndex of pCustomMetadataTemplates
-	logger's debug(logCtx, "theField: " & theField & ", theDimension: " & theDimension & ", theType: " & theType & ", theTemplate: " & theTemplate)
+	logger's debug(logCtx, "theField: " & theField & "; theDimension: " & theDimension & "; theType: " & theType & "; theTemplate: " & theTemplate)
 
 	tell application id "DNtp"
 		set currentValue to get custom meta data for theField from theRecord
@@ -855,10 +863,12 @@ on setCustomMetadata(theIndex, theRecord, theFields, theSupplemental)
 		set theCategory to theFields's objectForKey:theDimension
 		if theCategory is missing value then set theCategory to ""
 
-		set theModifiedTemplate to theTemplate
+		-- Custom Metadata Value von Template initialisieren - nachfolgend werden alle Placeholder ersetzt
+		set cmdValue to theTemplate
 
+		-- Replace marker placeholder "[[...]]"
 		repeat with aDimension in pDimensionsDictionary's allKeys()
-			if (theModifiedTemplate as string) contains ("[[" & aDimension & "]]" as string) then
+			if (cmdValue as string) contains ("[[" & aDimension & "]]" as string) then
 				set theReplaceText to ""
 				set theTag to (theFields's objectForKey:aDimension)
 				if theTag is missing value then
@@ -870,12 +880,13 @@ on setCustomMetadata(theIndex, theRecord, theFields, theSupplemental)
 					end repeat
 				end if
 				set thePlaceholder to "[[" & aDimension & "]]"
-				set theModifiedTemplate to my replaceText(thePlaceholder as string, theReplaceText as string, theModifiedTemplate as string)
+				set cmdValue to my replaceText(thePlaceholder as string, theReplaceText as string, cmdValue as string)
 			end if
 		end repeat
 
+		-- Replace category placeholder "[...]"
 		repeat with aDimension in pDimensionsDictionary's allKeys()
-			if (theModifiedTemplate as string) contains ("[" & aDimension & "]" as string) then
+			if (cmdValue as string) contains ("[" & aDimension & "]" as string) then
 				set theReplaceText to (theFields's objectForKey:aDimension)
 				if aDimension as string is equal to theDimension as string then
 					set theReplaceText to theCategory
@@ -883,40 +894,42 @@ on setCustomMetadata(theIndex, theRecord, theFields, theSupplemental)
 					if theReplaceText is missing value then
 						set theReplaceText to ""
 					else
-						set theReplaceText to " [" & theReplaceText & "]"
+						set theReplaceText to "[" & theReplaceText & "]"
 					end if
 				end if
 				set thePlaceholder to "[" & aDimension & "]"
-				set theModifiedTemplate to my replaceText(thePlaceholder as string, theReplaceText as string, theModifiedTemplate as string)
+				set cmdValue to my replaceText(thePlaceholder as string, theReplaceText as string, cmdValue as string)
 			end if
 		end repeat
 
-		-- Custom Text ermitteln und setzen
-		set {fieldList, customText} to {missing value, ""}
-		if currentValue is not missing value then
-			tell baseLib to set fieldList to text2List(currentValue, pCustomMetadataFieldSeparator)
-		end if
-		if fieldList is not missing value and length of fieldList > 1 then
-			set customText to pCustomMetadataFieldSeparator & second item of fieldList
-		end if
+		-- Replace custom text placeholder "{Text}"
+		set customText to my extractCustomTextFromCmdValue(currentValue)
 
-		-- Custom Text um Supplemental ergänzen
+		-- Add new Custom Text (Supplemental) to the right-hand side
 		if theSupplemental is not missing value and theSupplemental is not "" then
-			if customText is equal to "" then
-				set customText to pCustomMetadataFieldSeparator
+			if theSupplementalAction is not missing value and theSupplementalAction is equal to "REPLACE" then
+				set customText to theSupplemental
 			else
-				set customText to customText & " "
+				if length of customText > 0 then
+					set customText to customText & " "
+				end if
+				set customText to customText & theSupplemental
 			end if
-			set customText to customText & theSupplemental
 		end if
 
-		set theModifiedTemplate to my replaceText("{Text}", customText, theModifiedTemplate as string)
+		-- Add Field Separator to Custom Text
+		if length of customText > 0 then
+			set customText to pCustomMetadataFieldSeparator & customText
+		end if
 
+		set cmdValue to my replaceText("{Text}", customText, cmdValue as string)
+
+		-- Replace amount placeholder "{Amount}"
 		set amountText to ""
 		if currentAmount is not missing value then set amountText to " [EUR " & currentAmount & "]"
-		set theModifiedTemplate to my replaceText("{Amount}", amountText, theModifiedTemplate as string)
+		set cmdValue to my replaceText("{Amount}", amountText, cmdValue as string)
 
-		set newValue to theModifiedTemplate
+		set newValue to cmdValue
 	end if
 
 	if newValue is not equal to currentValue then
@@ -928,6 +941,54 @@ on setCustomMetadata(theIndex, theRecord, theFields, theSupplemental)
 
 	logger's trace(logCtx, "exit")
 end setCustomMetadata
+
+on extractCustomTextFromCmdValue(currentValue)
+	set logCtx to my initialize("extractCustomTextFromCmdValue")
+	logger's trace(logCtx, "enter > " & currentValue)
+
+	set customText to ""
+	if currentValue is not missing value then
+
+		-- wenn Custom Text vorhanden ist parsen, sonst vorhanden Wert nehmen
+		if currentValue contains pCustomMetadataFieldSeparator then
+
+			-- rechten Teil neben pCustomMetadataFieldSeparator ermitteln
+			tell baseLib to set fieldList to text2List(currentValue, pCustomMetadataFieldSeparator)
+			if fieldList is not missing value and length of fieldList > 1 then
+				set customText to second item of fieldList
+			end if
+
+			-- mögliche "[...]" Blöcke entfernen
+			set customText to my removeTrailingBracketBlocks(customText)
+
+		else
+			logger's debug(logCtx, "No Custom Text found use current value.")
+			if (count of words of currentValue) > 1 then
+				set customText to currentValue
+			end if
+		end if
+	end if
+
+	logger's trace(logCtx, "exit > " & customText)
+	return customText
+end extractCustomTextFromCmdValue
+
+on removeTrailingBracketBlocks(theString)
+	set logCtx to my initialize("removeTrailingBracketBlocks")
+	logger's trace(logCtx, "enter > " & theString)
+
+	set NSString to current application's NSString's stringWithString:theString
+
+	-- rechts trimmen
+	set trimmed to NSString's stringByTrimmingCharactersInSet:(current application's NSCharacterSet's whitespaceAndNewlineCharacterSet())
+
+	-- [Text]-Blöcke am Ende entfernen (inkl. Leerzeichen davor)
+	set cleaned to trimmed's stringByReplacingOccurrencesOfString:"(\\s*\\[[^\\[\\]]*\\])+$" withString:"" options:(current application's NSRegularExpressionSearch) range:{0, trimmed's |length|()}
+	set cleaned to cleaned as text
+
+	logger's trace(logCtx, "exit > " & cleaned)
+	return cleaned
+end removeTrailingBracketBlocks
 
 on tagAlias(theTag)
 	set logCtx to my initialize("tagAlias")
@@ -1096,7 +1157,7 @@ end twoDigit
 
 on setTagFromCompareRecord(theRecord, theDatabase, theFields, theDimension)
 	set logCtx to my initialize("setTagFromCompareRecord")
-	logger's trace(logCtx, "enter")
+	logger's trace(logCtx, "enter > theDimension: " & theDimension)
 
 	set theValue to theFields's objectForKey:theDimension
 	if theValue is not missing value then
