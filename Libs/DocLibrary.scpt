@@ -133,27 +133,6 @@ on initializeDatabaseConfiguration(theDatabase)
 		(monthsByName's setObject:theNumber forKey:theName)
 	end repeat
 
-	if pContentType is equal to "DOCUMENTS" then
-
-	else if pContentType is equal to "BUSINESS-01" then
-
-	else if pContentType is equal to "EMAILS" then
-
-	else if pContentType is equal to "ASSETS" then
-
-		set pAssetsBaseFolder to pAssetsBaseFolder of defaultConfiguration
-		set pAblageLookupLocation to pAblageLookupLocation of defaultConfiguration
-		set pAblageLatestFolder to pAblageLatestFolder of defaultConfiguration
-		set pCaptureContextConfig to pCaptureContextConfig of defaultConfiguration
-		set pCameraCaptureSender to pCameraCaptureSender of defaultConfiguration
-		set pCameraCaptureSubject to pCameraCaptureSubject of defaultConfiguration
-		set pAblageSender to pAblageSender of defaultConfiguration
-		set pAblageSubject to pAblageSubject of defaultConfiguration
-		set pObjectSender to pObjectSender of defaultConfiguration
-		set pObjectSubject to pObjectSubject of defaultConfiguration
-
-	end if
-
 	set pAmountFormatter to current application's NSNumberFormatter's new()
 	pAmountFormatter's setMinimumFractionDigits:2
 	pAmountFormatter's setMaximumFractionDigits:2
@@ -207,30 +186,19 @@ on addToTagList(theTagList, theRecord)
 	return theTagList
 end addToTagList
 
-on initializeMailLib(theDatabaseName)
-	set logCtx to my initialize("initializeMailLib")
-	logger's trace(logCtx, "enter")
-
-	set databaseConfigurationFilename to pDatabaseConfigurationFolder & "/Database-Configuration-" & theDatabaseName & ".scpt"
-
-	mailLib's initializeDepencencies(logger, baseLib)
-	mailLib's initializeDatabaseConfiguration(databaseConfigurationFilename)
-
-	logger's trace(logCtx, "exit")
-end initializeMailLib
-
-
 on importMailMessages(theDatabaseName)
 	set logCtx to my initialize("importMailMessages")
 	logger's trace(logCtx, "enter > " & theDatabaseName)
 
 	tell application id "DNtp"
 
-		my initializeMailLib(theDatabaseName)
+		mailLib's initializeDepencencies(logger, baseLib)
+
+		set databaseConfigurationFilename to pDatabaseConfigurationFolder & "/Database-Configuration-" & theDatabaseName & ".scpt"
+		mailLib's initializeDatabaseConfiguration(databaseConfigurationFilename)
 
 		set theMessages to mailLib's getInboxMessages()
 		logger's debug(logCtx, "Number of Inbox Messages: " & length of theMessages)
-
 		mailLib's importMessages(theMessages, theDatabaseName)
 
 	end tell
