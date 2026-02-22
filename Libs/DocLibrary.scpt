@@ -7,6 +7,7 @@ property pScriptName : "DocLibrary"
 
 property logger : missing value
 property baseLib : missing value
+property mailLib : missing value
 
 property pIsInitialized : false
 property pContentType : missing value
@@ -19,6 +20,8 @@ property monthsByDigit : missing value
 property pIssueCount : 0
 
 --- DATABASE CONFIGURATION PROPERTIES: START
+
+property pDatabaseConfigurationFolder : missing value
 
 property pDimensionsHome : missing value
 property pDimensionsConstraints : missing value
@@ -44,23 +47,6 @@ property pTagAliases : missing value
 
 --- DATABASE CONFIGURATION PROPERTIES: END
 
-property pAssetsBaseFolder : missing value
-property pAblageLookupLocation : missing value
-property pAblageLatestFolder : missing value
-
-property pCaptureContextConfig : missing value
-property pFolderConfig : missing value
-
-property pCameraCaptureSender : missing value
-property pCameraCaptureSubject : missing value
-
-property pAblageSender : missing value
-property pAblageSubject : missing value
-
-property pObjectSender : missing value
-property pObjectSubject : missing value
-
-property pDatabaseConfigurationFolder : missing value
 property pExiftool : missing value
 
 on initialize(loggingContext)
@@ -72,7 +58,8 @@ on initialize(loggingContext)
 		set config to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
 		set logger to load script pLogger of config
 		tell logger to initialize()
-		set baseLib to load script (pBaseLibraryPath of config)
+		set baseLib to load script pBaseLibraryPath of config
+		set mailLib to load script pMailLibraryPath of config
 
 		set pDatabaseConfigurationFolder to pDatabaseConfigurationFolder of config
 		set pExiftool to pExiftool of config
@@ -87,15 +74,17 @@ on initializeDatabaseConfiguration(theDatabase)
 	set logCtx to my initialize("initializeDatabaseConfiguration")
 	logger's trace(logCtx, "enter")
 
-	tell application id "DNtp"
-		set databaseName to name of theDatabase
-	end tell
+	tell application id "DNtp" to set theDatabaseName to name of theDatabase
 
-	set databaseConfigurationFilename to pDatabaseConfigurationFolder & "/Database-Configuration-" & databaseName & ".scpt"
+	set databaseConfigurationFilename to pDatabaseConfigurationFolder & "/Database-Configuration-" & theDatabaseName & ".scpt"
 	set databaseConfiguration to load script databaseConfigurationFilename
 	set pContentType to pContentType of databaseConfiguration
 	set defaultConfigurationName to pDefaultConfiguration of databaseConfiguration
 	set defaultConfiguration to load script (pDatabaseConfigurationFolder & "/" & defaultConfigurationName)
+
+	-- Logger
+	set pLogLevel to pLogLevel of defaultConfiguration
+	logger's setLogLevel(pLogLevel)
 
 	-- Dimensions
 	set pDimensionsHome to pDimensionsHome of defaultConfiguration
@@ -103,10 +92,8 @@ on initializeDatabaseConfiguration(theDatabase)
 	set pCompareDimensions to pCompareDimensions of defaultConfiguration
 	set pCompareDimensionsScoreThreshold to pCompareDimensionsScoreThreshold of defaultConfiguration
 
-	-- Date for auto-classificaton. Leave empty when auto-classification for date is not required.
 	set pClassificationDate to pClassificationDate of defaultConfiguration
 
-	-- Filename format. Leave empty when filename is not required.
 	set pNameTemplate to pNameTemplate of defaultConfiguration
 
 	set pCustomMetadataFields to pCustomMetadataFields of defaultConfiguration
@@ -146,16 +133,11 @@ on initializeDatabaseConfiguration(theDatabase)
 		(monthsByName's setObject:theNumber forKey:theName)
 	end repeat
 
-	-- Logger
-	set pLogLevel to pLogLevel of defaultConfiguration
-	logger's setLogLevel(pLogLevel)
-
 	if pContentType is equal to "DOCUMENTS" then
 
 	else if pContentType is equal to "BUSINESS-01" then
 
 	else if pContentType is equal to "EMAILS" then
-
 
 	else if pContentType is equal to "ASSETS" then
 
@@ -189,7 +171,7 @@ on initializeDimensions(theDatabase)
 	set pDimensionsDictionary to current application's NSMutableDictionary's dictionary()
 	tell application id "DNtp"
 
-		set dimensionHome to get record at pDimensionsHome
+		set dimensionHome to get record at pDimensionsHome in theDatabase
 		set theDimensions to children of dimensionHome
 		repeat with aDimension in theDimensions
 
@@ -225,124 +207,55 @@ on addToTagList(theTagList, theRecord)
 	return theTagList
 end addToTagList
 
-
--- Vorverarbeitung für Camera-Captures. Klassifizierung und Metadaten-Verarbeitung muss folgen.
--- Aufbau des Dateinamen:
---   [1]         [2]  [3]    [4]     [5]          [6]
---   [Timestamp]_DNtp_Assets_Capture_[KontextKey]_[Description, Base64-encoded].extension
--- Beispiel:
---   20260117-111824_DNtp_Assets_Capture_00_RGFzIGlzdCBub2NoIG1hbCBlaW4gQmVpc3BpZWx0ZXh0
---
-on processCameraCapture(theRecords)
-	set logCtx to my initialize("processCameraCapture")
+on initializeMailLib(theDatabaseName)
+	set logCtx to my initialize("initializeMailLib")
 	logger's trace(logCtx, "enter")
 
-	tell application id "DNtp"
-		repeat with theRecord in theRecords
+	set databaseConfigurationFilename to pDatabaseConfigurationFolder & "/Database-Configuration-" & theDatabaseName & ".scpt"
 
-			set theName to name of theRecord
-			tell baseLib to set theContextKey to fifth item of text2List(theName, "_")
-			tell baseLib to set theSubjectB64 to sixth item of text2List(theName, "_")
-			tell logger to debug(logCtx, "theSubject: " & theSubject & ", theContextKey: " & theContextKey & ", theSubjectB64: " & theSubjectB64)
-
-			tell baseLib to set theContext to configValue(pCaptureContextConfig, theContextKey)
-			tell baseLib to set theSubjectText to decodeBase64(theSubjectB64)
-			tell logger to debug(logCtx, "theContext: " & theContext & ", theSubjectText: " & theSubjectText)
-
-			set tags of theRecord to {pCameraCaptureSubject, pCameraCaptureSender}
-			if theContextKey is not "00" then set tags of theRecord to tags of theRecord & {(theContext as string)}
-			add custom meta data pCustomMetadataFieldSeparator & theSubjectText for "Subject" to theRecord
-
-		end repeat
-	end tell
+	mailLib's initializeDepencencies(logger, baseLib)
+	mailLib's initializeDatabaseConfiguration(databaseConfigurationFilename)
 
 	logger's trace(logCtx, "exit")
-end processCameraCapture
+end initializeMailLib
 
--- Vorverarbeitung für Ablage/Objekt-Records. Klassifizierung und Metadaten-Verarbeitung muss folgen.
--- Aufbau des Dateinamen:
---   [1]         [2]  [3]    [4]   [5]               [6]
---   [Timestamp]_DNtp_Assets_[F|I]_[Name-der-Ablage]_[Description, Base64-encoded].extension
---
-on processInventoryRecords(theRecords)
-	set logCtx to my initialize("processInventoryRecords")
-	logger's trace(logCtx, "enter")
 
-	tell application id "DNtp"
-		repeat with theRecord in theRecords
-
-			set theName to name of theRecord
-			set theTags to missing value
-			tell baseLib to set theAction to fourth item of text2List(theName, "_")
-			tell baseLib to set theFolderName to fifth item of text2List(theName, "_")
-			set theFolder to my getFolderRecord(theFolderName)
-
-			if theAction is equal to "F" then -- Folder (Ablage)
-				set theTags to {pAblageSender, pAblageSubject}
-
-				-- latest.txt
-				set filePath to pAssetsBaseFolder & "/" & pAblageLatestFolder & "/" & theFolderName
-				set theReferenceURL to reference URL of theRecord
-
-				do shell script "mkdir -p " & quoted form of filePath
-				do shell script "printf " & quoted form of theReferenceURL & " > " & quoted form of filePath & "/latest.txt"
-
-				-- Subject
-				add custom meta data pCustomMetadataFieldSeparator & theFolderName for "Subject" to theRecord
-
-				-- Itemlink (optional, wenn gesetzt)
-				set abgelegtInUuid to get custom meta data for "itemlink" from theFolder
-				if abgelegtInUuid is not missing value then
-					set abgelegtInFolder to get record with uuid abgelegtInUuid
-					add custom meta data reference URL of abgelegtInFolder for "itemlink" to theRecord
-				end if
-
-			else if theAction is equal to "I" then -- Item (Objekt)
-				set theTags to {pObjectSender, pObjectSubject}
-
-				tell baseLib to set theSubjectB64 to sixth item of text2List(theName, "_")
-				tell baseLib to set theSubjectText to decodeBase64(theSubjectB64)
-
-				add custom meta data pCustomMetadataFieldSeparator & theSubjectText for "Subject" to theRecord
-				add custom meta data reference URL of theFolder for "itemlink" to theRecord
-			end if
-			set tags of theRecord to theTags
-		end repeat
-	end tell
-
-	logger's trace(logCtx, "exit")
-end processInventoryRecords
-
-on getFolderRecord(theName)
-	set logCtx to my initialize("getFolderRecord")
-	logger's trace(logCtx, "enter => " & theName)
+on importMailMessages(theDatabaseName)
+	set logCtx to my initialize("importMailMessages")
+	logger's trace(logCtx, "enter > " & theDatabaseName)
 
 	tell application id "DNtp"
 
-		set theRecord to get record at pAblageLookupLocation & theName
-		if theRecord is missing value then error "Ablage '" & theName & "' not found at '" & pAblageLookupLocation & "'."
+		my initializeMailLib(theDatabaseName)
+
+		set theMessages to mailLib's getInboxMessages()
+		logger's debug(logCtx, "Number of Inbox Messages: " & length of theMessages)
+
+		mailLib's importMessages(theMessages, theDatabaseName)
 
 	end tell
-
 	logger's trace(logCtx, "exit")
-	return theRecord
-end getFolderRecord
+end importMailMessages
 
-on processDocuments(theDatabase, theRecords)
+on processDocuments(theRecords)
 	set logCtx to my initialize("processDocuments")
 	logger's trace(logCtx, "enter")
 
-	my classifyRecords(theDatabase, theRecords)
-	my updateRecordsMetadata(theDatabase, theRecords)
+	logger's debug(logCtx, "Number of Records: " & length of theRecords)
+
+	my classifyRecords(theRecords)
+	my updateRecordsMetadata(theRecords)
 
 	logger's trace(logCtx, "exit")
 end processDocuments
 
-on classifyRecords(theDatabase, theRecords)
+on classifyRecords(theRecords)
 	set logCtx to my initialize("classifyRecords")
 	logger's trace(logCtx, "enter")
 
 	tell application id "DNtp"
+
+		tell application id "DNtp" to set theDatabase to database of first item of theRecords
 
 		my initializeDatabaseConfiguration(theDatabase)
 		set {recordsSelected, recordsProcessed} to {0, 0}
@@ -371,11 +284,13 @@ on classifyRecords(theDatabase, theRecords)
 	logger's trace(logCtx, "exit")
 end classifyRecords
 
-on updateRecordsMetadata(theDatabase, theRecords)
+on updateRecordsMetadata(theRecords)
 	set logCtx to my initialize("updateRecordsMetadata")
 	logger's trace(logCtx, "enter")
 
 	tell application id "DNtp"
+
+		tell application id "DNtp" to set theDatabase to database of first item of theRecords
 
 		my initializeDatabaseConfiguration(theDatabase)
 		set {recordsSelected, recordsProcessed} to {0, 0}
@@ -420,34 +335,35 @@ on updateRecordsMetadata(theDatabase, theRecords)
 	logger's trace(logCtx, "exit")
 end updateRecordsMetadata
 
-on archiveRecords(theDatabase, theRecords)
+on archiveRecords(theRecords)
 	set logCtx to my initialize("archiveRecords")
 	logger's trace(logCtx, "enter")
 
 	tell application id "DNtp"
 
+		tell application id "DNtp" to set theDatabase to database of first item of theRecords
+
 		my initializeDatabaseConfiguration(theDatabase)
 		set allDimensions to pDimensionsDictionary's allKeys()
-		(*
-		set defaultAblage to missing value
-		set configRecords to lookup records with file "Default-Ablage.txt"
-		repeat with theRecord in (configRecords)
-			set defaultAblage to plain text of theRecord
-		end repeat
-*)
+
 		repeat with theRecord in theRecords
+
 			set tagFields to my fieldsFromTags(theRecord, true)
 
 			if not my existDimension(tagFields, pDateDimensions) then
 				display dialog "Can't update metadata due to missing Date tag(s)."
 			else
-				(*
-				set ablage to get custom meta data for "itemlink" from theRecord
-				if ablage is missing value and defaultAblagege is not missing value then ¬
-					add custom meta data defaultAblage for "itemlink" to theRecord
-*)
 				set theFilesHome to my replacePlaceholders(allDimensions, tagFields, pFilesHome)
 				set theFilesHome to my replaceFieldPlaceholder("{Decades}", tagFields, theFilesHome)
+
+				if pContentType is equal to "EMAILS" then
+
+					tell baseLib to set creationDateAsString to format(creation date of theRecord)
+					set theYear to rich texts 1 thru 4 of creationDateAsString
+					set theMonth to rich texts 5 thru 6 of creationDateAsString
+					set theFilesHome to theFilesHome & "/" & theYear & "/" & theMonth
+
+				end if
 
 				set theFilesHomeRecord to get record at theFilesHome
 				if theFilesHomeRecord is missing value then
@@ -887,9 +803,9 @@ on setCustomMetadata(theIndex, theRecord, theFields, theSupplemental, theSupplem
 		-- Replace category placeholder "[...]"
 		repeat with aDimension in pDimensionsDictionary's allKeys()
 			if (cmdValue as string) contains ("[" & aDimension & "]" as string) then
-				set theReplaceText to (theFields's objectForKey:aDimension)
+				set theReplaceText to my tagAlias((theFields's objectForKey:aDimension))
 				if aDimension as string is equal to theDimension as string then
-					set theReplaceText to theCategory
+					set theReplaceText to my tagAlias(theCategory)
 				else
 					if theReplaceText is missing value then
 						set theReplaceText to ""

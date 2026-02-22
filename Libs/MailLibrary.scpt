@@ -4,10 +4,6 @@ property pScriptName : "MailLibrary"
 property baseLib : missing value
 property logger : missing value
 
-property pDatabaseConfigurationFolder : missing value
-
-property pPrimaryEmailDatabase : missing value
-
 property pMailboxAccount : missing value
 property pMailboxImportFolder : missing value
 property pMailboxArchiveFolder : missing value
@@ -15,36 +11,25 @@ property pDevonthinkInboxFolder : missing value
 property pDevonthinkSortBySender : missing value
 property pDelayBeforeImport : 0
 
-property pScoreThreshold : 0.15
+on initializeDepencencies(theLogger, theBaseLib)
+	theLogger's trace(pScriptName & " > initializeDepencencies", "enter")
 
-property pIsInitialized : false
+	set logger to theLogger
+	set baseLib to theBaseLib
+
+	theLogger's trace(pScriptName & " > initializeDepencencies", "exit")
+end initializeDepencencies
 
 on initialize(loggingContext)
 	set logCtx to pScriptName & " > initialize"
-
-	if not pIsInitialized then
-
-		set config to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
-		set logger to load script pLogger of config
-		tell logger to initialize()
-		set baseLib to load script pBaseLibraryPath of config
-
-		set pDatabaseConfigurationFolder to pDatabaseConfigurationFolder of config
-		set pPrimaryEmailDatabase to pPrimaryEmailDatabase of config
-
-		set pIsInitialized to true
-		tell logger to debug(logCtx, "Initialization finished")
-	end if
 	return pScriptName & " > " & loggingContext
 end initialize
 
-on initializeDatabaseConfiguration(theRule)
+on initializeDatabaseConfiguration(databaseConfigurationFilename)
 	set logCtx to my initialize("initializeDatabaseConfiguration")
-	logger's trace(logCtx, "enter")
+	logger's trace(logCtx, "enter > " & databaseConfigurationFilename)
 
-	set databaseConfigurationFilename to pDatabaseConfigurationFolder & "/Database-Configuration-" & pPrimaryEmailDatabase & ".scpt"
 	set databaseConfiguration to load script databaseConfigurationFilename
-	tell logger to debug(logCtx, "databaseConfigurationFilename: " & databaseConfigurationFilename)
 
 	set pMailboxAccount to pMailboxAccount of databaseConfiguration
 	set pMailboxImportFolder to pMailboxImportFolder of databaseConfiguration
@@ -53,18 +38,16 @@ on initializeDatabaseConfiguration(theRule)
 	set pDevonthinkSortBySender to pDevonthinkSortBySender of databaseConfiguration
 	set pDelayBeforeImport to pDelayBeforeImport of databaseConfiguration
 
-	-- LOGGER
-	set pLogLevel to pLogLevel of databaseConfiguration
-	logger's setLogLevel(pLogLevel)
+	logger's debug(logCtx, "pMailboxAccount: " & pMailboxAccount & "; pMailboxImportFolder: " & pMailboxImportFolder & ¬
+		"; pMailboxArchiveFolder: " & pMailboxArchiveFolder & "; pDevonthinkInboxFolder: " & pDevonthinkInboxFolder & ¬
+		"; pDevonthinkSortBySender: " & pDevonthinkSortBySender & "; pDelayBeforeImport: " & pDelayBeforeImport)
 
 	logger's trace(logCtx, "exit")
 end initializeDatabaseConfiguration
 
-on importMessages(theMessages)
+on importMessages(theMessages, theDatabaseName)
 	set logCtx to my initialize("importMessages")
 	logger's trace(logCtx, "enter")
-
-	my initializeDatabaseConfiguration("")
 
 	tell application "Mail"
 
@@ -90,12 +73,11 @@ on importMessages(theMessages)
 				if theImportFolder is null then
 					set theImportFolder to "Inbox/" & pDevonthinkInboxFolder
 				end if
-
 				tell application id "DNtp"
-					set theGroup to incoming group of database pPrimaryEmailDatabase
+					set theGroup to incoming group of database theDatabaseName
 					set theRecord to create record with {name:theName & ".eml", type:unknown, creation date:theDateSent, modification date:theDateReceived, URL:theSender, source:(theSource as string), unread:(not theReadFlag)} in theGroup
 					perform smart rule trigger import event record theRecord
-					set theImportFolder to create location theImportFolder in database pPrimaryEmailDatabase
+					set theImportFolder to create location theImportFolder in database theDatabaseName
 					move record theRecord to theImportFolder
 
 					my setCustomAttributes(theRecord, senderAddress)
@@ -141,41 +123,18 @@ on importMessages(theMessages)
 	logger's trace(logCtx, "exit")
 end importMessages
 
-on getMessagesFromInbox()
-	set logCtx to my initialize("getMessagesFromInbox")
+on getInboxMessages()
+	set logCtx to my initialize("getInboxMessages")
 	logger's trace(logCtx, "enter")
 
-	my initializeDatabaseConfiguration("")
+	-- my initializeDatabaseConfiguration("")
 
 	tell application id "com.apple.mail" to set theMessages to messages of mailbox pMailboxImportFolder of account pMailboxAccount
 
 	logger's trace(logCtx, "exit")
 	return theMessages
-end getMessagesFromInbox
+end getInboxMessages
 
-on classifyMessages(theRecords)
-	set logCtx to my initialize("classifyMessages")
-	logger's trace(logCtx, "enter")
-
-	tell application id "DNtp"
-		set theDatabase to current database
-		repeat with theRecord in theRecords
-			set theTags to tags of theRecord
-			set theComparedRecords to compare record theRecord to theDatabase
-			repeat with aCompareRecord in theComparedRecords
-				if location of aCompareRecord does not contain "Inbox" then
-					if score of aCompareRecord ≥ pScoreThreshold then
-						set theTagsFromCompareRecord to tags of aCompareRecord
-						set tags of theRecord to theTagsFromCompareRecord
-						exit repeat
-					end if
-				end if
-			end repeat
-		end repeat
-	end tell
-
-	logger's trace(logCtx, "exit")
-end classifyMessages
 
 on createSmartGroup(theRecords)
 	set logCtx to my initialize("createSmartGroup")
@@ -404,48 +363,6 @@ on getContactGroupName(theMailAddress)
 	logger's trace(logCtx, "exit")
 	return theGroupName
 end getContactGroupName
-
-on archiveRecords(theRecords, theCallerScript)
-	set logCtx to my initialize("archiveRecords")
-	logger's trace(logCtx, "enter")
-
-	tell application id "DNtp"
-		try
-			repeat with theRecord in theRecords
-
-				set creationDate to creation date of theRecord
-				set recordIsEmail to (filename of theRecord ends with ".eml")
-
-				set archiveFolder to ""
-				if recordIsEmail then
-					set archiveFolder to "/05 Files"
-					set modification date of theRecord to current date
-					set locking of theRecord to true
-				else
-					set archiveFolder to "/06 Notes"
-				end if
-
-				tell baseLib to set creationDateAsString to format(creationDate)
-
-				set theYear to rich texts 1 thru 4 of creationDateAsString
-				set theMonth to rich texts 5 thru 6 of creationDateAsString
-				set archiveFolder to archiveFolder & "/" & theYear & "/" & theMonth
-
-				set theGroup to create location archiveFolder
-
-				set theLocation to location of theRecord
-				set theLoctionAsRecord to get record at theLocation
-				move record theRecord from theLoctionAsRecord to theGroup
-
-				tell logger to info_r(theRecord, "Record archived")
-			end repeat
-		on error error_message number error_number
-			if error_number is not -128 then display alert "Devonthink" message error_message as warning
-		end try
-	end tell
-
-	logger's trace(logCtx, "exit")
-end archiveRecords
 
 on extractAttachmentsFromEmail()
 	tell application id "DNtp"
