@@ -223,7 +223,7 @@ on classifyRecords(theRecords)
 
 	tell application id "DNtp"
 
-		tell application id "DNtp" to set theDatabase to database of first item of theRecords
+		set theDatabase to database of first item of theRecords
 
 		my initializeDatabaseConfiguration(theDatabase)
 		set {recordsSelected, recordsProcessed} to {0, 0}
@@ -236,7 +236,9 @@ on classifyRecords(theRecords)
 
 				-- Date, wenn ClassificationDate gesetzt
 				if pClassificationDate is not missing value and pClassificationDate is not "" then
-					my setDateTags(theRecord, tagFields, pClassificationDate)
+					if length of pDateDimensions > 0 then
+						my setDateTags(theRecord, tagFields, pClassificationDate)
+					end if
 				end if
 
 				-- restliche Dimensionen
@@ -258,7 +260,7 @@ on updateRecordsMetadata(theRecords)
 
 	tell application id "DNtp"
 
-		tell application id "DNtp" to set theDatabase to database of first item of theRecords
+		set theDatabase to database of first item of theRecords
 
 		my initializeDatabaseConfiguration(theDatabase)
 		set {recordsSelected, recordsProcessed} to {0, 0}
@@ -309,7 +311,7 @@ on archiveRecords(theRecords)
 
 	tell application id "DNtp"
 
-		tell application id "DNtp" to set theDatabase to database of first item of theRecords
+		set theDatabase to database of first item of theRecords
 
 		my initializeDatabaseConfiguration(theDatabase)
 		set allDimensions to pDimensionsDictionary's allKeys()
@@ -318,20 +320,17 @@ on archiveRecords(theRecords)
 
 			set tagFields to my fieldsFromTags(theRecord, true)
 
-			if not my existDimension(tagFields, pDateDimensions) then
-				display dialog "Can't update metadata due to missing Date tag(s)."
+			-- Replace Placeholder
+			set theFilesHome to my replaceDimensionPlaceholders(allDimensions, tagFields, pFilesHome)
+			set theFilesHome to my replaceFieldPlaceholder("{Decades}", tagFields, theFilesHome)
+			if pClassificationDate is not missing value and pClassificationDate is not "" and pDateDimensions is {} then
+				set theClassificationDate to my getClassificationDate(theRecord, pClassificationDate)
+				set theFilesHome to my replaceDatePlaceholder(theClassificationDate, theFilesHome)
+			end if
+
+			if theFilesHome contains "[" or the theFilesHome contains "{" then
+				error "Record can't be archived due to existing placeholders in destination group name: " & theFilesHome
 			else
-				set theFilesHome to my replacePlaceholders(allDimensions, tagFields, pFilesHome)
-				set theFilesHome to my replaceFieldPlaceholder("{Decades}", tagFields, theFilesHome)
-
-				if pContentType is equal to "EMAILS" then
-
-					tell baseLib to set creationDateAsString to format(creation date of theRecord)
-					set theYear to rich texts 1 thru 4 of creationDateAsString
-					set theMonth to rich texts 5 thru 6 of creationDateAsString
-					set theFilesHome to theFilesHome & "/" & theYear & "/" & theMonth
-
-				end if
 
 				set theFilesHomeRecord to get record at theFilesHome
 				if theFilesHomeRecord is missing value then
@@ -339,10 +338,10 @@ on archiveRecords(theRecords)
 					set theFilesHomeRecord to create location theFilesHome
 				end if
 
-				set locking of theRecord to true
-
 				logger's info_r(theRecord, "Record moved from: " & location of theRecord & " to: " & theFilesHome)
 				move record theRecord from location group of theRecord to theFilesHomeRecord
+				set locking of theRecord to true
+
 			end if
 		end repeat
 	end tell
@@ -467,7 +466,7 @@ end fieldsFromTags
 
 on setField(theTag, theFields, interactiveMode, theRecord)
 	set logCtx to my initialize("setField")
-	logger's trace(logCtx, "entry")
+	logger's trace(logCtx, "entry > theTag: " & theTag)
 
 	set hasFieldBeenSet to false
 	tell application id "DNtp"
@@ -561,7 +560,7 @@ on setName(theRecord, theFields)
 	logger's trace(logCtx, "enter")
 
 	set allDimensions to pDimensionsDictionary's allKeys()
-	set theName to my replacePlaceholders(allDimensions, theFields, pNameTemplate)
+	set theName to my replaceDimensionPlaceholders(allDimensions, theFields, pNameTemplate)
 
 	set currentName to name of theRecord
 	if theName as string is not equal to currentName as string then
@@ -912,8 +911,8 @@ on subjectFromMetadata(theRecord, theSender)
 	return subjectFromPdfTitle
 end subjectFromMetadata
 
-on replacePlaceholders(theDimensions, theFields, theTemplate)
-	set logCtx to my initialize("replacePlaceholders")
+on replaceDimensionPlaceholders(theDimensions, theFields, theTemplate)
+	set logCtx to my initialize("replaceDimensionPlaceholders")
 	logger's trace(logCtx, "enter")
 
 	set theModifiedTemplate to theTemplate
@@ -937,7 +936,7 @@ on replacePlaceholders(theDimensions, theFields, theTemplate)
 
 	logger's trace(logCtx, "exit > " & theModifiedTemplate)
 	return theModifiedTemplate
-end replacePlaceholders
+end replaceDimensionPlaceholders
 
 on replaceFieldPlaceholder(thePlaceholder, theFields, theTemplate)
 	set logCtx to my initialize("replaceFieldPlaceholder")
@@ -970,6 +969,30 @@ on replaceFieldPlaceholder(thePlaceholder, theFields, theTemplate)
 	return theModifiedTemplate
 end replaceFieldPlaceholder
 
+on replaceDatePlaceholder(theDate, theTemplate)
+	set logCtx to my initialize("replaceDatePlaceholder")
+	logger's trace(logCtx, "enter > theDate: " & theDate & "; theTemplate: " & theTemplate)
+
+	set theModifiedTemplate to theTemplate
+	if theTemplate contains "{Year}" or theTemplate contains "{Month}" or theTemplate contains "{Day}" then
+
+		tell application id "DNtp"
+
+			set theDay to my twoDigit(day of theDate)
+			set theMonth to my twoDigit(month of theDate as integer)
+			set theYear to year of theDate as rich text
+
+			set theModifiedTemplate to my replaceText("{Year}", theYear, theModifiedTemplate)
+			set theModifiedTemplate to my replaceText("{Month}", theMonth, theModifiedTemplate)
+			set theModifiedTemplate to my replaceText("{Day}", theDay, theModifiedTemplate)
+
+		end tell
+	end if
+
+	logger's trace(logCtx, "exit > " & theModifiedTemplate)
+	return theModifiedTemplate
+end replaceDatePlaceholder
+
 on setDateTags(theRecord, theFields, theClassificationDate)
 	set logCtx to my initialize("setDateTags")
 	logger's trace(logCtx, "enter")
@@ -989,38 +1012,7 @@ on setDateTags(theRecord, theFields, theClassificationDate)
 
 		tell application id "DNtp"
 
-			set theDate to missing value
-
-			if theClassificationDate is equal to "DATE_DOCUMENT" then
-
-				try
-					set theDate to document date of theRecord
-					if theDate is missing value then
-						tell logger to info(logCtx, "No 'document date' found, 'creation date' will be used instead.")
-						set theDate to creation date of theRecord
-					end if
-				on error number -2753
-					tell logger to info(logCtx, "No 'document date' found, 'creation date' will be used instead.")
-					set theDate to creation date of theRecord
-				end try
-
-			else if theClassificationDate is equal to "DATE_MODIFIED" then
-
-				set recordName to name of theRecord
-				set theDate to modification date of theRecord
-
-			else if theClassificationDate is equal to "DATE_CREATED" then
-
-				set recordName to name of theRecord
-				set theDate to my creationDateFromMetadata(theRecord)
-
-			else
-				error "Unknown Classification Date Field Identifier: " & pClassificationDate
-			end if
-
-			-- tell baseLib to set theDateAsString to date_to_iso(theDate)
-			tell logger to debug(logCtx, "theDate: " & theDate)
-
+			set theDate to my getClassificationDate(theRecord, theClassificationDate)
 			set theDay to my twoDigit(day of theDate)
 			set theMonth to my twoDigit(month of theDate as integer)
 			set theYear to year of theDate as rich text
@@ -1034,6 +1026,50 @@ on setDateTags(theRecord, theFields, theClassificationDate)
 
 	logger's trace(logCtx, "exit")
 end setDateTags
+
+on getClassificationDate(theRecord, theClassificationDate)
+	set logCtx to my initialize("getClassificationDate")
+	logger's trace(logCtx, "enter")
+
+	tell application id "DNtp"
+
+		set theDate to missing value
+		if theClassificationDate is equal to "DATE_DOCUMENT" then
+
+			try
+				set theDate to document date of theRecord
+				if theDate is missing value then
+					tell logger to info(logCtx, "No 'document date' found, 'creation date' will be used instead.")
+					set theDate to creation date of theRecord
+				end if
+			on error number -2753
+				tell logger to info(logCtx, "No 'document date' found, 'creation date' will be used instead.")
+				set theDate to creation date of theRecord
+			end try
+
+		else if theClassificationDate is equal to "DATE_MODIFIED" then
+
+			set recordName to name of theRecord
+			set theDate to modification date of theRecord
+
+		else if theClassificationDate is equal to "DATE_CREATED" then
+
+			set recordName to name of theRecord
+			set theDate to my creationDateFromMetadata(theRecord)
+
+		else if theClassificationDate is equal to "RECORD_CREATION_DATE" then
+
+			set theDate to creation date of theRecord
+
+		else
+			error "Unknown Classification Date Field Identifier: " & pClassificationDate
+		end if
+
+	end tell
+
+	logger's trace(logCtx, "exit > " & theDate)
+	return theDate
+end getClassificationDate
 
 on twoDigit(d)
 	return text -2 thru -1 of ("00" & d)
