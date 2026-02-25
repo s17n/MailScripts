@@ -33,9 +33,9 @@ on openSender()
 
 			set theSender to get custom meta data for "Sender" from theRecord
 
-			set theSmartSearchRecord to get record at "/03 Resources/General/by Sender/" & theSender
+			set theSmartSearchRecord to get record at "/03 Resources/by Sender/" & theSender
 			if theSmartSearchRecord is missing value then
-				set theSmartSearchRecord to get record at "/03 Resources/General/by Sender (FID)/" & theSender
+				set theSmartSearchRecord to get record at "/03 Resources/by Sender (FID)/" & theSender
 			end if
 			if theSmartSearchRecord is missing value then error "No Sender Record found."
 

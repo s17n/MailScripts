@@ -1,8 +1,14 @@
 #@osa-lang:AppleScript
+use AppleScript version "2.4"
+use framework "Foundation"
+use scripting additions
+
 property pScriptName : "MailLibrary"
 
 property baseLib : missing value
 property logger : missing value
+
+property pSubjectReplacementTextsDictionary : missing value
 
 property pMailboxAccount : missing value
 property pMailboxImportFolder : missing value
@@ -10,6 +16,7 @@ property pMailboxArchiveFolder : missing value
 property pDevonthinkInboxFolder : missing value
 property pDevonthinkSortBySender : missing value
 property pDelayBeforeImport : 0
+property pSubjectReplacementTexts : missing value
 
 on initializeDepencencies(theLogger, theBaseLib)
 	theLogger's trace(pScriptName & " > initializeDepencencies", "enter")
@@ -37,6 +44,14 @@ on initializeDatabaseConfiguration(databaseConfigurationFilename)
 	set pDevonthinkInboxFolder to pDtImportFolder_1 of databaseConfiguration
 	set pDevonthinkSortBySender to pDevonthinkSortBySender of databaseConfiguration
 	set pDelayBeforeImport to pDelayBeforeImport of databaseConfiguration
+	set pSubjectReplacementTexts to pSubjectReplacementTexts of databaseConfiguration
+
+	set pSubjectReplacementTextsDictionary to current application's NSMutableDictionary's dictionary()
+	repeat with aTextReplacement in pSubjectReplacementTexts
+		set theText to first item of aTextReplacement as string
+		set theReplacement to second item of aTextReplacement as string
+		(pSubjectReplacementTextsDictionary's setObject:theReplacement forKey:theText)
+	end repeat
 
 	logger's debug(logCtx, "pMailboxAccount: " & pMailboxAccount & "; pMailboxImportFolder: " & pMailboxImportFolder & ¬
 		"; pMailboxArchiveFolder: " & pMailboxArchiveFolder & "; pDevonthinkInboxFolder: " & pDevonthinkInboxFolder & ¬
@@ -63,20 +78,10 @@ on importMessages(theMessages, theDatabaseName)
 				tell baseLib to set theName to format(theDateSent)
 				if theSubject is equal to "" then set theSubject to "(no subject)"
 
-				set theImportFolder to null
-				if pDevonthinkSortBySender then
-					set theImportSubFolder to my getContactGroupName(senderAddress)
-					if theImportSubFolder is not null then
-						set theImportFolder to "Inbox/" & theImportSubFolder
-					end if
-				end if
-				if theImportFolder is null then
-					set theImportFolder to "Inbox/" & pDevonthinkInboxFolder
-				end if
+				set theImportFolder to pMailboxImportFolder
 				tell application id "DNtp"
 					set theGroup to incoming group of database theDatabaseName
 					set theRecord to create record with {name:theName & ".eml", type:unknown, creation date:theDateSent, modification date:theDateReceived, URL:theSender, source:(theSource as string), unread:(not theReadFlag)} in theGroup
-					perform smart rule trigger import event record theRecord
 					set theImportFolder to create location theImportFolder in database theDatabaseName
 					move record theRecord to theImportFolder
 
@@ -87,6 +92,8 @@ on importMessages(theMessages, theDatabaseName)
 					set unread of theRecord to not (exists record at "07 Miscellaneous/Configuration/Import as Read/" & theSenderEncoded)
 
 					tell logger to info_r(theRecord, "New Message imported - received at:  " & theDateSent & " from: " & theSender)
+
+					perform smart rule trigger import event record theRecord
 				end tell
 
 				-- Archiv-Folder zusammenbauen
@@ -127,8 +134,6 @@ on getInboxMessages()
 	set logCtx to my initialize("getInboxMessages")
 	logger's trace(logCtx, "enter")
 
-	-- my initializeDatabaseConfiguration("")
-
 	tell application id "com.apple.mail" to set theMessages to messages of mailbox pMailboxImportFolder of account pMailboxAccount
 
 	logger's trace(logCtx, "exit")
@@ -151,12 +156,12 @@ on createSmartGroup(theRecords)
 			tell logger to debug(pScriptName, "createSmartGroup: theSender: " & theSender & ", theEmailAddress: " & theEmailAddress)
 
 			-- Erstelle Smartgroup für Sender
-			if (exists record at "03 Resources/General/by Sender/" & theSenderEncoded) or ¬
-				(exists record at "03 Resources/General/by Sender (FID)/" & theSenderEncoded) then
+			if (exists record at "03 Resources/by Sender/" & theSenderEncoded) or ¬
+				(exists record at "03 Resources/by Sender (FID)/" & theSenderEncoded) then
 				tell logger to debug_r(theRecord, "Smartgroup already exists for Sender: " & theSender)
 			else
 
-				set theGroup to get record at "03 Resources/General/by Sender"
+				set theGroup to get record at "03 Resources/by Sender"
 				set theSmartGroup to create record with {name:theSender, URL:theEmailAddress, record type:smart group, search predicates:"mdsender:" & theSender} in theGroup
 				tell logger to info_r(theRecord, "Smartgroup created for Sender: " & theSender)
 			end if
@@ -245,12 +250,17 @@ on addOrUpdateContactsByGroup(theRecords, theCallerScript)
 end addOrUpdateContactsByGroup
 
 
-on getSender(theMetadata)
+on getSender(theRecord)
 	set logCtx to my initialize("getSender")
 	logger's trace(logCtx, "enter")
 
 	set {theSender, theFirstname, theLastname, theNickname} to {"", null, null, null}
-	set theMailAddress to kMDItemAuthorEmailAddresses of theMetadata
+
+
+	tell application id "DNtp"
+		set theMetadata to meta data of theRecord
+		set theMailAddress to kMDItemAuthorEmailAddresses of theMetadata
+	end tell
 
 	-- get names from first Contact with same email address
 	tell application "Contacts"
@@ -278,7 +288,7 @@ on getSender(theMetadata)
 
 		if theSender is null or length of theSender = 0 then
 			try
-				set theSender to kMDItemAuthors of theMetadata
+				tell application id "DNtp" to set theSender to kMDItemAuthors of theMetadata
 			on error error_message number error_number
 				if error_number is -1728 then
 					set theSender to theMailAddress -- "(null)"
@@ -289,27 +299,34 @@ on getSender(theMetadata)
 		end if
 	end if
 
-	logger's trace(logCtx, "enter")
+	logger's trace(logCtx, "exit > " & theSender)
 	return theSender
 end getSender
 
-on getSubject(theMetadata)
-	set logCtx to my initialize("getSubject")
-	logger's trace(logCtx, "enter")
 
-	try
-		set theSubject to kMDItemSubject of theMetadata
-	on error error_message number error_number
-		if error_number is -1728 then
-			set theSubject to "(null)"
-		else
-			display alert "Devonthink" message error_message as warning
+on getCustomMetadata(theRecord, theField)
+	set logCtx to my initialize("getCustomMetadata")
+	tell logger to debug(logCtx, "enter > theField: " & theField)
+
+	set theValue to ""
+	tell application id "DNtp"
+
+		if theField is equal to "Subject" then
+			set theMetadata to meta data of theRecord
+			set theValue to kMDItemSubject of theMetadata
+			repeat with aReplacement in pSubjectReplacementTextsDictionary's allKeys()
+				set theSubstitution to (pSubjectReplacementTextsDictionary's objectForKey:aReplacement)
+				set theValue to baseLib's replaceText(aReplacement, theSubstitution, theValue)
+			end repeat
+		else if theField is equal to "Sender" then
+			set theValue to my getSender(theRecord)
 		end if
-	end try
 
-	tell logger to debug(logCtx, "exit")
-	return theSubject
-end getSubject
+	end tell
+
+	logger's trace(logCtx, "exit > " & theValue)
+	return theValue
+end getCustomMetadata
 
 on setCustomAttributes(theSelection)
 	set logCtx to my initialize("setCustomAttributes")
@@ -318,16 +335,11 @@ on setCustomAttributes(theSelection)
 	tell application id "DNtp"
 		repeat with theRecord in theSelection
 
-			set {theSender, theSubject} to {null, null}
-			set theMetadata to meta data of theRecord
-
-			set theSender to my getSender(theMetadata)
-			set theSubject to my getSubject(theMetadata)
+			set theSender to my getSender(theRecord)
+			set theSubject to my getCustomMetadata(theRecord, "Subject")
 
 			add custom meta data theSender for "Sender" to theRecord
 			add custom meta data theSubject for "Subject" to theRecord
-
-			tell logger to debug_r(theRecord, "Sender: " & theSender & "; Subject: " & theSubject)
 
 		end repeat
 	end tell
@@ -410,4 +422,3 @@ on extractAttachmentsFromEmail()
 		end repeat
 	end tell
 end extractAttachmentsFromEmail
-

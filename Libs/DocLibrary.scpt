@@ -140,6 +140,11 @@ on initializeDatabaseConfiguration(theDatabase)
 
 	my initializeDimensions(theDatabase)
 
+	if pContentType is equal to "EMAILS" then
+		mailLib's initializeDepencencies(logger, baseLib)
+		mailLib's initializeDatabaseConfiguration(databaseConfigurationFilename)
+	end if
+
 	logger's trace(logCtx, "exit")
 end initializeDatabaseConfiguration
 
@@ -204,6 +209,44 @@ on importMailMessages(theDatabaseName)
 	end tell
 	logger's trace(logCtx, "exit")
 end importMailMessages
+
+on moveByDimension(theRecords, theDimension, theFolderPrefix)
+	set logCtx to my initialize("moveByDimension")
+	logger's trace(logCtx, "enter > theDimension: " & theDimension & "; theFolderPrefix: " & theFolderPrefix)
+
+	tell application id "DNtp"
+
+		set theDatabase to database of first item of theRecords
+		my initializeDatabaseConfiguration(theDatabase)
+		repeat with theRecord in theRecords
+
+			set tagFields to my fieldsFromTags(theRecord, true)
+			set theCategory to (tagFields's objectForKey:theDimension)
+
+			if theCategory is not missing value and theCategory is not "" then
+				set theDestinationFolderName to theFolderPrefix & "/" & theCategory as string
+				my moveRecord(theRecord, theDestinationFolderName)
+			end if
+
+		end repeat
+	end tell
+
+	logger's trace(logCtx, "exit")
+end moveByDimension
+
+on createSmartGroupForSender(theRecords, theDatabaseName)
+	set logCtx to my initialize("createSmartGroupForSender")
+	logger's trace(logCtx, "enter > " & theDatabaseName)
+
+	mailLib's initializeDepencencies(logger, baseLib)
+
+	set databaseConfigurationFilename to pDatabaseConfigurationFolder & "/Database-Configuration-" & theDatabaseName & ".scpt"
+	mailLib's initializeDatabaseConfiguration(databaseConfigurationFilename)
+
+	mailLib's createSmartGroup(theRecords)
+
+	logger's trace(logCtx, "exit")
+end createSmartGroupForSender
 
 on processDocuments(theRecords)
 	set logCtx to my initialize("processDocuments")
@@ -320,7 +363,7 @@ on archiveRecords(theRecords)
 
 			set tagFields to my fieldsFromTags(theRecord, true)
 
-			-- Replace Placeholder
+			-- Replace placeholder
 			set theFilesHome to my replaceDimensionPlaceholders(allDimensions, tagFields, pFilesHome)
 			set theFilesHome to my replaceFieldPlaceholder("{Decades}", tagFields, theFilesHome)
 			if pClassificationDate is not missing value and pClassificationDate is not "" and pDateDimensions is {} then
@@ -331,22 +374,32 @@ on archiveRecords(theRecords)
 			if theFilesHome contains "[" or the theFilesHome contains "{" then
 				error "Record can't be archived due to existing placeholders in destination group name: " & theFilesHome
 			else
-
-				set theFilesHomeRecord to get record at theFilesHome
-				if theFilesHomeRecord is missing value then
-					logger's info(logCtx, "Record will be moved to a group that doesn't exist yet and will be created now: " & theFilesHome)
-					set theFilesHomeRecord to create location theFilesHome
-				end if
-
-				logger's info_r(theRecord, "Record moved from: " & location of theRecord & " to: " & theFilesHome)
-				move record theRecord from location group of theRecord to theFilesHomeRecord
+				my moveRecord(theRecord, theFilesHome)
 				set locking of theRecord to true
-
 			end if
 		end repeat
 	end tell
 	logger's trace(logCtx, "exit")
 end archiveRecords
+
+on moveRecord(theRecord, theDestinationFolderName)
+	set logCtx to my initialize("moveRecord")
+	logger's trace(logCtx, "enter > theDestinationFolderName: " & theDestinationFolderName)
+
+	tell application id "DNtp"
+
+		set theDestinationFolder to get record at theDestinationFolderName
+		if theDestinationFolder is missing value then
+			logger's info(logCtx, "Record will be moved to a group that doesn't exist yet and will be created now: " & theDestinationFolderName)
+			set theDestinationFolder to create location theDestinationFolderName
+		end if
+		logger's debug(logCtx, "Record moved from: " & location of theRecord & " to: " & theDestinationFolderName)
+		move record theRecord from location group of theRecord to theDestinationFolder
+
+	end tell
+
+	logger's trace(logCtx, "exit")
+end moveRecord
 
 on addTextToCustomMetadata(theCustomMetadataField, theText)
 	set logCtx to my initialize(" addTextToCustomMetadata")
@@ -787,6 +840,9 @@ on setCustomMetadata(theIndex, theRecord, theFields, theSupplemental, theSupplem
 
 		-- Replace custom text placeholder "{Text}"
 		set customText to my extractCustomTextFromCmdValue(currentValue)
+		if customText is equal to "" and pContentType is equal to "EMAILS" then
+			set customText to mailLib's getCustomMetadata(theRecord, theField)
+		end if
 
 		-- Add new Custom Text (Supplemental) to the right-hand side
 		if theSupplemental is not missing value and theSupplemental is not "" then
@@ -800,9 +856,11 @@ on setCustomMetadata(theIndex, theRecord, theFields, theSupplemental, theSupplem
 			end if
 		end if
 
-		-- Add Field Separator to Custom Text
+		-- Add field separator to custom text - only when a Dimension is set ("[") - not used for email
 		if length of customText > 0 then
-			set customText to pCustomMetadataFieldSeparator & customText
+			if cmdValue starts with "[" then
+				set customText to pCustomMetadataFieldSeparator & customText
+			end if
 		end if
 
 		set cmdValue to my replaceText("{Text}", customText, cmdValue as string)
