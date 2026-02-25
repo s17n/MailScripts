@@ -76,13 +76,13 @@ on initialize(loggingContext)
 	return pScriptName & " > " & loggingContext
 end initialize
 
--- Operation: databaseConfigurationFilename
+-- Operation: databaseConfigurationPath
 -- Kurzbeschreibung: Erzeugt den Dateipfad zur datenbankspezifischen Konfigurationsdatei.
 -- Parameter: theDatabaseName:text
 -- Rueckgabe: text
-on databaseConfigurationFilename(theDatabaseName)
+on databaseConfigurationPath(theDatabaseName)
 	return pDatabaseConfigurationFolder & "/Database-Configuration-" & theDatabaseName & ".scpt"
-end databaseConfigurationFilename
+end databaseConfigurationPath
 
 -- Operation: initializeMailLibrary
 -- Kurzbeschreibung: Initialisiert MailLibrary-Abhaengigkeiten und laedt deren Datenbankkonfiguration.
@@ -90,9 +90,9 @@ end databaseConfigurationFilename
 -- Rueckgabe: text
 on initializeMailLibrary(theDatabaseName)
 	mailLib's initializeDepencencies(logger, baseLib)
-	set databaseConfigurationFilename to my databaseConfigurationFilename(theDatabaseName)
-	mailLib's initializeDatabaseConfiguration(databaseConfigurationFilename)
-	return databaseConfigurationFilename
+	set databaseConfigPath to my databaseConfigurationPath(theDatabaseName)
+	mailLib's initializeDatabaseConfiguration(databaseConfigPath)
+	return databaseConfigPath
 end initializeMailLibrary
 
 -- Operation: buildDimensionsConstraintsDictionary
@@ -149,8 +149,8 @@ on initializeDatabaseConfiguration(theDatabase)
 
 	tell application id "DNtp" to set theDatabaseName to name of theDatabase
 
-	set databaseConfigurationFilename to my databaseConfigurationFilename(theDatabaseName)
-	set databaseConfiguration to load script databaseConfigurationFilename
+	set databaseConfigPath to my databaseConfigurationPath(theDatabaseName)
+	set databaseConfiguration to load script databaseConfigPath
 	set pContentType to pContentType of databaseConfiguration
 	set defaultConfigurationName to pDefaultConfiguration of databaseConfiguration
 	set defaultConfiguration to load script (pDatabaseConfigurationFolder & "/" & defaultConfigurationName)
