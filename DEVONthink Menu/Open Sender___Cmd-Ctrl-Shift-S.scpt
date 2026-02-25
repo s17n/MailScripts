@@ -16,7 +16,7 @@ on initialize()
 	end if
 	if docLib is missing value then
 		set config to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
-		set doclLib to load script ((pMailScriptsPath of config) & "/Libs/DocLibrary.scpt")
+		set docLib to load script ((pMailScriptsPath of config) & "/Libs/DocLibrary.scpt")
 	end if
 end initialize
 
