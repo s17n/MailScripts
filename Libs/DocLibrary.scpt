@@ -487,7 +487,7 @@ on moveRecord(theRecord, theDestinationFolderName)
 
 	tell application id "DNtp"
 
-		set theDestinationFolder to get record at theDestinationFolderName
+		set theDestinationFolder to get record at theDestinationFolderName in (database of theRecord)
 		if theDestinationFolder is missing value then
 			logger's info(logCtx, "Record will be moved to a group that doesn't exist yet and will be created now: " & theDestinationFolderName)
 			set theDestinationFolder to create location theDestinationFolderName
@@ -964,6 +964,7 @@ on setCustomMetadata(theIndex, theRecord, theFields, theSupplemental, theSupplem
 
 		set theCategory to theFields's objectForKey:theDimension
 		if theCategory is missing value then set theCategory to ""
+		set theCategory to my tagAlias(theCategory)
 
 		-- Custom Metadata Value von Template initialisieren - nachfolgend werden alle Placeholder ersetzt
 		set cmdValue to theTemplate
@@ -991,7 +992,7 @@ on setCustomMetadata(theIndex, theRecord, theFields, theSupplemental, theSupplem
 			if (cmdValue as string) contains ("[" & aDimension & "]" as string) then
 				set theReplaceText to my tagAlias((theFields's objectForKey:aDimension))
 				if aDimension as string is equal to theDimension as string then
-					set theReplaceText to my tagAlias(theCategory)
+					set theReplaceText to theCategory
 				else
 					if theReplaceText is missing value then
 						set theReplaceText to ""
