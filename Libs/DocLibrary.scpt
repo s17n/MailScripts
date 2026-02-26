@@ -280,6 +280,26 @@ on importMailMessages(theDatabaseName)
 	logger's trace(logCtx, "exit")
 end importMailMessages
 
+on displayNotification(theRecords, pMessagePrefix, pFieldForMessage)
+	set logCtx to my initialize("displayNotification")
+	logger's trace(logCtx, "enter > displayNotification: " & pMessagePrefix)
+
+	tell application id "DNtp"
+
+		repeat with theRecord in theRecords
+
+			set theValue to get custom meta data for pFieldForMessage from theRecord
+			set theMessage to pMessagePrefix & theValue
+
+			log message info theMessage record theRecord
+
+		end repeat
+
+	end tell
+
+	logger's trace(logCtx, "exit")
+end displayNotification
+
 -- Operation: moveByDimension
 -- Kurzbeschreibung: Verschiebt Records in Zielgruppen auf Basis einer ermittelten Dimensions-Kategorie.
 -- Parameter: theRecords:list<DEVONthink record (class 'record' / DTrc)>
@@ -1023,11 +1043,9 @@ on setCustomMetadata(theIndex, theRecord, theFields, theSupplemental, theSupplem
 			end if
 		end if
 
-		-- Add field separator to custom text - only when a Dimension is set ("[") - not used for email
-		if length of customText > 0 then
-			if cmdValue starts with "[" then
-				set customText to pCustomMetadataFieldSeparator & customText
-			end if
+		-- Add field separator to custom text - only when custom text is set and a Dimension is set
+		if length of customText > 0 and (count of words of cmdValue) > 1 then
+			set customText to pCustomMetadataFieldSeparator & customText
 		end if
 
 		set cmdValue to my replaceText("{Text}", customText, cmdValue as string)
@@ -1074,8 +1092,9 @@ on extractCustomTextFromCmdValue(currentValue)
 			set customText to my removeTrailingBracketBlocks(customText)
 
 		else
-			logger's debug(logCtx, "No Custom Text found use current value.")
-			if (count of words of currentValue) > 1 then
+			-- Migrationsszenario bei EMAILS: wenn kein pCustomMetadataFieldSeparator vorhanden ist wird currentValue komplett übernommen
+			if (count of words of currentValue) > 1 and pContentType is equal to "EMAILS" then
+				logger's debug(logCtx, "Custom Text found but no pCustomMetadataFieldSeparator -> current value will be used")
 				set customText to currentValue
 			end if
 		end if

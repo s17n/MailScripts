@@ -148,6 +148,7 @@ on createSmartGroup(theRecords)
 	tell application id "DNtp"
 		repeat with theRecord in theRecords
 
+			set theDatabase to database of theRecord
 			set theSender to get custom meta data for "Sender" from theRecord
 			tell baseLib to set theSenderEncoded to replaceText("/", "\\/", theSender)
 
@@ -156,22 +157,22 @@ on createSmartGroup(theRecords)
 			tell logger to debug(pScriptName, "createSmartGroup: theSender: " & theSender & ", theEmailAddress: " & theEmailAddress)
 
 			-- Erstelle Smartgroup für Sender
-			if (exists record at "03 Resources/by Sender/" & theSenderEncoded) or ¬
-				(exists record at "03 Resources/by Sender (FID)/" & theSenderEncoded) then
+			if (exists record at "03 Resources/by Sender/" & theSenderEncoded in theDatabase) or ¬
+				(exists record at "03 Resources/by Sender (FID)/" & theSenderEncoded in theDatabase) then
 				tell logger to debug_r(theRecord, "Smartgroup already exists for Sender: " & theSender)
 			else
 
-				set theGroup to get record at "03 Resources/by Sender"
+				set theGroup to get record at "03 Resources/by Sender" in theDatabase
 				set theSmartGroup to create record with {name:theSender, URL:theEmailAddress, record type:smart group, search predicates:"mdsender:" & theSender} in theGroup
 				tell logger to info_r(theRecord, "Smartgroup created for Sender: " & theSender)
 			end if
 
 			-- Erstelle Smartgroup für Email-Adresse
-			if (exists record at "03 Resources/General/by Email/" & theEmailAddress) then
+			if (exists record at "03 Resources/General/by Email/" & theEmailAddress in theDatabase) then
 				tell logger to debug_r(theRecord, "Smartgroup already exists for Email: " & theEmailAddress)
 			else
 
-				set theGroup to get record at "03 Resources/General/by Email"
+				set theGroup to get record at "03 Resources/General/by Email" in theDatabase
 				set theSmartGroup to create record with {name:theEmailAddress, URL:theEmailAddress, record type:smart group, search predicates:"kMDItemAuthorEmailAddresses:" & theEmailAddress} ¬
 					in theGroup
 				tell logger to info_r(theRecord, "Smartgroup created for Email: " & theEmailAddress)
@@ -183,7 +184,7 @@ on createSmartGroup(theRecords)
 end createSmartGroup
 
 -- Erstellt für jeden Record (.eml) einen Kontakt und fügt diesen einer Kontaktgruppe hinzu
--- ODER aktualiserte die Kontaktgruppe des Kontakts - falls der Kontakt bereits existiert.
+-- ODER aktualiserte die Kontaktgruppe des Kontaktkts - falls der Kontakt bereits existiert.
 -- Die Kontaktgruppe muss bereits existieren.
 -- Die Zuordnung der Kontaktgruppe ergibt sich aus der 'location group' des records.
 -- Parameter:
