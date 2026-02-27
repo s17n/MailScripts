@@ -52,9 +52,482 @@ property pExiftool : missing value
 -- Typisierung: DEVONthink-Typen aus /Applications/DEVONthink v4.2.app/Contents/Resources/DEVONthink.sdef
 
 -- Operation: initialize
--- Kurzbeschreibung: Initialisiert Konfiguration und Bibliotheksreferenzen einmalig und liefert den Logging-Kontext.
+-- Description: Initializes configuration and library references once and returns the logging context.
 -- Parameter: loggingContext:text
--- Rueckgabe: text
+-- Returns: text
+on addTextToCustomMetadata(theCustomMetadataField, theText)
+	set logCtx to my initialize(" addTextToCustomMetadata")
+	logger's trace(logCtx, "enter > theCustomMetadataField: " & theCustomMetadataField & ", theText: " & theText)
+
+	tell application id "DNtp"
+
+		set theDatabase to current database
+		my initializeDatabaseConfiguration(theDatabase)
+
+		set theRecord to content record
+		set tagFields to my fieldsFromTags(theRecord, false)
+
+		set theAction to "ADD"
+		tell baseLib to set theTimmedText to trim(theText)
+
+		-- Command-Key
+		set cmdKeyStat to (((current application's NSEvent's modifierFlags()) div ¬
+			(current application's NSCommandKeyMask as integer)) mod 2) > 0
+		if cmdKeyStat then set theAction to "REPLACE"
+
+		set customMetadataFieldIndex to 0
+		repeat with aCustomMetadataField in pCustomMetadataFields
+			set customMetadataFieldIndex to customMetadataFieldIndex + 1
+			if aCustomMetadataField as string is equal to theCustomMetadataField as string then exit repeat
+		end repeat
+		logger's debug(logCtx, "customMetadataFieldIndex: " & customMetadataFieldIndex)
+
+		my setCustomMetadata(customMetadataFieldIndex, theRecord, tagFields, theTimmedText, theAction)
+
+	end tell
+	logger's trace(logCtx, "exit")
+end addTextToCustomMetadata
+
+-- Operation: verifyTags
+-- Description: Checks records at a location for tag consistency and logs metrics.
+-- Parameter: theLocation:text (DEVONthink location prefix, z.B. '/05 Files')
+-- Returns: no return value (side effects)
+on addToTagList(theTagList, theRecord)
+	set end of theTagList to name of theRecord as string
+	return theTagList
+end addToTagList
+
+-- Operation: importMailMessages
+-- Description: Reads inbox messages via MailLibrary and imports them into the target database.
+-- Parameter: theDatabaseName:text
+-- Returns: no return value (side effects)
+on archiveRecords(theRecords)
+	set logCtx to my initialize("archiveRecords")
+	logger's trace(logCtx, "enter")
+
+	tell application id "DNtp"
+
+		set theDatabase to database of first item of theRecords
+
+		my initializeDatabaseConfiguration(theDatabase)
+		set allDimensions to pDimensionsDictionary's allKeys()
+
+		repeat with theRecord in theRecords
+
+			set tagFields to my fieldsFromTags(theRecord, true)
+
+			-- Replace placeholder
+			set theFilesHome to my replaceDimensionPlaceholders(allDimensions, tagFields, pFilesHome)
+			set theFilesHome to my replaceFieldPlaceholder("{Decades}", tagFields, theFilesHome)
+			if pClassificationDate is not missing value and pClassificationDate is not "" and pDateDimensions is {} then
+				set theClassificationDate to my getClassificationDate(theRecord, pClassificationDate)
+				set theFilesHome to my replaceDatePlaceholder(theClassificationDate, theFilesHome)
+			end if
+
+			if theFilesHome contains "[" or the theFilesHome contains "{" then
+				error "Record can't be archived due to existing placeholders in destination group name: " & theFilesHome
+			else
+				my moveRecord(theRecord, theFilesHome)
+				set locking of theRecord to true
+			end if
+		end repeat
+	end tell
+	logger's trace(logCtx, "exit")
+end archiveRecords
+
+-- Operation: moveRecord
+-- Description: Moves a record into a target group and creates the group if needed.
+-- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
+-- Parameter: theDestinationFolderName:text
+-- Returns: no return value (side effects)
+on buildDimensionsConstraintsDictionary(theConstraints)
+	set constraintsDictionary to current application's NSMutableDictionary's dictionary()
+	repeat with aDimensionConstraint in theConstraints
+		set theDimensionName to first item of aDimensionConstraint as string
+		set theCardinality to second item of aDimensionConstraint as integer
+		(constraintsDictionary's setObject:theCardinality forKey:theDimensionName)
+	end repeat
+	return constraintsDictionary
+end buildDimensionsConstraintsDictionary
+
+-- Operation: buildTagAliasDictionary
+-- Description: Builds a dictionary with tag -> alias from the configured tag-alias pairs.
+-- Parameter: theTagAliases:list<list{text,text}>
+-- Returns: NSMutableDictionary<text,text>
+on buildMonthDictionaries(theMonths)
+	set byDigit to current application's NSMutableDictionary's dictionary()
+	set byName to current application's NSMutableDictionary's dictionary()
+	repeat with aMonth in theMonths
+		set theNumber to first item of aMonth as string
+		set theName to second item of aMonth as string
+		(byDigit's setObject:theName forKey:theNumber)
+		(byName's setObject:theNumber forKey:theName)
+	end repeat
+	return {byDigit, byName}
+end buildMonthDictionaries
+
+-- Operation: initializeDatabaseConfiguration
+-- Description: Loads database and default configuration, sets module properties, and initializes dimensions.
+-- Parameter: theDatabase:DEVONthink database (class 'database' / DTkb)
+-- Returns: no return value (side effects)
+on buildTagAliasDictionary(theTagAliases)
+	set aliasesDictionary to current application's NSMutableDictionary's dictionary()
+	repeat with aTagAlias in theTagAliases
+		set theTag to first item of aTagAlias as string
+		set theAlias to second item of aTagAlias as string
+		(aliasesDictionary's setObject:theAlias forKey:theTag)
+	end repeat
+	return aliasesDictionary
+end buildTagAliasDictionary
+
+-- Operation: buildMonthDictionaries
+-- Description: Creates both month mappings (number->name and name->number).
+-- Parameter: theMonths:list<list{text,text}>
+-- Returns: list{NSMutableDictionary<text,text>, NSMutableDictionary<text,text>}
+on classifyRecords(theRecords)
+	set logCtx to my initialize("classifyRecords")
+	logger's trace(logCtx, "enter")
+
+	tell application id "DNtp"
+
+		set theDatabase to database of first item of theRecords
+
+		my initializeDatabaseConfiguration(theDatabase)
+		set {recordsSelected, recordsProcessed} to {0, 0}
+		repeat with theRecord in theRecords
+			set recordsSelected to recordsSelected + 1
+			if type of theRecord is not group and type of theRecord is not smart group then
+				set recordsProcessed to recordsProcessed + 1
+
+				set tagFields to my fieldsFromTags(theRecord, true)
+
+				-- Date, wenn ClassificationDate gesetzt
+				if pClassificationDate is not missing value and pClassificationDate is not "" then
+					if length of pDateDimensions > 0 then
+						my setDateTags(theRecord, tagFields, pClassificationDate)
+					end if
+				end if
+
+				-- restliche Dimensionen
+				repeat with aCompareDimension in pCompareDimensions
+					my setTagFromCompareRecord(theRecord, theDatabase, tagFields, aCompareDimension)
+				end repeat
+
+			end if
+		end repeat
+		tell logger to info(logCtx, "Records selected: " & recordsSelected & ", Records processed:  " & recordsProcessed)
+	end tell
+
+	logger's trace(logCtx, "exit")
+end classifyRecords
+
+-- Operation: updateRecordsMetadata
+-- Description: Updates name, custom metadata, and comments based on derived fields.
+-- Parameter: theRecords:list<DEVONthink record (class 'record' / DTrc)>
+-- Returns: no return value (side effects)
+on createSmartGroupForSender(theRecords, theDatabaseName)
+	set logCtx to my initialize("createSmartGroupForSender")
+	logger's trace(logCtx, "enter > " & theDatabaseName)
+
+	my initializeMailLibrary(theDatabaseName)
+
+	mailLib's createSmartGroup(theRecords)
+
+	logger's trace(logCtx, "exit")
+end createSmartGroupForSender
+
+-- Operation: processDocuments
+-- Description: Runs the standard workflow: classification and metadata update.
+-- Parameter: theRecords:list<DEVONthink record (class 'record' / DTrc)>
+-- Returns: no return value (side effects)
+on createTagList(theTags, resultList)
+	tell application id "DNtp"
+		repeat with tagListItem in theTags
+			set theTagType to tag type of tagListItem
+			if theTagType is ordinary tag then
+				set resultList to my addToTagList(resultList, tagListItem)
+			else
+				set resultList to my createTagList(every child of tagListItem, resultList)
+			end if
+		end repeat
+		return resultList
+	end tell
+	return resultList
+end createTagList
+
+-- Operation: addToTagList
+-- Description: Appends the name of a tag record to a result list.
+-- Parameter: theTagList:list<text>
+-- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
+-- Returns: list<text>
+on creationDateFromMetadata(theRecord)
+	set logCtx to my initialize("creationDateFromMetadata")
+	logger's trace(logCtx, "enter")
+
+	set {creationDate, pdfCreateDate, pdfCreateDateString} to {missing value, missing value, missing value}
+	tell application id "DNtp"
+
+		if kind of theRecord contains "PDF" then
+
+			set pdfPath to path of theRecord
+			set command to pExiftool & " -s -s -s -CreateDate -d '%Y-%m-%d %H:%M:%S' " & quoted form of pdfPath
+			try
+				set pdfCreateDateString to do shell script command
+			on error errMsg number errNum
+				error "ExifTool-Aufruf fehlgeschlagen (" & errNum & "): " & errMsg
+			end try
+			tell baseLib to set creationDate to isoStringToDate(pdfCreateDateString)
+
+		end if
+
+		if creationDate is missing value then set creationDate to creation date of theRecord
+	end tell
+
+	logger's trace(logCtx, "exit => creationDate: " & creationDate)
+	return creationDate
+end creationDateFromMetadata
+
+-- Operation: setNameForAsset
+-- Description: Generates a unique asset name from date components and a running number.
+-- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
+-- Parameter: f:record/dictionary mit tagYear, tagMonth, tagDay, tagSender
+-- Returns: no return value (side effects)
+on databaseConfigurationPath(theDatabaseName)
+	return pDatabaseConfigurationFolder & "/Database-Configuration-" & theDatabaseName & ".scpt"
+end databaseConfigurationPath
+
+-- Operation: initializeMailLibrary
+-- Description: Initializes MailLibrary dependencies and loads their database configuration.
+-- Parameter: theDatabaseName:text
+-- Returns: text
+on displayNotification(theRecords, pMessagePrefix, pFieldForMessage)
+	set logCtx to my initialize("displayNotification")
+	logger's trace(logCtx, "enter > displayNotification: " & pMessagePrefix)
+
+	tell application id "DNtp"
+
+		repeat with theRecord in theRecords
+
+			set theValue to get custom meta data for pFieldForMessage from theRecord
+			set theMessage to pMessagePrefix & theValue
+
+			log message info theMessage record theRecord
+
+		end repeat
+
+	end tell
+
+	logger's trace(logCtx, "exit")
+end displayNotification
+
+-- Operation: moveByDimension
+-- Description: Moves records into target groups based on a derived dimension category.
+-- Parameter: theRecords:list<DEVONthink record (class 'record' / DTrc)>
+-- Parameter: theDimension:text
+-- Parameter: theFolderPrefix:text
+-- Returns: no return value (side effects)
+on existDimension(theFields, theDimensions)
+	set logCtx to my initialize("existDimension")
+	logger's trace(logCtx, "enter")
+
+	repeat with aDimension in theDimensions
+		set theValue to (theFields's objectForKey:aDimension)
+		if theValue is missing value then
+			logger's trace(logCtx, "No value found for dimension '" & aDimension & "'.")
+			logger's trace(logCtx, "exit > false")
+			return false
+		end if
+	end repeat
+
+	logger's trace(logCtx, "exit > true")
+	return true
+end existDimension
+
+-- Operation: setName
+-- Description: Calculates the record name from the name template and sets it if it changed.
+-- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
+-- Parameter: theFields:NSMutableDictionary
+-- Returns: no return value (side effects)
+on extractCustomTextFromCmdValue(currentValue)
+	set logCtx to my initialize("extractCustomTextFromCmdValue")
+	logger's trace(logCtx, "enter > " & currentValue)
+
+	set customText to ""
+	if currentValue is not missing value then
+
+		-- wenn Custom Text vorhanden ist parsen, sonst vorhanden Wert nehmen
+		if currentValue contains pCustomMetadataFieldSeparator then
+
+			-- rechten Teil neben pCustomMetadataFieldSeparator ermitteln
+			tell baseLib to set fieldList to text2List(currentValue, pCustomMetadataFieldSeparator)
+			if fieldList is not missing value and length of fieldList > 1 then
+				set customText to second item of fieldList
+			end if
+
+			-- mögliche "[...]" Blöcke entfernen
+			set customText to my removeTrailingBracketBlocks(customText)
+
+		else
+			-- Migrationsszenario bei EMAILS: wenn kein pCustomMetadataFieldSeparator vorhanden ist wird currentValue komplett übernommen
+			if (count of words of currentValue) > 1 and pContentType is equal to "EMAILS" then
+				logger's debug(logCtx, "Custom Text found but no pCustomMetadataFieldSeparator -> current value will be used")
+				set customText to currentValue
+			end if
+		end if
+	end if
+
+	logger's trace(logCtx, "exit > " & customText)
+	return customText
+end extractCustomTextFromCmdValue
+
+-- Operation: removeTrailingBracketBlocks
+-- Description: Removes bracketed blocks appended at the end of a string, such as [..].
+-- Parameter: theString:text
+-- Returns: text
+on fieldsFromTags(theRecord, interactiveMode)
+	set logCtx to my initialize("fieldsFromTags")
+	logger's trace(logCtx, "enter")
+
+	set fields to current application's NSMutableDictionary's dictionary()
+	tell application id "DNtp"
+
+		set theTags to tags of theRecord
+		repeat with aTag in theTags
+			set theResult to my setField(aTag, fields, interactiveMode, theRecord)
+			set hasFieldBeenSet to first item of theResult
+			set fields to second item of theResult
+			if not hasFieldBeenSet and interactiveMode then
+				my handleUncategorizedTag(aTag)
+				set fields to second item of my setField(aTag, fields, interactiveMode, theRecord)
+			end if
+		end repeat
+	end tell
+
+	logger's trace(logCtx, "exit")
+	return fields
+end fieldsFromTags
+
+-- Operation: setField
+-- Description: Assigns a tag to a matching dimension and checks cardinality.
+-- Parameter: theTag:text
+-- Parameter: theFields:NSMutableDictionary
+-- Parameter: interactiveMode:boolean
+-- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
+-- Returns: list{boolean, NSMutableDictionary}
+on getClassificationDate(theRecord, theClassificationDate)
+	set logCtx to my initialize("getClassificationDate")
+	logger's trace(logCtx, "enter")
+
+	tell application id "DNtp"
+
+		set theDate to missing value
+		if theClassificationDate is equal to "DATE_DOCUMENT" then
+
+			try
+				set theDate to document date of theRecord
+				if theDate is missing value then
+					tell logger to info(logCtx, "No 'document date' found, 'creation date' will be used instead.")
+					set theDate to creation date of theRecord
+				end if
+			on error number -2753
+				tell logger to info(logCtx, "No 'document date' found, 'creation date' will be used instead.")
+				set theDate to creation date of theRecord
+			end try
+
+		else if theClassificationDate is equal to "DATE_MODIFIED" then
+
+			set recordName to name of theRecord
+			set theDate to modification date of theRecord
+
+		else if theClassificationDate is equal to "DATE_CREATED" then
+
+			set recordName to name of theRecord
+			set theDate to my creationDateFromMetadata(theRecord)
+
+		else if theClassificationDate is equal to "RECORD_CREATION_DATE" then
+
+			set theDate to creation date of theRecord
+
+		else
+			error "Unknown Classification Date Field Identifier: " & pClassificationDate
+		end if
+
+	end tell
+
+	logger's trace(logCtx, "exit > " & theDate)
+	return theDate
+end getClassificationDate
+
+-- Operation: twoDigit
+-- Description: Formats a value as a two-digit string.
+-- Parameter: d:integer|text
+-- Returns: text
+on handleUncategorizedTag(theTag)
+	set logCtx to my initialize("handleUncategorizedTag")
+	logger's trace(logCtx, "enter")
+
+	tell application id "DNtp"
+
+		set theUncategorizedRecord to get record at "/Tags/" & theTag
+
+		set allKeysAsList to {}
+		repeat with aKey in pDimensionsDictionary's allKeys()
+			if aKey as string is not equal to theTag as string then
+				set end of allKeysAsList to aKey as string
+			end if
+		end repeat
+
+		set sortedList to (current application's NSArray's arrayWithArray:allKeysAsList)'s ¬
+			sortedArrayUsingSelector:"localizedCaseInsensitiveCompare:"
+		set sortedList to sortedList as list
+
+		set theItem to choose from list sortedList ¬
+			with title "Uncategorized Tag: " & theTag with prompt "The Tag '" & theTag & "' is not categorized yet. You can categorize it now to one of the following dimensions or leave it as is." default items "05 Subject" OK button name "Catagorize" cancel button name "Cancel" without multiple selections allowed
+
+		-- Tag zu Categories der entsprechenden Dimension hinzufügen
+		if theItem is not {} and theItem is not false then
+
+			-- Dictionary
+			set theCategories to (pDimensionsDictionary's objectForKey:theItem) as list
+			set end of theCategories to name of theUncategorizedRecord as string
+			(pDimensionsDictionary's setObject:theCategories forKey:theItem)
+
+			-- Tag Group
+			set theDimensionRecord to get record at pDimensionsHome & "/" & theItem
+			move record theUncategorizedRecord to theDimensionRecord
+		end if
+
+	end tell
+	logger's trace(logCtx, "exit")
+end handleUncategorizedTag
+
+-- Operation: existDimension
+-- Description: Checks whether values exist for all requested dimensions.
+-- Parameter: theFields:NSMutableDictionary
+-- Parameter: theDimensions:list<text>
+-- Returns: boolean
+on importMailMessages(theDatabaseName)
+	set logCtx to my initialize("importMailMessages")
+	logger's trace(logCtx, "enter > " & theDatabaseName)
+
+	tell application id "DNtp"
+
+		my initializeMailLibrary(theDatabaseName)
+
+		set theMessages to mailLib's getInboxMessages()
+		logger's debug(logCtx, "Number of Inbox Messages: " & length of theMessages)
+		mailLib's importMessages(theMessages, theDatabaseName)
+
+	end tell
+	logger's trace(logCtx, "exit")
+end importMailMessages
+
+-- Operation: displayNotification
+-- Description: Shows an info notification with field values per record.
+-- Parameter: theRecords:list<DEVONthink record (class 'record' / DTrc)>
+-- Parameter: pMessagePrefix:text
+-- Parameter: pFieldForMessage:text
+-- Returns: no return value (side effects)
 on initialize(loggingContext)
 	set logCtx to pScriptName & " > initialize"
 
@@ -77,72 +550,9 @@ on initialize(loggingContext)
 end initialize
 
 -- Operation: databaseConfigurationPath
--- Kurzbeschreibung: Erzeugt den Dateipfad zur datenbankspezifischen Konfigurationsdatei.
+-- Description: Builds the file path to the database-specific configuration file.
 -- Parameter: theDatabaseName:text
--- Rueckgabe: text
-on databaseConfigurationPath(theDatabaseName)
-	return pDatabaseConfigurationFolder & "/Database-Configuration-" & theDatabaseName & ".scpt"
-end databaseConfigurationPath
-
--- Operation: initializeMailLibrary
--- Kurzbeschreibung: Initialisiert MailLibrary-Abhaengigkeiten und laedt deren Datenbankkonfiguration.
--- Parameter: theDatabaseName:text
--- Rueckgabe: text
-on initializeMailLibrary(theDatabaseName)
-	mailLib's initializeDepencencies(logger, baseLib)
-	set databaseConfigPath to my databaseConfigurationPath(theDatabaseName)
-	mailLib's initializeDatabaseConfiguration(databaseConfigPath)
-	return databaseConfigPath
-end initializeMailLibrary
-
--- Operation: buildDimensionsConstraintsDictionary
--- Kurzbeschreibung: Baut ein Dictionary mit Dimension -> Kardinalitaet aus der Konfigurationsliste.
--- Parameter: theConstraints:list<list{text,integer}>
--- Rueckgabe: NSMutableDictionary<text,integer>
-on buildDimensionsConstraintsDictionary(theConstraints)
-	set constraintsDictionary to current application's NSMutableDictionary's dictionary()
-	repeat with aDimensionConstraint in theConstraints
-		set theDimensionName to first item of aDimensionConstraint as string
-		set theCardinality to second item of aDimensionConstraint as integer
-		(constraintsDictionary's setObject:theCardinality forKey:theDimensionName)
-	end repeat
-	return constraintsDictionary
-end buildDimensionsConstraintsDictionary
-
--- Operation: buildTagAliasDictionary
--- Kurzbeschreibung: Baut ein Dictionary mit Tag -> Alias aus den konfigurierten Tag-Alias-Paaren.
--- Parameter: theTagAliases:list<list{text,text}>
--- Rueckgabe: NSMutableDictionary<text,text>
-on buildTagAliasDictionary(theTagAliases)
-	set aliasesDictionary to current application's NSMutableDictionary's dictionary()
-	repeat with aTagAlias in theTagAliases
-		set theTag to first item of aTagAlias as string
-		set theAlias to second item of aTagAlias as string
-		(aliasesDictionary's setObject:theAlias forKey:theTag)
-	end repeat
-	return aliasesDictionary
-end buildTagAliasDictionary
-
--- Operation: buildMonthDictionaries
--- Kurzbeschreibung: Erzeugt beide Monats-Mappings (Nummer->Name und Name->Nummer).
--- Parameter: theMonths:list<list{text,text}>
--- Rueckgabe: list{NSMutableDictionary<text,text>, NSMutableDictionary<text,text>}
-on buildMonthDictionaries(theMonths)
-	set byDigit to current application's NSMutableDictionary's dictionary()
-	set byName to current application's NSMutableDictionary's dictionary()
-	repeat with aMonth in theMonths
-		set theNumber to first item of aMonth as string
-		set theName to second item of aMonth as string
-		(byDigit's setObject:theName forKey:theNumber)
-		(byName's setObject:theNumber forKey:theName)
-	end repeat
-	return {byDigit, byName}
-end buildMonthDictionaries
-
--- Operation: initializeDatabaseConfiguration
--- Kurzbeschreibung: Laedt Datenbank- und Default-Konfiguration, setzt Modul-Properties und initialisiert Dimensionen.
--- Parameter: theDatabase:DEVONthink database (class 'database' / DTkb)
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Returns: text
 on initializeDatabaseConfiguration(theDatabase)
 	set logCtx to my initialize("initializeDatabaseConfiguration")
 	logger's trace(logCtx, "enter")
@@ -204,9 +614,9 @@ on initializeDatabaseConfiguration(theDatabase)
 end initializeDatabaseConfiguration
 
 -- Operation: initializeDimensions
--- Kurzbeschreibung: Laedt alle Dimensionen und Kategorien der Datenbank in den In-Memory-Cache.
+-- Description: Loads all dimensions and categories of the database into the in-memory cache.
 -- Parameter: theDatabase:DEVONthink database (class 'database' / DTkb)
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Returns: no return value (side effects)
 on initializeDimensions(theDatabase)
 	set logCtx to my initialize("initializeDimensions")
 	logger's trace(logCtx, "enter")
@@ -231,81 +641,36 @@ on initializeDimensions(theDatabase)
 end initializeDimensions
 
 -- Operation: createTagList
--- Kurzbeschreibung: Traversiert Tag-Hierarchien rekursiv und sammelt Blatt-Tags als flache Liste.
+-- Description: Recursively traverses tag hierarchies and collects leaf tags as a flat list.
 -- Parameter: theTags:list<DEVONthink child record (class 'child' / DTch)>
 -- Parameter: resultList:list<text>
--- Rueckgabe: list<text>
-on createTagList(theTags, resultList)
-	tell application id "DNtp"
-		repeat with tagListItem in theTags
-			set theTagType to tag type of tagListItem
-			if theTagType is ordinary tag then
-				set resultList to my addToTagList(resultList, tagListItem)
-			else
-				set resultList to my createTagList(every child of tagListItem, resultList)
-			end if
-		end repeat
-		return resultList
-	end tell
-	return resultList
-end createTagList
+-- Returns: list<text>
+on initializeMailLibrary(theDatabaseName)
+	mailLib's initializeDepencencies(logger, baseLib)
+	set databaseConfigPath to my databaseConfigurationPath(theDatabaseName)
+	mailLib's initializeDatabaseConfiguration(databaseConfigPath)
+	return databaseConfigPath
+end initializeMailLibrary
 
--- Operation: addToTagList
--- Kurzbeschreibung: Fuegt den Namen eines Tag-Records an eine Ergebnisliste an.
--- Parameter: theTagList:list<text>
+-- Operation: buildDimensionsConstraintsDictionary
+-- Description: Builds a dictionary with dimension -> cardinality from the configuration list.
+-- Parameter: theConstraints:list<list{text,integer}>
+-- Returns: NSMutableDictionary<text,integer>
+on logIssue(theRecord, setRecordLabel, theMessage)
+	tell application id "DNtp"
+		tell logger to info_r(theRecord, theMessage)
+		set pIssueCount to pIssueCount + 1
+		if setRecordLabel is true then
+			set label of theRecord to 7
+		end if
+	end tell
+end logIssue
+
+-- Operation: fieldsFromTags
+-- Description: Derives a dictionary of dimensions and values from record tags.
 -- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Rueckgabe: list<text>
-on addToTagList(theTagList, theRecord)
-	set end of theTagList to name of theRecord as string
-	return theTagList
-end addToTagList
-
--- Operation: importMailMessages
--- Kurzbeschreibung: Liest Inbox-Nachrichten ueber MailLibrary und importiert sie in die Ziel-Datenbank.
--- Parameter: theDatabaseName:text
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
-on importMailMessages(theDatabaseName)
-	set logCtx to my initialize("importMailMessages")
-	logger's trace(logCtx, "enter > " & theDatabaseName)
-
-	tell application id "DNtp"
-
-		my initializeMailLibrary(theDatabaseName)
-
-		set theMessages to mailLib's getInboxMessages()
-		logger's debug(logCtx, "Number of Inbox Messages: " & length of theMessages)
-		mailLib's importMessages(theMessages, theDatabaseName)
-
-	end tell
-	logger's trace(logCtx, "exit")
-end importMailMessages
-
-on displayNotification(theRecords, pMessagePrefix, pFieldForMessage)
-	set logCtx to my initialize("displayNotification")
-	logger's trace(logCtx, "enter > displayNotification: " & pMessagePrefix)
-
-	tell application id "DNtp"
-
-		repeat with theRecord in theRecords
-
-			set theValue to get custom meta data for pFieldForMessage from theRecord
-			set theMessage to pMessagePrefix & theValue
-
-			log message info theMessage record theRecord
-
-		end repeat
-
-	end tell
-
-	logger's trace(logCtx, "exit")
-end displayNotification
-
--- Operation: moveByDimension
--- Kurzbeschreibung: Verschiebt Records in Zielgruppen auf Basis einer ermittelten Dimensions-Kategorie.
--- Parameter: theRecords:list<DEVONthink record (class 'record' / DTrc)>
--- Parameter: theDimension:text
--- Parameter: theFolderPrefix:text
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Parameter: interactiveMode:boolean
+-- Returns: NSMutableDictionary<text, text|list<text>>
 on moveByDimension(theRecords, theDimension, theFolderPrefix)
 	set logCtx to my initialize("moveByDimension")
 	logger's trace(logCtx, "enter > theDimension: " & theDimension & "; theFolderPrefix: " & theFolderPrefix)
@@ -331,176 +696,10 @@ on moveByDimension(theRecords, theDimension, theFolderPrefix)
 end moveByDimension
 
 -- Operation: createSmartGroupForSender
--- Kurzbeschreibung: Initialisiert MailLibrary und erstellt eine Sender-Smart-Group fuer gegebene Records.
+-- Description: Initializes MailLibrary and creates a sender smart group for given records.
 -- Parameter: theRecords:list<DEVONthink record (class 'record' / DTrc)>
 -- Parameter: theDatabaseName:text
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
-on createSmartGroupForSender(theRecords, theDatabaseName)
-	set logCtx to my initialize("createSmartGroupForSender")
-	logger's trace(logCtx, "enter > " & theDatabaseName)
-
-	my initializeMailLibrary(theDatabaseName)
-
-	mailLib's createSmartGroup(theRecords)
-
-	logger's trace(logCtx, "exit")
-end createSmartGroupForSender
-
--- Operation: processDocuments
--- Kurzbeschreibung: Fuehrt den Standard-Workflow aus: Klassifikation und Metadatenaktualisierung.
--- Parameter: theRecords:list<DEVONthink record (class 'record' / DTrc)>
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
-on processDocuments(theRecords)
-	set logCtx to my initialize("processDocuments")
-	logger's trace(logCtx, "enter")
-
-	logger's debug(logCtx, "Number of Records: " & length of theRecords)
-
-	my classifyRecords(theRecords)
-	my updateRecordsMetadata(theRecords)
-
-	logger's trace(logCtx, "exit")
-end processDocuments
-
--- Operation: classifyRecords
--- Kurzbeschreibung: Klassifiziert Records durch Datumstags und Vergleich mit aehnlichen Records.
--- Parameter: theRecords:list<DEVONthink record (class 'record' / DTrc)>
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
-on classifyRecords(theRecords)
-	set logCtx to my initialize("classifyRecords")
-	logger's trace(logCtx, "enter")
-
-	tell application id "DNtp"
-
-		set theDatabase to database of first item of theRecords
-
-		my initializeDatabaseConfiguration(theDatabase)
-		set {recordsSelected, recordsProcessed} to {0, 0}
-		repeat with theRecord in theRecords
-			set recordsSelected to recordsSelected + 1
-			if type of theRecord is not group and type of theRecord is not smart group then
-				set recordsProcessed to recordsProcessed + 1
-
-				set tagFields to my fieldsFromTags(theRecord, true)
-
-				-- Date, wenn ClassificationDate gesetzt
-				if pClassificationDate is not missing value and pClassificationDate is not "" then
-					if length of pDateDimensions > 0 then
-						my setDateTags(theRecord, tagFields, pClassificationDate)
-					end if
-				end if
-
-				-- restliche Dimensionen
-				repeat with aCompareDimension in pCompareDimensions
-					my setTagFromCompareRecord(theRecord, theDatabase, tagFields, aCompareDimension)
-				end repeat
-
-			end if
-		end repeat
-		tell logger to info(logCtx, "Records selected: " & recordsSelected & ", Records processed:  " & recordsProcessed)
-	end tell
-
-	logger's trace(logCtx, "exit")
-end classifyRecords
-
--- Operation: updateRecordsMetadata
--- Kurzbeschreibung: Aktualisiert Name, Custom Metadata und Kommentare basierend auf ermittelten Feldern.
--- Parameter: theRecords:list<DEVONthink record (class 'record' / DTrc)>
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
-on updateRecordsMetadata(theRecords)
-	set logCtx to my initialize("updateRecordsMetadata")
-	logger's trace(logCtx, "enter")
-
-	tell application id "DNtp"
-
-		set theDatabase to database of first item of theRecords
-
-		my initializeDatabaseConfiguration(theDatabase)
-		set {recordsSelected, recordsProcessed} to {0, 0}
-		repeat with theRecord in theRecords
-			set recordsSelected to recordsSelected + 1
-			if type of theRecord is group or type of theRecord is smart group then
-				set comment of theRecord to ""
-			else
-				set tagFields to my fieldsFromTags(theRecord, true)
-
-				if not my existDimension(tagFields, pDateDimensions) then
-					tell logger to info_r(theRecord, "Can't update metadata due to missing Date tag(s).")
-				else
-					set recordsProcessed to recordsProcessed + 1
-
-					-- Set Name
-					if pNameTemplate is not missing value and pNameTemplate is not "" then
-						my setName(theRecord, tagFields)
-					end if
-
-					-- Set Custom Metadata
-					set customMetadataFieldIndex to 0
-					repeat with aCustomMetadataField in pCustomMetadataFields
-						set customMetadataFieldIndex to customMetadataFieldIndex + 1
-						my setCustomMetadata(customMetadataFieldIndex, theRecord, tagFields, "", "")
-					end repeat
-
-					-- Set Comments
-					if length of pCommentsFields > 0 then
-						set comment of theRecord to ""
-						repeat with aFinderCommentsField in pCommentsFields
-							my setFinderComment(aFinderCommentsField, theRecord)
-						end repeat
-					end if
-				end if
-			end if
-		end repeat
-
-		tell logger to info(logCtx, "Records selected: " & recordsSelected & ", Records processed:  " & recordsProcessed)
-	end tell
-
-	logger's trace(logCtx, "exit")
-end updateRecordsMetadata
-
--- Operation: archiveRecords
--- Kurzbeschreibung: Ermittelt Archivziel aus Platzhaltern, verschiebt Record und markiert ihn als gesperrt.
--- Parameter: theRecords:list<DEVONthink record (class 'record' / DTrc)>
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
-on archiveRecords(theRecords)
-	set logCtx to my initialize("archiveRecords")
-	logger's trace(logCtx, "enter")
-
-	tell application id "DNtp"
-
-		set theDatabase to database of first item of theRecords
-
-		my initializeDatabaseConfiguration(theDatabase)
-		set allDimensions to pDimensionsDictionary's allKeys()
-
-		repeat with theRecord in theRecords
-
-			set tagFields to my fieldsFromTags(theRecord, true)
-
-			-- Replace placeholder
-			set theFilesHome to my replaceDimensionPlaceholders(allDimensions, tagFields, pFilesHome)
-			set theFilesHome to my replaceFieldPlaceholder("{Decades}", tagFields, theFilesHome)
-			if pClassificationDate is not missing value and pClassificationDate is not "" and pDateDimensions is {} then
-				set theClassificationDate to my getClassificationDate(theRecord, pClassificationDate)
-				set theFilesHome to my replaceDatePlaceholder(theClassificationDate, theFilesHome)
-			end if
-
-			if theFilesHome contains "[" or the theFilesHome contains "{" then
-				error "Record can't be archived due to existing placeholders in destination group name: " & theFilesHome
-			else
-				my moveRecord(theRecord, theFilesHome)
-				set locking of theRecord to true
-			end if
-		end repeat
-	end tell
-	logger's trace(logCtx, "exit")
-end archiveRecords
-
--- Operation: moveRecord
--- Kurzbeschreibung: Verschiebt einen Record in eine Zielgruppe und legt die Gruppe bei Bedarf an.
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Parameter: theDestinationFolderName:text
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Returns: no return value (side effects)
 on moveRecord(theRecord, theDestinationFolderName)
 	set logCtx to my initialize("moveRecord")
 	logger's trace(logCtx, "enter > theDestinationFolderName: " & theDestinationFolderName)
@@ -521,391 +720,146 @@ on moveRecord(theRecord, theDestinationFolderName)
 end moveRecord
 
 -- Operation: addTextToCustomMetadata
--- Kurzbeschreibung: Fuegt Zusatztext in ein konfiguriertes Custom-Metadata-Feld ein oder ersetzt ihn.
+-- Description: Inserts additional text into a configured custom metadata field or replaces it.
 -- Parameter: theCustomMetadataField:text
 -- Parameter: theText:text
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
-on addTextToCustomMetadata(theCustomMetadataField, theText)
-	set logCtx to my initialize(" addTextToCustomMetadata")
-	logger's trace(logCtx, "enter > theCustomMetadataField: " & theCustomMetadataField & ", theText: " & theText)
-
-	tell application id "DNtp"
-
-		set theDatabase to current database
-		my initializeDatabaseConfiguration(theDatabase)
-
-		set theRecord to content record
-		set tagFields to my fieldsFromTags(theRecord, false)
-
-		set theAction to "ADD"
-		tell baseLib to set theTimmedText to trim(theText)
-
-		-- Command-Key
-		set cmdKeyStat to (((current application's NSEvent's modifierFlags()) div ¬
-			(current application's NSCommandKeyMask as integer)) mod 2) > 0
-		if cmdKeyStat then set theAction to "REPLACE"
-
-		set customMetadataFieldIndex to 0
-		repeat with aCustomMetadataField in pCustomMetadataFields
-			set customMetadataFieldIndex to customMetadataFieldIndex + 1
-			if aCustomMetadataField as string is equal to theCustomMetadataField as string then exit repeat
-		end repeat
-		logger's debug(logCtx, "customMetadataFieldIndex: " & customMetadataFieldIndex)
-
-		my setCustomMetadata(customMetadataFieldIndex, theRecord, tagFields, theTimmedText, theAction)
-
-	end tell
-	logger's trace(logCtx, "exit")
-end addTextToCustomMetadata
-
--- Operation: verifyTags
--- Kurzbeschreibung: Prueft Records an einer Location auf Tag-Konsistenz und protokolliert Kennzahlen.
--- Parameter: theLocation:text (DEVONthink location prefix, z.B. '/05 Files')
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
-on verifyTags(theLocation)
-	set logCtx to my initialize("verifyTags")
+-- Returns: no return value (side effects)
+on processDocuments(theRecords)
+	set logCtx to my initialize("processDocuments")
 	logger's trace(logCtx, "enter")
 
-	tell application id "DNtp"
-		set currentDatabase to current database
-		my initializeDatabaseConfiguration(currentDatabase)
+	logger's debug(logCtx, "Number of Records: " & length of theRecords)
 
-		set theRecords to every content of currentDatabase whose location begins with theLocation
-		tell logger to info(logCtx, "Verification started for Database: " & (name of currentDatabase as string) & ", Location: " & theLocation & ¬
-			", Number of Records: " & (length of theRecords as string))
-
-		set {issueRecords, issues, totalPages} to {0, 0, 0}
-		repeat with theRecord in theRecords
-			logger's debug(logCtx, " " & name of theRecord)
-
-			set {theYear, theMonth, theDay, theSender, theSubject, pIssueCount} to {null, null, null, null, null, 0}
-			if type of theRecord is PDF document then set totalPages to totalPages + (page count of theRecord)
-
-			set theFields to my fieldsFromTags(theRecord, false)
-			-- set allDimensionConstraints to pDimensionsConstraintsDictionary's allKeys()
-			-- repeat with aDimensionName in allDimensionConstraints
-			-- 	set theCardinality to (pConstraintsDictionary's objectForKey:aDimensionName)
-			-- 	set theCategories to (theFields's objectForKey:aDimensionName)
-			--
-			-- 	if theCategories is missing value then
-			-- 		my logIssue(theRecord, true, "No category found for dimension '" & theDimension & "'.")
-			-- 	else
-			-- 		if theCount = 1 then
-			-- 			if not (theCategories's isKindOfClass:(current application's NSString)) as boolean then
-			-- 				set logtext to theCategories as list
-			-- 				my logIssue(theRecord, true, "More than 1 category found for dimension '" & theDimension & "': " & logtext)
-			-- 			end if
-			-- 			-- else if (setCategories's isKindOfClass:(current application's NSArray)) as boolean
-			-- 		end if
-			-- 	end if
-			-- end repeat
-			--
-			-- if pIssueCount > 0 then
-			-- 	set issueRecords to issueRecords + 1
-			-- 	set issues to issues + pIssueCount
-			-- end if
-		end repeat
-		tell logger to info(logCtx, "Verification finished - Records with Issues: " & issueRecords & ", Total Issues: " & issues & ", Total Pages (PDF only): " & totalPages)
-	end tell
-	logger's trace(logCtx, "exit")
-end verifyTags
-
--- Operation: logIssue
--- Kurzbeschreibung: Protokolliert einen Validierungsfehler, zaehlt ihn und setzt optional ein Label.
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Parameter: setRecordLabel:boolean
--- Parameter: theMessage:text
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
-on logIssue(theRecord, setRecordLabel, theMessage)
-	tell application id "DNtp"
-		tell logger to info_r(theRecord, theMessage)
-		set pIssueCount to pIssueCount + 1
-		if setRecordLabel is true then
-			set label of theRecord to 7
-		end if
-	end tell
-end logIssue
-
--- Operation: fieldsFromTags
--- Kurzbeschreibung: Leitet aus den Record-Tags ein Dictionary mit Dimensionen und Werten ab.
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Parameter: interactiveMode:boolean
--- Rueckgabe: NSMutableDictionary<text, text|list<text>>
-on fieldsFromTags(theRecord, interactiveMode)
-	set logCtx to my initialize("fieldsFromTags")
-	logger's trace(logCtx, "enter")
-
-	set fields to current application's NSMutableDictionary's dictionary()
-	tell application id "DNtp"
-
-		set theTags to tags of theRecord
-		repeat with aTag in theTags
-			set theResult to my setField(aTag, fields, interactiveMode, theRecord)
-			set hasFieldBeenSet to first item of theResult
-			set fields to second item of theResult
-			if not hasFieldBeenSet and interactiveMode then
-				my handleUncategorizedTag(aTag)
-				set fields to second item of my setField(aTag, fields, interactiveMode, theRecord)
-			end if
-		end repeat
-	end tell
+	my classifyRecords(theRecords)
+	my updateRecordsMetadata(theRecords)
 
 	logger's trace(logCtx, "exit")
-	return fields
-end fieldsFromTags
+end processDocuments
 
--- Operation: setField
--- Kurzbeschreibung: Ordnet ein Tag einer passenden Dimension zu und prueft dabei die Kardinalitaet.
+-- Operation: classifyRecords
+-- Description: Classifies records using date tags and comparison with similar records.
+-- Parameter: theRecords:list<DEVONthink record (class 'record' / DTrc)>
+-- Returns: no return value (side effects)
+on removeTrailingBracketBlocks(theString)
+	set logCtx to my initialize("removeTrailingBracketBlocks")
+	logger's trace(logCtx, "enter > " & theString)
+
+	set NSString to current application's NSString's stringWithString:theString
+
+	-- rechts trimmen
+	set trimmed to NSString's stringByTrimmingCharactersInSet:(current application's NSCharacterSet's whitespaceAndNewlineCharacterSet())
+
+	-- [Text]-Blöcke am Ende entfernen (inkl. Leerzeichen davor)
+	set cleaned to trimmed's stringByReplacingOccurrencesOfString:"(\\s*\\[[^\\[\\]]*\\])+$" withString:"" options:(current application's NSRegularExpressionSearch) range:{0, trimmed's |length|()}
+	set cleaned to cleaned as text
+
+	logger's trace(logCtx, "exit > " & cleaned)
+	return cleaned
+end removeTrailingBracketBlocks
+
+-- Operation: tagAlias
+-- Description: Returns the alias for a tag, if one is configured.
 -- Parameter: theTag:text
--- Parameter: theFields:NSMutableDictionary
--- Parameter: interactiveMode:boolean
+-- Returns: text
+on replaceDatePlaceholder(theDate, theTemplate)
+	set logCtx to my initialize("replaceDatePlaceholder")
+	logger's trace(logCtx, "enter > theDate: " & theDate & "; theTemplate: " & theTemplate)
+
+	set theModifiedTemplate to theTemplate
+	if theTemplate contains "{Year}" or theTemplate contains "{Month}" or theTemplate contains "{Day}" then
+
+		tell application id "DNtp"
+
+			set theDay to my twoDigit(day of theDate)
+			set theMonth to my twoDigit(month of theDate as integer)
+			set theYear to year of theDate as rich text
+
+			set theModifiedTemplate to my replaceText("{Year}", theYear, theModifiedTemplate)
+			set theModifiedTemplate to my replaceText("{Month}", theMonth, theModifiedTemplate)
+			set theModifiedTemplate to my replaceText("{Day}", theDay, theModifiedTemplate)
+
+		end tell
+	end if
+
+	logger's trace(logCtx, "exit > " & theModifiedTemplate)
+	return theModifiedTemplate
+end replaceDatePlaceholder
+
+-- Operation: setDateTags
+-- Description: Sets year/month/day tags based on the classification date if they are missing.
 -- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Rueckgabe: list{boolean, NSMutableDictionary}
-on setField(theTag, theFields, interactiveMode, theRecord)
-	set logCtx to my initialize("setField")
-	logger's trace(logCtx, "entry > theTag: " & theTag)
-
-	set hasFieldBeenSet to false
-	tell application id "DNtp"
-
-		set allDimensions to pDimensionsDictionary's allKeys()
-		repeat with aDimension in allDimensions
-			set categories to (pDimensionsDictionary's objectForKey:aDimension) as list
-			if categories contains theTag then
-				set theCardinality to (pDimensionsConstraintsDictionary's objectForKey:aDimension)
-				logger's debug(logCtx, "theCardinality: " & theCardinality)
-
-				set setCurrentValue to (theFields's objectForKey:aDimension)
-				if setCurrentValue is missing value then
-					(theFields's setObject:theTag forKey:aDimension)
-				else
-					if theCardinality is not missing value and theCardinality as integer > 0 then
-						set theMessage to "Cardinality error at dimension '" & aDimension & "' for record: " & name of theRecord
-						logger's info_r(theRecord, theMessage)
-						if interactiveMode then error theMessage
-					end if
-					(theFields's setObject:{setCurrentValue, theTag} forKey:aDimension)
-				end if
-				set hasFieldBeenSet to true
-			end if
-		end repeat
-
-	end tell
-
-	logger's trace(logCtx, "exit")
-	return {hasFieldBeenSet, theFields}
-end setField
-
--- Operation: handleUncategorizedTag
--- Kurzbeschreibung: Bietet interaktiv an, ein nicht zugeordnetes Tag einer Dimension zuzuordnen.
--- Parameter: theTag:text
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
-on handleUncategorizedTag(theTag)
-	set logCtx to my initialize("handleUncategorizedTag")
-	logger's trace(logCtx, "enter")
-
-	tell application id "DNtp"
-
-		set theUncategorizedRecord to get record at "/Tags/" & theTag
-
-		set allKeysAsList to {}
-		repeat with aKey in pDimensionsDictionary's allKeys()
-			if aKey as string is not equal to theTag as string then
-				set end of allKeysAsList to aKey as string
-			end if
-		end repeat
-
-		set sortedList to (current application's NSArray's arrayWithArray:allKeysAsList)'s ¬
-			sortedArrayUsingSelector:"localizedCaseInsensitiveCompare:"
-		set sortedList to sortedList as list
-
-		set theItem to choose from list sortedList ¬
-			with title "Uncategorized Tag: " & theTag with prompt "The Tag '" & theTag & "' is not categorized yet. You can categorize it now to one of the following dimensions or leave it as is." default items "05 Subject" OK button name "Catagorize" cancel button name "Cancel" without multiple selections allowed
-
-		-- Tag zu Categories der entsprechenden Dimension hinzufügen
-		if theItem is not {} and theItem is not false then
-
-			-- Dictionary
-			set theCategories to (pDimensionsDictionary's objectForKey:theItem) as list
-			set end of theCategories to name of theUncategorizedRecord as string
-			(pDimensionsDictionary's setObject:theCategories forKey:theItem)
-
-			-- Tag Group
-			set theDimensionRecord to get record at pDimensionsHome & "/" & theItem
-			move record theUncategorizedRecord to theDimensionRecord
-		end if
-
-	end tell
-	logger's trace(logCtx, "exit")
-end handleUncategorizedTag
-
--- Operation: existDimension
--- Kurzbeschreibung: Prueft, ob fuer alle angeforderten Dimensionen Werte vorhanden sind.
 -- Parameter: theFields:NSMutableDictionary
--- Parameter: theDimensions:list<text>
--- Rueckgabe: boolean
-on existDimension(theFields, theDimensions)
-	set logCtx to my initialize("existDimension")
+-- Parameter: theClassificationDate:text
+-- Returns: no return value (side effects)
+on replaceDimensionPlaceholders(theDimensions, theFields, theTemplate)
+	set logCtx to my initialize("replaceDimensionPlaceholders")
 	logger's trace(logCtx, "enter")
 
+	set theModifiedTemplate to theTemplate
 	repeat with aDimension in theDimensions
-		set theValue to (theFields's objectForKey:aDimension)
-		if theValue is missing value then
-			logger's trace(logCtx, "No value found for dimension '" & aDimension & "'.")
-			logger's trace(logCtx, "exit > false")
-			return false
+
+		if (theModifiedTemplate as string) contains ("[" & aDimension & "]" as string) then
+
+			tell logger to debug(logCtx, "aDimension: " & aDimension)
+
+			set theValue to (theFields's objectForKey:aDimension) as string
+
+			-- Replace Month to double-digit
+			set theReplacedValue to (monthsByName's objectForKey:theValue)
+			if theReplacedValue is not missing value then set theValue to theReplacedValue as string
+
+			if theValue is missing value then set theValue to ""
+			set thePlaceholder to "[" & aDimension & "]"
+			set theModifiedTemplate to my replaceText(thePlaceholder, theValue, theModifiedTemplate)
 		end if
 	end repeat
 
-	logger's trace(logCtx, "exit > true")
-	return true
-end existDimension
+	logger's trace(logCtx, "exit > " & theModifiedTemplate)
+	return theModifiedTemplate
+end replaceDimensionPlaceholders
 
--- Operation: setName
--- Kurzbeschreibung: Berechnet den Record-Namen aus dem Namens-Template und setzt ihn bei Aenderung.
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
+-- Operation: replaceFieldPlaceholder
+-- Description: Replaces special field placeholders such as {Decades} in a template.
+-- Parameter: thePlaceholder:text
 -- Parameter: theFields:NSMutableDictionary
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
-on setName(theRecord, theFields)
-	set logCtx to my initialize("setName")
+-- Parameter: theTemplate:text
+-- Returns: text
+on replaceFieldPlaceholder(thePlaceholder, theFields, theTemplate)
+	set logCtx to my initialize("replaceFieldPlaceholder")
 	logger's trace(logCtx, "enter")
 
-	set allDimensions to pDimensionsDictionary's allKeys()
-	set theName to my replaceDimensionPlaceholders(allDimensions, theFields, pNameTemplate)
+	set theModifiedTemplate to theTemplate
 
-	set currentName to name of theRecord
-	if theName as string is not equal to currentName as string then
-		tell logger to info_r(theRecord, "Name changed from: " & currentName & " to: " & theName)
-		set name of theRecord to theName
+	if thePlaceholder is equal to "{Decades}" then
+
+		if (theTemplate as string) contains (thePlaceholder as string) then
+
+			set theYear to theFields's objectForKey:(first item of pDateDimensions)
+
+			set theYearAsInteger to theYear as integer
+			set theValue to ""
+			if theYearAsInteger ≥ 1990 and theYearAsInteger ≤ 1999 then
+				set theValue to "1990-1999/"
+			else if theYearAsInteger ≥ 2000 and theYearAsInteger ≤ 2009 then
+				set theValue to "2000-2009/"
+			else if theYearAsInteger ≥ 2010 and theYearAsInteger ≤ 2019 then
+				set theValue to "2010-2019/"
+			end if
+
+			set theModifiedTemplate to my replaceText(thePlaceholder, theValue, theModifiedTemplate)
+		end if
+
 	end if
 
-	logger's trace(logCtx, "exit")
-end setName
+	logger's trace(logCtx, "exit > " & theModifiedTemplate)
+	return theModifiedTemplate
+end replaceFieldPlaceholder
 
--- Operation: creationDateFromMetadata
--- Kurzbeschreibung: Liest das Erstellungsdatum (bei PDF ueber ExifTool) mit Fallback auf Record-Erstellungsdatum.
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Rueckgabe: date
-on creationDateFromMetadata(theRecord)
-	set logCtx to my initialize("creationDateFromMetadata")
-	logger's trace(logCtx, "enter")
-
-	set {creationDate, pdfCreateDate, pdfCreateDateString} to {missing value, missing value, missing value}
-	tell application id "DNtp"
-
-		if kind of theRecord contains "PDF" then
-
-			set pdfPath to path of theRecord
-			set command to pExiftool & " -s -s -s -CreateDate -d '%Y-%m-%d %H:%M:%S' " & quoted form of pdfPath
-			try
-				set pdfCreateDateString to do shell script command
-			on error errMsg number errNum
-				error "ExifTool-Aufruf fehlgeschlagen (" & errNum & "): " & errMsg
-			end try
-			tell baseLib to set creationDate to isoStringToDate(pdfCreateDateString)
-
-		end if
-
-		if creationDate is missing value then set creationDate to creation date of theRecord
-	end tell
-
-	logger's trace(logCtx, "exit => creationDate: " & creationDate)
-	return creationDate
-end creationDateFromMetadata
-
--- Operation: setNameForAsset
--- Kurzbeschreibung: Vergibt einen eindeutigen Asset-Namen aus Datumskomponenten und laufender Nummer.
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Parameter: f:record/dictionary mit tagYear, tagMonth, tagDay, tagSender
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
-on setNameForAsset(theRecord, f)
-	set logCtx to my initialize("setNameForAsset")
-	logger's trace(logCtx, "enter")
-
-	set {logicalYear, logicalMonth, logicalDay, theSender} to {tagYear of f, tagMonth of f, tagDay of f, tagSender of f}
-	set {theName, technicalDate, logicalDate} to {missing value, missing value, missing value}
-
-	tell application id "DNtp"
-
-		-- das technische Datum wird aus "Creation Date" ermittelt (Datum und Uhrzeit)
-		tell baseLib to set technicalDate to format(my creationDateFromMetadata(theRecord))
-
-		-- das logische Datum wird aus den Tags ermittelt (nur Datum)
-		if logicalYear is not missing value and logicalMonth is not missing value and logicalDay is not missing value then
-			set logicalDate to logicalYear & logicalMonth & logicalDay & "-0000"
-		end if
-
-		-- wenn technisches und logisches Datum identisch sind wird das technische Datum verwendet, sonst das logische
-		set theName to technicalDate
-		if logicalDate is not missing value then
-			if not (rich texts 1 thru 8 of logicalDate = rich texts 1 thru 8 of technicalDate) then
-				set theName to logicalDate
-				tell logger to debug(logCtx, "Use logical date as name of the record: " & logicalDate)
-			end if
-		end if
-
-		-- prüfen, ob ein Dateiname passend zum Namen möglich ist (das geht nur, wenn der Dateiname noch nicht existiert)
-		-- falls bereits eine Datei mit dem Namen existiert wird die laufende Nummer um 1 erhöht
-		set currentFilename to filename of theRecord
-		tell baseLib to set theExtension to extentionOf(currentFilename)
-		set {incrementalCounter, availableNumber} to {0, missing value}
-		repeat while (availableNumber is missing value and incrementalCounter < 100)
-			set theEvaluationFilename to theName & "-" & my twoDigit(incrementalCounter) & "." & theExtension
-			tell the logger to trace(logCtx, "theEvaluationFilename: " & theEvaluationFilename)
-			if not (exists record with file theEvaluationFilename) then
-				set availableNumber to my twoDigit(incrementalCounter)
-				tell logger to debug(logCtx, "No record found with this ending number - set availableNumber to: " & availableNumber)
-			else
-				if currentFilename = theEvaluationFilename then
-					set availableNumber to my twoDigit(incrementalCounter)
-					tell logger to debug(logCtx, "Record found, but it's the current record -  set availableNumber to: " & availableNumber)
-				else
-					set incrementalCounter to incrementalCounter + 1
-				end if
-			end if
-		end repeat
-		set theName to theName & "-" & availableNumber
-
-		set name of theRecord to theName
-	end tell
-
-	logger's trace(logCtx, "exit")
-end setNameForAsset
-
--- Operation: setFinderComment
--- Kurzbeschreibung: Uebernimmt einen Feldwert in den Kommentar des Records.
--- Parameter: theField:text
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
-on setFinderComment(theField, theRecord)
-	set logCtx to my initialize("setFinderComment")
-	logger's trace(logCtx, "enter > " & theField)
-
-	tell application id "DNtp"
-
-		set theValue to get custom meta data for theField from theRecord
-
-		set wordCount to count of words of theValue
-		if wordCount > 1 then
-			set finderComment to comment of theRecord
-			if finderComment is not "" then
-				set finderComment to finderComment & ", " & linefeed
-			end if
-			set finderComment to finderComment & theValue
-			set comment of theRecord to finderComment
-		end if
-
-	end tell
-
-	logger's trace(logCtx, "exit")
-end setFinderComment
-
--- Operation: replaceText
--- Kurzbeschreibung: Ersetzt alle Vorkommen eines Teilstrings in einem Quelltext.
--- Parameter: findText:text
--- Parameter: replaceText:text
--- Parameter: sourceText:text
--- Rueckgabe: text
+-- Operation: replaceDatePlaceholder
+-- Description: Replaces date placeholders {Year}, {Month}, {Day} in a template.
+-- Parameter: theDate:date
+-- Parameter: theTemplate:text
+-- Returns: text
 on replaceText(findText, replaceText, sourceText)
 	set logCtx to my initialize("replaceText")
 	logger's trace(logCtx, "enter > " & findText & ", " & replaceText & ", " & sourceText)
@@ -924,13 +878,13 @@ end replaceText
 -- theSupplementalAction:
 -- theSupplementalAction: ADD, REPLACE
 -- Operation: setCustomMetadata
--- Kurzbeschreibung: Berechnet den Zielwert fuer ein Custom-Metadata-Feld und schreibt ihn bei Aenderung.
+-- Description: Calculates the target value for a custom metadata field and writes it if it changed.
 -- Parameter: theIndex:integer
 -- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
 -- Parameter: theFields:NSMutableDictionary
 -- Parameter: theSupplemental:text
 -- Parameter: theSupplementalAction:text (ADD|REPLACE)
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Returns: no return value (side effects)
 on setCustomMetadata(theIndex, theRecord, theFields, theSupplemental, theSupplementalAction)
 	set logCtx to my initialize("setCustomMetadata")
 	logger's trace(logCtx, "enter > theIndex: " & theIndex & "; theSupplemental: " & theSupplemental & "; theSupplementalAction: " & theSupplementalAction)
@@ -1069,214 +1023,9 @@ on setCustomMetadata(theIndex, theRecord, theFields, theSupplemental, theSupplem
 end setCustomMetadata
 
 -- Operation: extractCustomTextFromCmdValue
--- Kurzbeschreibung: Extrahiert den frei eingegebenen Textanteil aus einem Custom-Metadata-Wert.
+-- Description: Extracts the free-form text portion from a custom metadata value.
 -- Parameter: currentValue:text|missing value
--- Rueckgabe: text
-on extractCustomTextFromCmdValue(currentValue)
-	set logCtx to my initialize("extractCustomTextFromCmdValue")
-	logger's trace(logCtx, "enter > " & currentValue)
-
-	set customText to ""
-	if currentValue is not missing value then
-
-		-- wenn Custom Text vorhanden ist parsen, sonst vorhanden Wert nehmen
-		if currentValue contains pCustomMetadataFieldSeparator then
-
-			-- rechten Teil neben pCustomMetadataFieldSeparator ermitteln
-			tell baseLib to set fieldList to text2List(currentValue, pCustomMetadataFieldSeparator)
-			if fieldList is not missing value and length of fieldList > 1 then
-				set customText to second item of fieldList
-			end if
-
-			-- mögliche "[...]" Blöcke entfernen
-			set customText to my removeTrailingBracketBlocks(customText)
-
-		else
-			-- Migrationsszenario bei EMAILS: wenn kein pCustomMetadataFieldSeparator vorhanden ist wird currentValue komplett übernommen
-			if (count of words of currentValue) > 1 and pContentType is equal to "EMAILS" then
-				logger's debug(logCtx, "Custom Text found but no pCustomMetadataFieldSeparator -> current value will be used")
-				set customText to currentValue
-			end if
-		end if
-	end if
-
-	logger's trace(logCtx, "exit > " & customText)
-	return customText
-end extractCustomTextFromCmdValue
-
--- Operation: removeTrailingBracketBlocks
--- Kurzbeschreibung: Entfernt am String-Ende angehaengte Klammerbloecke wie [..].
--- Parameter: theString:text
--- Rueckgabe: text
-on removeTrailingBracketBlocks(theString)
-	set logCtx to my initialize("removeTrailingBracketBlocks")
-	logger's trace(logCtx, "enter > " & theString)
-
-	set NSString to current application's NSString's stringWithString:theString
-
-	-- rechts trimmen
-	set trimmed to NSString's stringByTrimmingCharactersInSet:(current application's NSCharacterSet's whitespaceAndNewlineCharacterSet())
-
-	-- [Text]-Blöcke am Ende entfernen (inkl. Leerzeichen davor)
-	set cleaned to trimmed's stringByReplacingOccurrencesOfString:"(\\s*\\[[^\\[\\]]*\\])+$" withString:"" options:(current application's NSRegularExpressionSearch) range:{0, trimmed's |length|()}
-	set cleaned to cleaned as text
-
-	logger's trace(logCtx, "exit > " & cleaned)
-	return cleaned
-end removeTrailingBracketBlocks
-
--- Operation: tagAlias
--- Kurzbeschreibung: Liefert fuer ein Tag den Alias, falls einer konfiguriert ist.
--- Parameter: theTag:text
--- Rueckgabe: text
-on tagAlias(theTag)
-	set logCtx to my initialize("tagAlias")
-	logger's trace(logCtx, "enter")
-
-	set theValue to theTag
-	set theAlias to (tagAliases's objectForKey:theTag)
-	if theAlias is not missing value then
-		set theValue to theAlias
-	end if
-
-	logger's trace(logCtx, "exit")
-	return theValue
-end tagAlias
-
--- Operation: subjectFromMetadata
--- Kurzbeschreibung: Liest bei PDF-Dateien den Titel aus Metadaten als Betreff.
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Parameter: theSender:text|missing value
--- Rueckgabe: text|missing value
-on subjectFromMetadata(theRecord, theSender)
-	set logCtx to my initialize("subjectFromMetadata")
-	logger's trace(logCtx, "enter")
-
-	set subjectFromPdfTitle to missing value
-	tell application id "DNtp"
-
-		if kind of theRecord contains "PDF" then
-
-			set pdfPath to path of theRecord
-			set cmd to pExiftool & " -s -s -s -Title " & quoted form of pdfPath
-			try
-				set subjectFromPdfTitle to do shell script cmd
-			on error errMsg number errNum
-				error "ExifTool-Aufruf fehlgeschlagen (" & errNum & "): " & errMsg
-			end try
-		end if
-
-	end tell
-
-	logger's trace(logCtx, "exit => subjectFromPdfTitle: " & subjectFromPdfTitle)
-	return subjectFromPdfTitle
-end subjectFromMetadata
-
--- Operation: replaceDimensionPlaceholders
--- Kurzbeschreibung: Ersetzt Dimensions-Platzhalter [Dimension] in einem Template.
--- Parameter: theDimensions:list<text>
--- Parameter: theFields:NSMutableDictionary
--- Parameter: theTemplate:text
--- Rueckgabe: text
-on replaceDimensionPlaceholders(theDimensions, theFields, theTemplate)
-	set logCtx to my initialize("replaceDimensionPlaceholders")
-	logger's trace(logCtx, "enter")
-
-	set theModifiedTemplate to theTemplate
-	repeat with aDimension in theDimensions
-
-		if (theModifiedTemplate as string) contains ("[" & aDimension & "]" as string) then
-
-			tell logger to debug(logCtx, "aDimension: " & aDimension)
-
-			set theValue to (theFields's objectForKey:aDimension) as string
-
-			-- Replace Month to double-digit
-			set theReplacedValue to (monthsByName's objectForKey:theValue)
-			if theReplacedValue is not missing value then set theValue to theReplacedValue as string
-
-			if theValue is missing value then set theValue to ""
-			set thePlaceholder to "[" & aDimension & "]"
-			set theModifiedTemplate to my replaceText(thePlaceholder, theValue, theModifiedTemplate)
-		end if
-	end repeat
-
-	logger's trace(logCtx, "exit > " & theModifiedTemplate)
-	return theModifiedTemplate
-end replaceDimensionPlaceholders
-
--- Operation: replaceFieldPlaceholder
--- Kurzbeschreibung: Ersetzt spezielle Feld-Platzhalter wie {Decades} in einem Template.
--- Parameter: thePlaceholder:text
--- Parameter: theFields:NSMutableDictionary
--- Parameter: theTemplate:text
--- Rueckgabe: text
-on replaceFieldPlaceholder(thePlaceholder, theFields, theTemplate)
-	set logCtx to my initialize("replaceFieldPlaceholder")
-	logger's trace(logCtx, "enter")
-
-	set theModifiedTemplate to theTemplate
-
-	if thePlaceholder is equal to "{Decades}" then
-
-		if (theTemplate as string) contains (thePlaceholder as string) then
-
-			set theYear to theFields's objectForKey:(first item of pDateDimensions)
-
-			set theYearAsInteger to theYear as integer
-			set theValue to ""
-			if theYearAsInteger ≥ 1990 and theYearAsInteger ≤ 1999 then
-				set theValue to "1990-1999/"
-			else if theYearAsInteger ≥ 2000 and theYearAsInteger ≤ 2009 then
-				set theValue to "2000-2009/"
-			else if theYearAsInteger ≥ 2010 and theYearAsInteger ≤ 2019 then
-				set theValue to "2010-2019/"
-			end if
-
-			set theModifiedTemplate to my replaceText(thePlaceholder, theValue, theModifiedTemplate)
-		end if
-
-	end if
-
-	logger's trace(logCtx, "exit > " & theModifiedTemplate)
-	return theModifiedTemplate
-end replaceFieldPlaceholder
-
--- Operation: replaceDatePlaceholder
--- Kurzbeschreibung: Ersetzt Datums-Platzhalter {Year}, {Month}, {Day} in einem Template.
--- Parameter: theDate:date
--- Parameter: theTemplate:text
--- Rueckgabe: text
-on replaceDatePlaceholder(theDate, theTemplate)
-	set logCtx to my initialize("replaceDatePlaceholder")
-	logger's trace(logCtx, "enter > theDate: " & theDate & "; theTemplate: " & theTemplate)
-
-	set theModifiedTemplate to theTemplate
-	if theTemplate contains "{Year}" or theTemplate contains "{Month}" or theTemplate contains "{Day}" then
-
-		tell application id "DNtp"
-
-			set theDay to my twoDigit(day of theDate)
-			set theMonth to my twoDigit(month of theDate as integer)
-			set theYear to year of theDate as rich text
-
-			set theModifiedTemplate to my replaceText("{Year}", theYear, theModifiedTemplate)
-			set theModifiedTemplate to my replaceText("{Month}", theMonth, theModifiedTemplate)
-			set theModifiedTemplate to my replaceText("{Day}", theDay, theModifiedTemplate)
-
-		end tell
-	end if
-
-	logger's trace(logCtx, "exit > " & theModifiedTemplate)
-	return theModifiedTemplate
-end replaceDatePlaceholder
-
--- Operation: setDateTags
--- Kurzbeschreibung: Setzt Jahr/Monat/Tag-Tags anhand des Klassifikationsdatums, wenn sie noch fehlen.
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Parameter: theFields:NSMutableDictionary
--- Parameter: theClassificationDate:text
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Returns: text
 on setDateTags(theRecord, theFields, theClassificationDate)
 	set logCtx to my initialize("setDateTags")
 	logger's trace(logCtx, "enter")
@@ -1312,69 +1061,157 @@ on setDateTags(theRecord, theFields, theClassificationDate)
 end setDateTags
 
 -- Operation: getClassificationDate
--- Kurzbeschreibung: Ermittelt das fuer die Klassifikation zu verwendende Datum gemaess Konfiguration.
+-- Description: Determines the date to use for classification according to configuration.
 -- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
 -- Parameter: theClassificationDate:text
--- Rueckgabe: date
-on getClassificationDate(theRecord, theClassificationDate)
-	set logCtx to my initialize("getClassificationDate")
-	logger's trace(logCtx, "enter")
+-- Returns: date
+on setField(theTag, theFields, interactiveMode, theRecord)
+	set logCtx to my initialize("setField")
+	logger's trace(logCtx, "entry > theTag: " & theTag)
+
+	set hasFieldBeenSet to false
+	tell application id "DNtp"
+
+		set allDimensions to pDimensionsDictionary's allKeys()
+		repeat with aDimension in allDimensions
+			set categories to (pDimensionsDictionary's objectForKey:aDimension) as list
+			if categories contains theTag then
+				set theCardinality to (pDimensionsConstraintsDictionary's objectForKey:aDimension)
+				logger's debug(logCtx, "theCardinality: " & theCardinality)
+
+				set setCurrentValue to (theFields's objectForKey:aDimension)
+				if setCurrentValue is missing value then
+					(theFields's setObject:theTag forKey:aDimension)
+				else
+					if theCardinality is not missing value and theCardinality as integer > 0 then
+						set theMessage to "Cardinality error at dimension '" & aDimension & "' for record: " & name of theRecord
+						logger's info_r(theRecord, theMessage)
+						if interactiveMode then error theMessage
+					end if
+					(theFields's setObject:{setCurrentValue, theTag} forKey:aDimension)
+				end if
+				set hasFieldBeenSet to true
+			end if
+		end repeat
+
+	end tell
+
+	logger's trace(logCtx, "exit")
+	return {hasFieldBeenSet, theFields}
+end setField
+
+-- Operation: handleUncategorizedTag
+-- Description: Interactively offers to assign an uncategorized tag to a dimension.
+-- Parameter: theTag:text
+-- Returns: no return value (side effects)
+on setFinderComment(theField, theRecord)
+	set logCtx to my initialize("setFinderComment")
+	logger's trace(logCtx, "enter > " & theField)
 
 	tell application id "DNtp"
 
-		set theDate to missing value
-		if theClassificationDate is equal to "DATE_DOCUMENT" then
+		set theValue to get custom meta data for theField from theRecord
 
-			try
-				set theDate to document date of theRecord
-				if theDate is missing value then
-					tell logger to info(logCtx, "No 'document date' found, 'creation date' will be used instead.")
-					set theDate to creation date of theRecord
-				end if
-			on error number -2753
-				tell logger to info(logCtx, "No 'document date' found, 'creation date' will be used instead.")
-				set theDate to creation date of theRecord
-			end try
-
-		else if theClassificationDate is equal to "DATE_MODIFIED" then
-
-			set recordName to name of theRecord
-			set theDate to modification date of theRecord
-
-		else if theClassificationDate is equal to "DATE_CREATED" then
-
-			set recordName to name of theRecord
-			set theDate to my creationDateFromMetadata(theRecord)
-
-		else if theClassificationDate is equal to "RECORD_CREATION_DATE" then
-
-			set theDate to creation date of theRecord
-
-		else
-			error "Unknown Classification Date Field Identifier: " & pClassificationDate
+		set wordCount to count of words of theValue
+		if wordCount > 1 then
+			set finderComment to comment of theRecord
+			if finderComment is not "" then
+				set finderComment to finderComment & ", " & linefeed
+			end if
+			set finderComment to finderComment & theValue
+			set comment of theRecord to finderComment
 		end if
 
 	end tell
 
-	logger's trace(logCtx, "exit > " & theDate)
-	return theDate
-end getClassificationDate
+	logger's trace(logCtx, "exit")
+end setFinderComment
 
--- Operation: twoDigit
--- Kurzbeschreibung: Formatiert einen Wert als zweistellige Zeichenkette.
--- Parameter: d:integer|text
--- Rueckgabe: text
-on twoDigit(d)
-	return text -2 thru -1 of ("00" & d)
-end twoDigit
+-- Operation: replaceText
+-- Description: Replaces all occurrences of a substring in a source text.
+-- Parameter: findText:text
+-- Parameter: replaceText:text
+-- Parameter: sourceText:text
+-- Returns: text
+on setName(theRecord, theFields)
+	set logCtx to my initialize("setName")
+	logger's trace(logCtx, "enter")
 
--- Operation: setTagFromCompareRecord
--- Kurzbeschreibung: Uebernimmt ein passendes Tag aus dem besten Vergleichsrecord oberhalb des Schwellwerts.
+	set allDimensions to pDimensionsDictionary's allKeys()
+	set theName to my replaceDimensionPlaceholders(allDimensions, theFields, pNameTemplate)
+
+	set currentName to name of theRecord
+	if theName as string is not equal to currentName as string then
+		tell logger to info_r(theRecord, "Name changed from: " & currentName & " to: " & theName)
+		set name of theRecord to theName
+	end if
+
+	logger's trace(logCtx, "exit")
+end setName
+
+-- Operation: creationDateFromMetadata
+-- Description: Reads the creation date (for PDFs via ExifTool) with fallback to the record creation date.
 -- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Parameter: theDatabase:DEVONthink database (class 'database' / DTkb)
--- Parameter: theFields:NSMutableDictionary
--- Parameter: theDimension:text
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Returns: date
+on setNameForAsset(theRecord, f)
+	set logCtx to my initialize("setNameForAsset")
+	logger's trace(logCtx, "enter")
+
+	set {logicalYear, logicalMonth, logicalDay, theSender} to {tagYear of f, tagMonth of f, tagDay of f, tagSender of f}
+	set {theName, technicalDate, logicalDate} to {missing value, missing value, missing value}
+
+	tell application id "DNtp"
+
+		-- das technische Datum wird aus "Creation Date" ermittelt (Datum und Uhrzeit)
+		tell baseLib to set technicalDate to format(my creationDateFromMetadata(theRecord))
+
+		-- das logische Datum wird aus den Tags ermittelt (nur Datum)
+		if logicalYear is not missing value and logicalMonth is not missing value and logicalDay is not missing value then
+			set logicalDate to logicalYear & logicalMonth & logicalDay & "-0000"
+		end if
+
+		-- wenn technisches und logisches Datum identisch sind wird das technische Datum verwendet, sonst das logische
+		set theName to technicalDate
+		if logicalDate is not missing value then
+			if not (rich texts 1 thru 8 of logicalDate = rich texts 1 thru 8 of technicalDate) then
+				set theName to logicalDate
+				tell logger to debug(logCtx, "Use logical date as name of the record: " & logicalDate)
+			end if
+		end if
+
+		-- prüfen, ob ein Dateiname passend zum Namen möglich ist (das geht nur, wenn der Dateiname noch nicht existiert)
+		-- falls bereits eine Datei mit dem Namen existiert wird die laufende Nummer um 1 erhöht
+		set currentFilename to filename of theRecord
+		tell baseLib to set theExtension to extentionOf(currentFilename)
+		set {incrementalCounter, availableNumber} to {0, missing value}
+		repeat while (availableNumber is missing value and incrementalCounter < 100)
+			set theEvaluationFilename to theName & "-" & my twoDigit(incrementalCounter) & "." & theExtension
+			tell the logger to trace(logCtx, "theEvaluationFilename: " & theEvaluationFilename)
+			if not (exists record with file theEvaluationFilename) then
+				set availableNumber to my twoDigit(incrementalCounter)
+				tell logger to debug(logCtx, "No record found with this ending number - set availableNumber to: " & availableNumber)
+			else
+				if currentFilename = theEvaluationFilename then
+					set availableNumber to my twoDigit(incrementalCounter)
+					tell logger to debug(logCtx, "Record found, but it's the current record -  set availableNumber to: " & availableNumber)
+				else
+					set incrementalCounter to incrementalCounter + 1
+				end if
+			end if
+		end repeat
+		set theName to theName & "-" & availableNumber
+
+		set name of theRecord to theName
+	end tell
+
+	logger's trace(logCtx, "exit")
+end setNameForAsset
+
+-- Operation: setFinderComment
+-- Description: Copies a field value into the record's comment.
+-- Parameter: theField:text
+-- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
+-- Returns: no return value (side effects)
 on setTagFromCompareRecord(theRecord, theDatabase, theFields, theDimension)
 	set logCtx to my initialize("setTagFromCompareRecord")
 	logger's trace(logCtx, "enter > theDimension: " & theDimension)
@@ -1415,3 +1252,176 @@ on setTagFromCompareRecord(theRecord, theDatabase, theFields, theDimension)
 
 	logger's trace(logCtx, "exit")
 end setTagFromCompareRecord
+
+
+
+
+on subjectFromMetadata(theRecord, theSender)
+	set logCtx to my initialize("subjectFromMetadata")
+	logger's trace(logCtx, "enter")
+
+	set subjectFromPdfTitle to missing value
+	tell application id "DNtp"
+
+		if kind of theRecord contains "PDF" then
+
+			set pdfPath to path of theRecord
+			set cmd to pExiftool & " -s -s -s -Title " & quoted form of pdfPath
+			try
+				set subjectFromPdfTitle to do shell script cmd
+			on error errMsg number errNum
+				error "ExifTool-Aufruf fehlgeschlagen (" & errNum & "): " & errMsg
+			end try
+		end if
+
+	end tell
+
+	logger's trace(logCtx, "exit => subjectFromPdfTitle: " & subjectFromPdfTitle)
+	return subjectFromPdfTitle
+end subjectFromMetadata
+
+-- Operation: replaceDimensionPlaceholders
+-- Description: Replaces dimension placeholders [Dimension] in a template.
+-- Parameter: theDimensions:list<text>
+-- Parameter: theFields:NSMutableDictionary
+-- Parameter: theTemplate:text
+-- Returns: text
+on tagAlias(theTag)
+	set logCtx to my initialize("tagAlias")
+	logger's trace(logCtx, "enter")
+
+	set theValue to theTag
+	set theAlias to (tagAliases's objectForKey:theTag)
+	if theAlias is not missing value then
+		set theValue to theAlias
+	end if
+
+	logger's trace(logCtx, "exit")
+	return theValue
+end tagAlias
+
+-- Operation: subjectFromMetadata
+-- Description: For PDF files, reads the title from metadata as the subject.
+-- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
+-- Parameter: theSender:text|missing value
+-- Returns: text|missing value
+on twoDigit(d)
+	return text -2 thru -1 of ("00" & d)
+end twoDigit
+
+-- Operation: setTagFromCompareRecord
+-- Description: Applies a matching tag from the best comparison record above the threshold.
+-- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
+-- Parameter: theDatabase:DEVONthink database (class 'database' / DTkb)
+-- Parameter: theFields:NSMutableDictionary
+-- Parameter: theDimension:text
+-- Returns: no return value (side effects)
+on updateRecordsMetadata(theRecords)
+	set logCtx to my initialize("updateRecordsMetadata")
+	logger's trace(logCtx, "enter")
+
+	tell application id "DNtp"
+
+		set theDatabase to database of first item of theRecords
+
+		my initializeDatabaseConfiguration(theDatabase)
+		set {recordsSelected, recordsProcessed} to {0, 0}
+		repeat with theRecord in theRecords
+			set recordsSelected to recordsSelected + 1
+			if type of theRecord is group or type of theRecord is smart group then
+				set comment of theRecord to ""
+			else
+				set tagFields to my fieldsFromTags(theRecord, true)
+
+				if not my existDimension(tagFields, pDateDimensions) then
+					tell logger to info_r(theRecord, "Can't update metadata due to missing Date tag(s).")
+				else
+					set recordsProcessed to recordsProcessed + 1
+
+					-- Set Name
+					if pNameTemplate is not missing value and pNameTemplate is not "" then
+						my setName(theRecord, tagFields)
+					end if
+
+					-- Set Custom Metadata
+					set customMetadataFieldIndex to 0
+					repeat with aCustomMetadataField in pCustomMetadataFields
+						set customMetadataFieldIndex to customMetadataFieldIndex + 1
+						my setCustomMetadata(customMetadataFieldIndex, theRecord, tagFields, "", "")
+					end repeat
+
+					-- Set Comments
+					if length of pCommentsFields > 0 then
+						set comment of theRecord to ""
+						repeat with aFinderCommentsField in pCommentsFields
+							my setFinderComment(aFinderCommentsField, theRecord)
+						end repeat
+					end if
+				end if
+			end if
+		end repeat
+
+		tell logger to info(logCtx, "Records selected: " & recordsSelected & ", Records processed:  " & recordsProcessed)
+	end tell
+
+	logger's trace(logCtx, "exit")
+end updateRecordsMetadata
+
+-- Operation: archiveRecords
+-- Description: Derives the archive destination from placeholders, moves the record, and marks it as locked.
+-- Parameter: theRecords:list<DEVONthink record (class 'record' / DTrc)>
+-- Returns: no return value (side effects)
+on verifyTags(theLocation)
+	set logCtx to my initialize("verifyTags")
+	logger's trace(logCtx, "enter")
+
+	tell application id "DNtp"
+		set currentDatabase to current database
+		my initializeDatabaseConfiguration(currentDatabase)
+
+		set theRecords to every content of currentDatabase whose location begins with theLocation
+		tell logger to info(logCtx, "Verification started for Database: " & (name of currentDatabase as string) & ", Location: " & theLocation & ¬
+			", Number of Records: " & (length of theRecords as string))
+
+		set {issueRecords, issues, totalPages} to {0, 0, 0}
+		repeat with theRecord in theRecords
+			logger's debug(logCtx, " " & name of theRecord)
+
+			set {theYear, theMonth, theDay, theSender, theSubject, pIssueCount} to {null, null, null, null, null, 0}
+			if type of theRecord is PDF document then set totalPages to totalPages + (page count of theRecord)
+
+			set theFields to my fieldsFromTags(theRecord, false)
+			-- set allDimensionConstraints to pDimensionsConstraintsDictionary's allKeys()
+			-- repeat with aDimensionName in allDimensionConstraints
+			-- 	set theCardinality to (pConstraintsDictionary's objectForKey:aDimensionName)
+			-- 	set theCategories to (theFields's objectForKey:aDimensionName)
+			--
+			-- 	if theCategories is missing value then
+			-- 		my logIssue(theRecord, true, "No category found for dimension '" & theDimension & "'.")
+			-- 	else
+			-- 		if theCount = 1 then
+			-- 			if not (theCategories's isKindOfClass:(current application's NSString)) as boolean then
+			-- 				set logtext to theCategories as list
+			-- 				my logIssue(theRecord, true, "More than 1 category found for dimension '" & theDimension & "': " & logtext)
+			-- 			end if
+			-- 			-- else if (setCategories's isKindOfClass:(current application's NSArray)) as boolean
+			-- 		end if
+			-- 	end if
+			-- end repeat
+			--
+			-- if pIssueCount > 0 then
+			-- 	set issueRecords to issueRecords + 1
+			-- 	set issues to issues + pIssueCount
+			-- end if
+		end repeat
+		tell logger to info(logCtx, "Verification finished - Records with Issues: " & issueRecords & ", Total Issues: " & issues & ", Total Pages (PDF only): " & totalPages)
+	end tell
+	logger's trace(logCtx, "exit")
+end verifyTags
+
+-- Operation: logIssue
+-- Description: Logs a validation error, increments the count, and optionally sets a label.
+-- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
+-- Parameter: setRecordLabel:boolean
+-- Parameter: theMessage:text
+-- Returns: no return value (side effects)
