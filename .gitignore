@@ -3,3 +3,5 @@
 *.applescript
 Database-Configuration*.scpt
 /src/
+.agents/skills/CommitSkill.md
+AGENTS.md
