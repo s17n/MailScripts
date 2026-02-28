@@ -444,7 +444,7 @@ on getClassificationDate(theRecord, theClassificationDate)
 			set theDate to creation date of theRecord
 
 		else
-			error "Unknown Classification Date Field Identifier: " & pClassificationDate
+			error "Unknown Classification Date Field Identifier: " & theClassificationDate
 		end if
 
 	end tell
@@ -1033,9 +1033,9 @@ on setDateTags(theRecord, theFields, theClassificationDate)
 	-- Date Tags will not be set if Year, Month or Day is already set
 	if theYear is not missing value or theMonth is not missing value or theDay is not missing value then
 
-		if theYear is missing value then tell logger to debug(logCtx, "Year already set to: " & theYear)
-		if theMonth is missing value then tell logger to debug(logCtx, "Month already set to: " & theMonth)
-		if theDay is missing value then tell logger to debug(logCtx, "Day already set to: " & theDay)
+		if theYear is not missing value then tell logger to debug(logCtx, "Year already set to: " & theYear)
+		if theMonth is not missing value then tell logger to debug(logCtx, "Month already set to: " & theMonth)
+		if theDay is not missing value then tell logger to debug(logCtx, "Day already set to: " & theDay)
 	else
 
 		tell application id "DNtp"
@@ -1084,8 +1084,9 @@ on setField(theTag, theFields, interactiveMode, theRecord)
 						set theMessage to "Cardinality error at dimension '" & aDimension & "' for record: " & name of theRecord
 						logger's info_r(theRecord, theMessage)
 						if interactiveMode then error theMessage
+					else
+						(theFields's setObject:{setCurrentValue, theTag} forKey:aDimension)
 					end if
-					(theFields's setObject:{setCurrentValue, theTag} forKey:aDimension)
 				end if
 				set hasFieldBeenSet to true
 			end if
@@ -1110,14 +1111,16 @@ on setFinderComment(theField, theRecord)
 
 		set theValue to get custom meta data for theField from theRecord
 
-		set wordCount to count of words of theValue
-		if wordCount > 1 then
-			set finderComment to comment of theRecord
-			if finderComment is not "" then
-				set finderComment to finderComment & ", " & linefeed
+		if theValue is not missing value then
+			set wordCount to count of words of theValue
+			if wordCount > 1 then
+				set finderComment to comment of theRecord
+				if finderComment is not "" then
+					set finderComment to finderComment & ", " & linefeed
+				end if
+				set finderComment to finderComment & theValue
+				set comment of theRecord to finderComment
 			end if
-			set finderComment to finderComment & theValue
-			set comment of theRecord to finderComment
 		end if
 
 	end tell
@@ -1413,4 +1416,3 @@ on verifyTags(theLocation)
 	end tell
 	logger's trace(logCtx, "exit")
 end verifyTags
-
