@@ -62,7 +62,10 @@ on addTextToCustomMetadata(theCustomMetadataField, theText)
 
 	tell application id "DNtp"
 
-		set theRecord to content record
+		set theRecord to missing value
+		set selectedRecords to selection
+		if selectedRecords is not {} then set theRecord to first item of selectedRecords
+		if theRecord is missing value then set theRecord to content record
 		if theRecord is missing value then error "No current record selected."
 
 		set theDatabase to database of theRecord
