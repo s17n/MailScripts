@@ -2,3 +2,4 @@
 *.local*
 *.applescript
 Database-Configuration*.scpt
+/src/
