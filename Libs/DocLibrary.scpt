@@ -62,10 +62,13 @@ on addTextToCustomMetadata(theCustomMetadataField, theText)
 
 	tell application id "DNtp"
 
-		set theDatabase to current database
-		my initializeDatabaseConfiguration(theDatabase)
-
 		set theRecord to content record
+		if theRecord is missing value then error "No current record selected."
+
+		set theDatabase to database of theRecord
+		if theDatabase is missing value then error "No database found for current record."
+
+		my initializeDatabaseConfiguration(theDatabase)
 		set tagFields to my fieldsFromTags(theRecord, false)
 
 		set theAction to "ADD"
