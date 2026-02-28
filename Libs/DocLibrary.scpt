@@ -416,7 +416,7 @@ on getClassificationDate(theRecord, theClassificationDate)
 	tell application id "DNtp"
 
 		set theDate to missing value
-		if theClassificationDate is equal to "DATE_DOCUMENT" then
+		if theClassificationDate is equal to "DOCUMENT_CREATION_DATE" then
 
 			try
 				set theDate to document date of theRecord
