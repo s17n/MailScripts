@@ -1,4 +1,6 @@
 #@osa-lang:AppleScript
+property pContentType : "DOCUMENTS"
+
 -- Root-Tag-Gruppe fuer Dimensionen; wird in initializeDimensions() geladen und in handleUncategorizedTag() als Zielpfad genutzt.
 property pDimensionsHome : "/Tags"
 

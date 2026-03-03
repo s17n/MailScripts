@@ -300,7 +300,7 @@ end creationDateFromMetadata
 -- Parameter: theDatabaseName:text
 -- Rueckgabe: text
 on databaseConfigurationPath(theDatabaseName)
-	return pDatabaseConfigurationFolder & "/Database-Configuration-" & theDatabaseName & ".scpt"
+	return pDatabaseConfigurationFolder & "/Database-" & theDatabaseName & ".scpt"
 end databaseConfigurationPath
 
 -- Operation: displayNotification
@@ -557,44 +557,56 @@ on initializeDatabaseConfiguration(theDatabase)
 
 	tell application id "DNtp" to set theDatabaseName to name of theDatabase
 
-	set databaseConfigPath to my databaseConfigurationPath(theDatabaseName)
-	set databaseConfiguration to load script databaseConfigPath
-	set pContentType to pContentType of databaseConfiguration
-	set defaultConfigurationName to pDefaultConfiguration of databaseConfiguration
-	set defaultConfiguration to load script (pDatabaseConfigurationFolder & "/" & defaultConfigurationName)
+	set databaseConfigurationFilename to my databaseConfigurationPath(theDatabaseName)
+
+	try
+		set databaseConfiguration to load script databaseConfigurationFilename
+	on error
+		error "Database configuration file not found. Expected database configuration file: " & databaseConfigurationFilename
+	end try
+
+	set configurationFilename to pConfigurationFile of databaseConfiguration
+	try
+		set configurationFile to load script (pDatabaseConfigurationFolder & "/" & configurationFilename)
+	on error
+		error "Configuration file not found. Expected configuration file: " & configurationFilename
+	end try
+
+	set pContentType to pContentType of configurationFile
 
 	-- Logger
-	set pLogLevel to pLogLevel of defaultConfiguration
+	set pLogLevel to pLogLevel of configurationFile
 	logger's setLogLevel(pLogLevel)
+	logger's debug(logCtx, "Database configuration: " & configurationFilename)
 
 	-- Dimensions
-	set pDimensionsHome to pDimensionsHome of defaultConfiguration
-	set pDateDimensions to pDateDimensions of defaultConfiguration
-	set pCompareDimensions to pCompareDimensions of defaultConfiguration
-	set pCompareDimensionsScoreThreshold to pCompareDimensionsScoreThreshold of defaultConfiguration
+	set pDimensionsHome to pDimensionsHome of configurationFile
+	set pDateDimensions to pDateDimensions of configurationFile
+	set pCompareDimensions to pCompareDimensions of configurationFile
+	set pCompareDimensionsScoreThreshold to pCompareDimensionsScoreThreshold of configurationFile
 
-	set pClassificationDate to pClassificationDate of defaultConfiguration
+	set pClassificationDate to pClassificationDate of configurationFile
 
-	set pNameTemplate to pNameTemplate of defaultConfiguration
+	set pNameTemplate to pNameTemplate of configurationFile
 
-	set pCustomMetadataFields to pCustomMetadataFields of defaultConfiguration
-	set pCustomMetadataDimensions to pCustomMetadataDimensions of defaultConfiguration
-	set pCustomMetadataTypes to pCustomMetadataTypes of defaultConfiguration
-	set pCustomMetadataTemplates to pCustomMetadataTemplates of defaultConfiguration
-	set pCustomMetadataFieldSeparator to pCustomMetadataFieldSeparator of defaultConfiguration
+	set pCustomMetadataFields to pCustomMetadataFields of configurationFile
+	set pCustomMetadataDimensions to pCustomMetadataDimensions of configurationFile
+	set pCustomMetadataTypes to pCustomMetadataTypes of configurationFile
+	set pCustomMetadataTemplates to pCustomMetadataTemplates of configurationFile
+	set pCustomMetadataFieldSeparator to pCustomMetadataFieldSeparator of configurationFile
 
-	set pCommentsFields to pCommentsFields of defaultConfiguration
+	set pCommentsFields to pCommentsFields of configurationFile
 
-	set pAmountLookupCategories to words of (pAmountLookupCategories of defaultConfiguration)
-	set pFilesHome to pFilesHome of defaultConfiguration
+	set pAmountLookupCategories to words of (pAmountLookupCategories of configurationFile)
+	set pFilesHome to pFilesHome of configurationFile
 
-	set pDimensionsConstraints to pDimensionsConstraints of defaultConfiguration
+	set pDimensionsConstraints to pDimensionsConstraints of configurationFile
 	set pDimensionsConstraintsDictionary to my buildDimensionsConstraintsDictionary(pDimensionsConstraints)
 
-	set pTagAliases to pTagAliases of defaultConfiguration
+	set pTagAliases to pTagAliases of configurationFile
 	set tagAliases to my buildTagAliasDictionary(pTagAliases)
 
-	set theMonths to pMonths of defaultConfiguration
+	set theMonths to pMonths of configurationFile
 	set {monthsByDigit, monthsByName} to my buildMonthDictionaries(theMonths)
 
 	set pAmountFormatter to current application's NSNumberFormatter's new()
