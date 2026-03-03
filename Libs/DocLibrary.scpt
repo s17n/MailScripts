@@ -237,7 +237,7 @@ on createSmartGroupForSender(theRecords, theDatabaseName)
 	set logCtx to my initialize("createSmartGroupForSender")
 	logger's trace(logCtx, "enter > " & theDatabaseName)
 
-	my initializeMailLibrary(theDatabaseName)
+	my initializeMailConfiguration(pDatabaseConfigurationFolder, theDatabaseName)
 
 	mailLib's createSmartGroup(theRecords)
 
@@ -295,13 +295,7 @@ on creationDateFromMetadata(theRecord)
 	return creationDate
 end creationDateFromMetadata
 
--- Operation: databaseConfigurationPath
--- Kurzbeschreibung: Erzeugt den Dateipfad zur datenbankspezifischen Konfigurationsdatei.
--- Parameter: theDatabaseName:text
--- Rueckgabe: text
-on databaseConfigurationPath(theDatabaseName)
-	return pDatabaseConfigurationFolder & "/Database-" & theDatabaseName & ".scpt"
-end databaseConfigurationPath
+
 
 -- Operation: displayNotification
 -- Kurzbeschreibung: Zeigt pro Record eine Info-Benachrichtigung mit einem Feldwert an.
@@ -512,7 +506,7 @@ on importMailMessages(theDatabaseName)
 
 	tell application id "DNtp"
 
-		my initializeMailLibrary(theDatabaseName)
+		my initializeMailConfiguration(pDatabaseConfigurationFolder, theDatabaseName)
 
 		set theMessages to mailLib's getInboxMessages()
 		logger's debug(logCtx, "Number of Inbox Messages: " & length of theMessages)
@@ -557,27 +551,13 @@ on initializeDatabaseConfiguration(theDatabase)
 
 	tell application id "DNtp" to set theDatabaseName to name of theDatabase
 
-	set databaseConfigurationFilename to my databaseConfigurationPath(theDatabaseName)
-
-	try
-		set databaseConfiguration to load script databaseConfigurationFilename
-	on error
-		error "Database configuration file not found. Expected database configuration file: " & databaseConfigurationFilename
-	end try
-
-	set configurationFilename to pConfigurationFile of databaseConfiguration
-	try
-		set configurationFile to load script (pDatabaseConfigurationFolder & "/" & configurationFilename)
-	on error
-		error "Configuration file not found. Expected configuration file: " & configurationFilename
-	end try
+	set configurationFile to baseLib's loadConfiguration(pDatabaseConfigurationFolder, theDatabaseName)
 
 	set pContentType to pContentType of configurationFile
 
 	-- Logger
 	set pLogLevel to pLogLevel of configurationFile
 	logger's setLogLevel(pLogLevel)
-	logger's debug(logCtx, "Database configuration: " & configurationFilename)
 
 	-- Dimensions
 	set pDimensionsHome to pDimensionsHome of configurationFile
@@ -617,7 +597,7 @@ on initializeDatabaseConfiguration(theDatabase)
 	my initializeDimensions(theDatabase)
 
 	if pContentType is equal to "EMAILS" then
-		my initializeMailLibrary(theDatabaseName)
+		my initializeMailConfiguration(pDatabaseConfigurationFolder, theDatabaseName)
 	end if
 
 	logger's trace(logCtx, "exit")
@@ -650,16 +630,14 @@ on initializeDimensions(theDatabase)
 	logger's trace(logCtx, "exit")
 end initializeDimensions
 
--- Operation: initializeMailLibrary
+-- Operation: initializeMailConfiguration
 -- Kurzbeschreibung: Initialisiert MailLibrary-Abhaengigkeiten und laedt deren Datenbankkonfiguration.
 -- Parameter: theDatabaseName:text
 -- Rueckgabe: text
-on initializeMailLibrary(theDatabaseName)
+on initializeMailConfiguration(theDatabaseConfigurationFolder, theDatabaseName)
 	mailLib's initializeDepencencies(logger, baseLib)
-	set databaseConfigPath to my databaseConfigurationPath(theDatabaseName)
-	mailLib's initializeDatabaseConfiguration(databaseConfigPath)
-	return databaseConfigPath
-end initializeMailLibrary
+	mailLib's initializeMailConfiguration(theDatabaseConfigurationFolder, theDatabaseName)
+end initializeMailConfiguration
 
 -- Operation: logIssue
 -- Kurzbeschreibung: Protokolliert einen Validierungsfehler, zaehlt ihn und setzt optional ein Label.
@@ -718,10 +696,10 @@ on moveRecord(theRecord, theDestinationFolderName)
 
 	tell application id "DNtp"
 
-		set theDestinationFolder to get record at theDestinationFolderName
+		set theDestinationFolder to get record at theDestinationFolderName in database of theRecord
 		if theDestinationFolder is missing value then
 			logger's info(logCtx, "Record will be moved to a group that doesn't exist yet and will be created now: " & theDestinationFolderName)
-			set theDestinationFolder to create location theDestinationFolderName
+			set theDestinationFolder to create location theDestinationFolderName in database of theRecord
 		end if
 		logger's debug(logCtx, "Record moved from: " & location of theRecord & " to: " & theDestinationFolderName)
 		move record theRecord from location group of theRecord to theDestinationFolder

@@ -32,11 +32,11 @@ on initialize(loggingContext)
 	return pScriptName & " > " & loggingContext
 end initialize
 
-on initializeDatabaseConfiguration(databaseConfigurationFilename)
-	set logCtx to my initialize("initializeDatabaseConfiguration")
-	logger's trace(logCtx, "enter > " & databaseConfigurationFilename)
+on initializeMailConfiguration(theDatabaseConfigurationFolder, theDatabaseName)
+	set logCtx to my initialize("initializeMailConfiguration")
+	logger's trace(logCtx, "enter > theDatabaseConfigurationFolder: " & theDatabaseConfigurationFolder & "; theDatabaseName: " & theDatabaseName)
 
-	set databaseConfiguration to load script databaseConfigurationFilename
+	set databaseConfiguration to baseLib's loadConfiguration(theDatabaseConfigurationFolder, theDatabaseName)
 
 	set pMailboxAccount to pMailboxAccount of databaseConfiguration
 	set pMailboxImportFolder to pMailboxImportFolder of databaseConfiguration
@@ -58,7 +58,7 @@ on initializeDatabaseConfiguration(databaseConfigurationFilename)
 		"; pDevonthinkSortBySender: " & pDevonthinkSortBySender & "; pDelayBeforeImport: " & pDelayBeforeImport)
 
 	logger's trace(logCtx, "exit")
-end initializeDatabaseConfiguration
+end initializeMailConfiguration
 
 on importMessages(theMessages, theDatabaseName)
 	set logCtx to my initialize("importMessages")
@@ -119,12 +119,6 @@ on importMessages(theMessages, theDatabaseName)
 		end repeat
 
 		logger's info(logCtx, "Messages imported: " & length of theMessages)
-		-- set theOldMessages to messages of mailbox mailboxImportFolder of account mailboxAccount
-		-- if length of theOldMessages > 0 then
-		--	tell logger to info(pScriptName, ((length of theMessages) as rich text) & " already received message(s) found for import.")
-		--	tell mailLib to importMessages(theOldMessages, devonthinkDatabase, devonthinkInboxFolder, dtSortBySender, mailboxAccount, mailboxArchiveFolder, pScriptName)
-		--end if
-
 	end tell
 
 	logger's trace(logCtx, "exit")
@@ -168,11 +162,11 @@ on createSmartGroup(theRecords)
 			end if
 
 			-- Erstelle Smartgroup für Email-Adresse
-			if (exists record at "03 Resources/General/by Email/" & theEmailAddress in theDatabase) then
+			if (exists record at "03 Resources/by Email/" & theEmailAddress in theDatabase) then
 				tell logger to debug_r(theRecord, "Smartgroup already exists for Email: " & theEmailAddress)
 			else
 
-				set theGroup to get record at "03 Resources/General/by Email" in theDatabase
+				set theGroup to get record at "03 Resources/by Email" in theDatabase
 				set theSmartGroup to create record with {name:theEmailAddress, URL:theEmailAddress, record type:smart group, search predicates:"kMDItemAuthorEmailAddresses:" & theEmailAddress} ¬
 					in theGroup
 				tell logger to info_r(theRecord, "Smartgroup created for Email: " & theEmailAddress)

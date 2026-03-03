@@ -15,6 +15,31 @@ on initialize(loggingContext)
 	return pScriptName & " > " & loggingContext
 end initialize
 
+on loadConfiguration(theDatabaseConfigurationFolder, theDatabaseName)
+	set logCtx to my initialize("loadConfiguration")
+	logger's trace(logCtx, "enter")
+
+	set databaseConfigurationFilename to theDatabaseConfigurationFolder & "/Database-" & theDatabaseName & ".scpt"
+
+	try
+		set databaseConfiguration to load script databaseConfigurationFilename
+	on error
+		error "Database configuration file not found. Expected database configuration file: " & databaseConfigurationFilename
+	end try
+
+	set configurationFilename to pConfigurationFile of databaseConfiguration
+	try
+		set configurationFile to load script (theDatabaseConfigurationFolder & "/" & configurationFilename)
+	on error
+		error "Configuration file not found. Expected configuration file: " & configurationFilename
+	end try
+
+	logger's debug(logCtx, "Configuration file: " & configurationFilename)
+	logger's trace(logCtx, "exit")
+	return configurationFile
+end loadConfiguration
+
+
 on showLogLevel()
 	my initialize()
 	tell logger to info(pScriptName, "Current log level is: " & LOG_LEVEL)
