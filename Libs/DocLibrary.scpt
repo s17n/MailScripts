@@ -51,11 +51,11 @@ property pExiftool : missing value
 
 -- Typisierung: DEVONthink-Typen aus /Applications/DEVONthink v4.2.app/Contents/Resources/DEVONthink.sdef
 
--- Operation: addTextToCustomMetadata
--- Kurzbeschreibung: Fuegt Zusatztext in ein konfiguriertes Custom-Metadata-Feld ein oder ersetzt ihn.
--- Parameter: theCustomMetadataField:text
--- Parameter: theText:text
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Adds supplemental text to a configured custom metadata field.
+-- Parameters:
+--    theCustomMetadataField:text target custom metadata field name.
+--    theText:text supplemental text to apply.
+-- Return: none (side effects only).
 on addTextToCustomMetadata(theCustomMetadataField, theText)
 	set logCtx to my initialize(" addTextToCustomMetadata")
 	logger's trace(logCtx, "enter > theCustomMetadataField: " & theCustomMetadataField & ", theText: " & theText)
@@ -95,20 +95,20 @@ on addTextToCustomMetadata(theCustomMetadataField, theText)
 	logger's trace(logCtx, "exit")
 end addTextToCustomMetadata
 
--- Operation: addToTagList
--- Kurzbeschreibung: Fuegt den Namen eines Tag-Records an eine Ergebnisliste an.
--- Parameter: theTagList:list<text>
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Rueckgabe: list<text>
+-- Appends a tag name to the current tag list.
+-- Parameters:
+--    theTagList:list<text> input value for this operation.
+--    theRecord:DEVONthink record (class 'record' / DTrc) record to process.
+-- Return: list<text> computed result.
 on addToTagList(theTagList, theRecord)
 	set end of theTagList to name of theRecord as string
 	return theTagList
 end addToTagList
 
--- Operation: archiveRecords
--- Kurzbeschreibung: Ermittelt Archivziel aus Platzhaltern, verschiebt Record und markiert ihn als gesperrt.
--- Parameter: theRecords:list<DEVONthink record (class 'record' / DTrc)>
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Archives records to a destination resolved from configured placeholders.
+-- Parameters:
+--    theRecords:list<DEVONthink record (class 'record' / DTrc)> records to process.
+-- Return: none (side effects only).
 on archiveRecords(theRecords)
 	set logCtx to my initialize("archiveRecords")
 	logger's trace(logCtx, "enter")
@@ -143,10 +143,10 @@ on archiveRecords(theRecords)
 	logger's trace(logCtx, "exit")
 end archiveRecords
 
--- Operation: buildDimensionsConstraintsDictionary
--- Kurzbeschreibung: Baut ein Dictionary mit Dimension -> Kardinalitaet aus der Konfigurationsliste.
--- Parameter: theConstraints:list<list{text,integer}>
--- Rueckgabe: NSMutableDictionary<text,integer>
+-- Builds a dimension-to-cardinality dictionary from configuration data.
+-- Parameters:
+--    theConstraints:list<list{text,integer}> configured dimension cardinality constraints.
+-- Return: NSMutableDictionary<text,integer> computed result.
 on buildDimensionsConstraintsDictionary(theConstraints)
 	set constraintsDictionary to current application's NSMutableDictionary's dictionary()
 	repeat with aDimensionConstraint in theConstraints
@@ -157,10 +157,10 @@ on buildDimensionsConstraintsDictionary(theConstraints)
 	return constraintsDictionary
 end buildDimensionsConstraintsDictionary
 
--- Operation: buildMonthDictionaries
--- Kurzbeschreibung: Erzeugt beide Monats-Mappings (Nummer->Name und Name->Nummer).
--- Parameter: theMonths:list<list{text,text}>
--- Rueckgabe: list{NSMutableDictionary<text,text>, NSMutableDictionary<text,text>}
+-- Builds month lookup dictionaries for number-to-name and name-to-number mapping.
+-- Parameters:
+--    theMonths:list<list{text,text}> configured month mapping pairs.
+-- Return: list{NSMutableDictionary<text,text>, NSMutableDictionary<text,text>} computed result.
 on buildMonthDictionaries(theMonths)
 	set byDigit to current application's NSMutableDictionary's dictionary()
 	set byName to current application's NSMutableDictionary's dictionary()
@@ -173,10 +173,10 @@ on buildMonthDictionaries(theMonths)
 	return {byDigit, byName}
 end buildMonthDictionaries
 
--- Operation: buildTagAliasDictionary
--- Kurzbeschreibung: Baut ein Dictionary mit Tag -> Alias aus den konfigurierten Tag-Alias-Paaren.
--- Parameter: theTagAliases:list<list{text,text}>
--- Rueckgabe: NSMutableDictionary<text,text>
+-- Builds a tag-to-alias dictionary from configured alias pairs.
+-- Parameters:
+--    theTagAliases:list<list{text,text}> configured tag alias pairs.
+-- Return: NSMutableDictionary<text,text> computed result.
 on buildTagAliasDictionary(theTagAliases)
 	set aliasesDictionary to current application's NSMutableDictionary's dictionary()
 	repeat with aTagAlias in theTagAliases
@@ -187,10 +187,10 @@ on buildTagAliasDictionary(theTagAliases)
 	return aliasesDictionary
 end buildTagAliasDictionary
 
--- Operation: classifyRecords
--- Kurzbeschreibung: Klassifiziert Records durch Datumstags und Vergleich mit aehnlichen Records.
--- Parameter: theRecords:list<DEVONthink record (class 'record' / DTrc)>
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Classifies records by date tags and compare-based dimension inference.
+-- Parameters:
+--    theRecords:list<DEVONthink record (class 'record' / DTrc)> records to process.
+-- Return: none (side effects only).
 on classifyRecords(theRecords)
 	set logCtx to my initialize("classifyRecords")
 	logger's trace(logCtx, "enter")
@@ -228,11 +228,11 @@ on classifyRecords(theRecords)
 	logger's trace(logCtx, "exit")
 end classifyRecords
 
--- Operation: createSmartGroupForSender
--- Kurzbeschreibung: Initialisiert MailLibrary und erstellt eine Sender-Smart-Group fuer gegebene Records.
--- Parameter: theRecords:list<DEVONthink record (class 'record' / DTrc)>
--- Parameter: theDatabaseName:text
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Creates a sender smart group for the provided records.
+-- Parameters:
+--    theRecords:list<DEVONthink record (class 'record' / DTrc)> records to process.
+--    theDatabaseName:text name of the target database.
+-- Return: none (side effects only).
 on createSmartGroupForSender(theRecords, theDatabaseName)
 	set logCtx to my initialize("createSmartGroupForSender")
 	logger's trace(logCtx, "enter > " & theDatabaseName)
@@ -244,11 +244,11 @@ on createSmartGroupForSender(theRecords, theDatabaseName)
 	logger's trace(logCtx, "exit")
 end createSmartGroupForSender
 
--- Operation: createTagList
--- Kurzbeschreibung: Traversiert Tag-Hierarchien rekursiv und sammelt Blatt-Tags als flache Liste.
--- Parameter: theTags:list<DEVONthink child record (class 'child' / DTch)>
--- Parameter: resultList:list<text>
--- Rueckgabe: list<text>
+-- Flattens hierarchical tags into a plain leaf-tag list.
+-- Parameters:
+--    theTags:list<DEVONthink child record (class 'child' / DTch)> tags to traverse and transform.
+--    resultList:list<text> accumulator list for collected results.
+-- Return: list<text> computed result.
 on createTagList(theTags, resultList)
 	tell application id "DNtp"
 		repeat with tagListItem in theTags
@@ -264,10 +264,10 @@ on createTagList(theTags, resultList)
 	return resultList
 end createTagList
 
--- Operation: creationDateFromMetadata
--- Kurzbeschreibung: Liest das Erstellungsdatum (bei PDF ueber ExifTool) mit Fallback auf Record-Erstellungsdatum.
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Rueckgabe: date
+-- Resolves the creation date from metadata with fallback handling.
+-- Parameters:
+--    theRecord:DEVONthink record (class 'record' / DTrc) record to process.
+-- Return: date computed result.
 on creationDateFromMetadata(theRecord)
 	set logCtx to my initialize("creationDateFromMetadata")
 	logger's trace(logCtx, "enter")
@@ -297,12 +297,12 @@ end creationDateFromMetadata
 
 
 
--- Operation: displayNotification
--- Kurzbeschreibung: Zeigt pro Record eine Info-Benachrichtigung mit einem Feldwert an.
--- Parameter: theRecords:list<DEVONthink record (class 'record' / DTrc)>
--- Parameter: pMessagePrefix:text
--- Parameter: pFieldForMessage:text
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Displays an informational notification for each record.
+-- Parameters:
+--    theRecords:list<DEVONthink record (class 'record' / DTrc)> records to process.
+--    pMessagePrefix:text message prefix shown in notifications.
+--    pFieldForMessage:text field name used to build notification text.
+-- Return: none (side effects only).
 on displayNotification(theRecords, pMessagePrefix, pFieldForMessage)
 	set logCtx to my initialize("displayNotification")
 	logger's trace(logCtx, "enter > displayNotification: " & pMessagePrefix)
@@ -318,11 +318,11 @@ on displayNotification(theRecords, pMessagePrefix, pFieldForMessage)
 	logger's trace(logCtx, "exit")
 end displayNotification
 
--- Operation: existDimension
--- Kurzbeschreibung: Prueft, ob fuer alle angeforderten Dimensionen Werte vorhanden sind.
--- Parameter: theFields:NSMutableDictionary
--- Parameter: theDimensions:list<text>
--- Rueckgabe: boolean
+-- Checks whether all requested dimensions are present in the field dictionary.
+-- Parameters:
+--    theFields:NSMutableDictionary field dictionary used for value lookup.
+--    theDimensions:list<text> dimension keys used for placeholder replacement.
+-- Return: boolean computed result.
 on existDimension(theFields, theDimensions)
 	set logCtx to my initialize("existDimension")
 	logger's trace(logCtx, "enter")
@@ -340,10 +340,10 @@ on existDimension(theFields, theDimensions)
 	return true
 end existDimension
 
--- Operation: extractCustomTextFromCmdValue
--- Kurzbeschreibung: Extrahiert den frei eingegebenen Textanteil aus einem Custom-Metadata-Wert.
--- Parameter: currentValue:text|missing value
--- Rueckgabe: text
+-- Extracts user-provided custom text from a metadata command value.
+-- Parameters:
+--    currentValue:text|missing value current metadata value to parse.
+-- Return: text computed result.
 on extractCustomTextFromCmdValue(currentValue)
 	set logCtx to my initialize("extractCustomTextFromCmdValue")
 	logger's trace(logCtx, "enter > " & currentValue)
@@ -376,11 +376,11 @@ on extractCustomTextFromCmdValue(currentValue)
 	return customText
 end extractCustomTextFromCmdValue
 
--- Operation: fieldsFromTags
--- Kurzbeschreibung: Leitet aus den Record-Tags ein Dictionary mit Dimensionen und Werten ab.
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Parameter: interactiveMode:boolean
--- Rueckgabe: NSMutableDictionary<text, text|list<text>>
+-- Derives normalized field values from record tags.
+-- Parameters:
+--    theRecord:DEVONthink record (class 'record' / DTrc) record to process.
+--    interactiveMode:boolean whether interactive fallback handling is enabled.
+-- Return: NSMutableDictionary<text, text|list<text>> computed result.
 on fieldsFromTags(theRecord, interactiveMode)
 	set logCtx to my initialize("fieldsFromTags")
 	logger's trace(logCtx, "enter")
@@ -404,11 +404,11 @@ on fieldsFromTags(theRecord, interactiveMode)
 	return fields
 end fieldsFromTags
 
--- Operation: getClassificationDate
--- Kurzbeschreibung: Ermittelt das fuer die Klassifikation zu verwendende Datum gemaess Konfiguration.
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Parameter: theClassificationDate:text
--- Rueckgabe: date
+-- Determines the effective date to use for classification.
+-- Parameters:
+--    theRecord:DEVONthink record (class 'record' / DTrc) record to process.
+--    theClassificationDate:text configured classification date source.
+-- Return: date computed result.
 on getClassificationDate(theRecord, theClassificationDate)
 	set logCtx to my initialize("getClassificationDate")
 	logger's trace(logCtx, "enter")
@@ -453,10 +453,10 @@ on getClassificationDate(theRecord, theClassificationDate)
 	return theDate
 end getClassificationDate
 
--- Operation: handleUncategorizedTag
--- Kurzbeschreibung: Bietet interaktiv an, ein nicht zugeordnetes Tag einer Dimension zuzuordnen.
--- Parameter: theTag:text
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Handles interactive assignment for an uncategorized tag.
+-- Parameters:
+--    theTag:text tag value to evaluate.
+-- Return: none (side effects only).
 on handleUncategorizedTag(theTag)
 	set logCtx to my initialize("handleUncategorizedTag")
 	logger's trace(logCtx, "enter")
@@ -496,10 +496,10 @@ on handleUncategorizedTag(theTag)
 	logger's trace(logCtx, "exit")
 end handleUncategorizedTag
 
--- Operation: importMailMessages
--- Kurzbeschreibung: Liest Inbox-Nachrichten ueber MailLibrary und importiert sie in die Ziel-Datenbank.
--- Parameter: theDatabaseName:text
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Imports inbox messages into the configured target database.
+-- Parameters:
+--    theDatabaseName:text name of the target database.
+-- Return: none (side effects only).
 on importMailMessages(theDatabaseName)
 	set logCtx to my initialize("importMailMessages")
 	logger's trace(logCtx, "enter > " & theDatabaseName)
@@ -516,10 +516,10 @@ on importMailMessages(theDatabaseName)
 	logger's trace(logCtx, "exit")
 end importMailMessages
 
--- Operation: initialize
--- Kurzbeschreibung: Initialisiert Konfiguration und Bibliotheksreferenzen einmalig und liefert den Logging-Kontext.
--- Parameter: loggingContext:text
--- Rueckgabe: text
+-- Initializes configuration and library dependencies for this module.
+-- Parameters:
+--    loggingContext:text context label used for logging.
+-- Return: text computed result.
 on initialize(loggingContext)
 	set logCtx to pScriptName & " > initialize"
 
@@ -541,10 +541,10 @@ on initialize(loggingContext)
 	return pScriptName & " > " & loggingContext
 end initialize
 
--- Operation: initializeDatabaseConfiguration
--- Kurzbeschreibung: Laedt Datenbank- und Default-Konfiguration, setzt Modul-Properties und initialisiert Dimensionen.
--- Parameter: theDatabase:DEVONthink database (class 'database' / DTkb)
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Loads and applies database-specific configuration.
+-- Parameters:
+--    theDatabase:DEVONthink database (class 'database' / DTkb) database context used by the operation.
+-- Return: none (side effects only).
 on initializeDatabaseConfiguration(theDatabase)
 	set logCtx to my initialize("initializeDatabaseConfiguration")
 	logger's trace(logCtx, "enter")
@@ -603,10 +603,10 @@ on initializeDatabaseConfiguration(theDatabase)
 	logger's trace(logCtx, "exit")
 end initializeDatabaseConfiguration
 
--- Operation: initializeDimensions
--- Kurzbeschreibung: Laedt alle Dimensionen und Kategorien der Datenbank in den In-Memory-Cache.
--- Parameter: theDatabase:DEVONthink database (class 'database' / DTkb)
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Loads dimension and category definitions into the in-memory cache.
+-- Parameters:
+--    theDatabase:DEVONthink database (class 'database' / DTkb) database context used by the operation.
+-- Return: none (side effects only).
 on initializeDimensions(theDatabase)
 	set logCtx to my initialize("initializeDimensions")
 	logger's trace(logCtx, "enter")
@@ -630,21 +630,21 @@ on initializeDimensions(theDatabase)
 	logger's trace(logCtx, "exit")
 end initializeDimensions
 
--- Operation: initializeMailConfiguration
--- Kurzbeschreibung: Initialisiert MailLibrary-Abhaengigkeiten und laedt deren Datenbankkonfiguration.
--- Parameter: theDatabaseName:text
--- Rueckgabe: text
+-- Initializes mail library configuration for a target database.
+-- Parameters:
+--    theDatabaseName:text name of the target database.
+-- Return: text computed result.
 on initializeMailConfiguration(theDatabaseConfigurationFolder, theDatabaseName)
 	mailLib's initializeDepencencies(logger, baseLib)
 	mailLib's initializeMailConfiguration(theDatabaseConfigurationFolder, theDatabaseName)
 end initializeMailConfiguration
 
--- Operation: logIssue
--- Kurzbeschreibung: Protokolliert einen Validierungsfehler, zaehlt ihn und setzt optional ein Label.
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Parameter: setRecordLabel:boolean
--- Parameter: theMessage:text
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Logs a validation issue and updates issue-tracking state.
+-- Parameters:
+--    theRecord:DEVONthink record (class 'record' / DTrc) record to process.
+--    setRecordLabel:boolean whether to set a label on the record.
+--    theMessage:text log message text.
+-- Return: none (side effects only).
 on logIssue(theRecord, setRecordLabel, theMessage)
 	tell application id "DNtp"
 		tell logger to info_r(theRecord, theMessage)
@@ -655,12 +655,12 @@ on logIssue(theRecord, setRecordLabel, theMessage)
 	end tell
 end logIssue
 
--- Operation: moveByDimension
--- Kurzbeschreibung: Verschiebt Records in Zielgruppen auf Basis einer ermittelten Dimensions-Kategorie.
--- Parameter: theRecords:list<DEVONthink record (class 'record' / DTrc)>
--- Parameter: theDimension:text
--- Parameter: theFolderPrefix:text
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Moves records into target groups based on a dimension value.
+-- Parameters:
+--    theRecords:list<DEVONthink record (class 'record' / DTrc)> records to process.
+--    theDimension:text dimension key used for lookup and routing.
+--    theFolderPrefix:text folder prefix used for target path resolution.
+-- Return: none (side effects only).
 on moveByDimension(theRecords, theDimension, theFolderPrefix)
 	set logCtx to my initialize("moveByDimension")
 	logger's trace(logCtx, "enter > theDimension: " & theDimension & "; theFolderPrefix: " & theFolderPrefix)
@@ -685,11 +685,11 @@ on moveByDimension(theRecords, theDimension, theFolderPrefix)
 	logger's trace(logCtx, "exit")
 end moveByDimension
 
--- Operation: moveRecord
--- Kurzbeschreibung: Verschiebt einen Record in eine Zielgruppe und legt die Gruppe bei Bedarf an.
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Parameter: theDestinationFolderName:text
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Moves a record to a destination group and creates it if needed.
+-- Parameters:
+--    theRecord:DEVONthink record (class 'record' / DTrc) record to process.
+--    theDestinationFolderName:text destination group name.
+-- Return: none (side effects only).
 on moveRecord(theRecord, theDestinationFolderName)
 	set logCtx to my initialize("moveRecord")
 	logger's trace(logCtx, "enter > theDestinationFolderName: " & theDestinationFolderName)
@@ -709,10 +709,10 @@ on moveRecord(theRecord, theDestinationFolderName)
 	logger's trace(logCtx, "exit")
 end moveRecord
 
--- Operation: processDocuments
--- Kurzbeschreibung: Fuehrt den Standard-Workflow aus: Klassifikation und Metadatenaktualisierung.
--- Parameter: theRecords:list<DEVONthink record (class 'record' / DTrc)>
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Runs the standard document workflow for classification and metadata updates.
+-- Parameters:
+--    theRecords:list<DEVONthink record (class 'record' / DTrc)> records to process.
+-- Return: none (side effects only).
 on processDocuments(theRecords)
 	set logCtx to my initialize("processDocuments")
 	logger's trace(logCtx, "enter")
@@ -725,10 +725,10 @@ on processDocuments(theRecords)
 	logger's trace(logCtx, "exit")
 end processDocuments
 
--- Operation: removeTrailingBracketBlocks
--- Kurzbeschreibung: Entfernt am String-Ende angehaengte Klammerbloecke wie [..].
--- Parameter: theString:text
--- Rueckgabe: text
+-- Removes trailing bracket blocks from a string value.
+-- Parameters:
+--    theString:text string value to normalize.
+-- Return: text computed result.
 on removeTrailingBracketBlocks(theString)
 	set logCtx to my initialize("removeTrailingBracketBlocks")
 	logger's trace(logCtx, "enter > " & theString)
@@ -746,11 +746,11 @@ on removeTrailingBracketBlocks(theString)
 	return cleaned
 end removeTrailingBracketBlocks
 
--- Operation: replaceDatePlaceholder
--- Kurzbeschreibung: Ersetzt Datums-Platzhalter {Year}, {Month}, {Day} in einem Template.
--- Parameter: theDate:date
--- Parameter: theTemplate:text
--- Rueckgabe: text
+-- Replaces date placeholders in a template string.
+-- Parameters:
+--    theDate:date date value used for placeholder replacement.
+--    theTemplate:text template text containing placeholders.
+-- Return: text computed result.
 on replaceDatePlaceholder(theDate, theTemplate)
 	set logCtx to my initialize("replaceDatePlaceholder")
 	logger's trace(logCtx, "enter > theDate: " & theDate & "; theTemplate: " & theTemplate)
@@ -775,12 +775,12 @@ on replaceDatePlaceholder(theDate, theTemplate)
 	return theModifiedTemplate
 end replaceDatePlaceholder
 
--- Operation: replaceDimensionPlaceholders
--- Kurzbeschreibung: Ersetzt Dimensions-Platzhalter [Dimension] in einem Template.
--- Parameter: theDimensions:list<text>
--- Parameter: theFields:NSMutableDictionary
--- Parameter: theTemplate:text
--- Rueckgabe: text
+-- Replaces dimension placeholders in a template string.
+-- Parameters:
+--    theDimensions:list<text> dimension keys used for placeholder replacement.
+--    theFields:NSMutableDictionary field dictionary used for value lookup.
+--    theTemplate:text template text containing placeholders.
+-- Return: text computed result.
 on replaceDimensionPlaceholders(theDimensions, theFields, theTemplate)
 	set logCtx to my initialize("replaceDimensionPlaceholders")
 	logger's trace(logCtx, "enter")
@@ -808,12 +808,12 @@ on replaceDimensionPlaceholders(theDimensions, theFields, theTemplate)
 	return theModifiedTemplate
 end replaceDimensionPlaceholders
 
--- Operation: replaceFieldPlaceholder
--- Kurzbeschreibung: Ersetzt spezielle Feld-Platzhalter wie {Decades} in einem Template.
--- Parameter: thePlaceholder:text
--- Parameter: theFields:NSMutableDictionary
--- Parameter: theTemplate:text
--- Rueckgabe: text
+-- Replaces special field placeholders in a template string.
+-- Parameters:
+--    thePlaceholder:text placeholder token to replace.
+--    theFields:NSMutableDictionary field dictionary used for value lookup.
+--    theTemplate:text template text containing placeholders.
+-- Return: text computed result.
 on replaceFieldPlaceholder(thePlaceholder, theFields, theTemplate)
 	set logCtx to my initialize("replaceFieldPlaceholder")
 	logger's trace(logCtx, "enter")
@@ -845,12 +845,12 @@ on replaceFieldPlaceholder(thePlaceholder, theFields, theTemplate)
 	return theModifiedTemplate
 end replaceFieldPlaceholder
 
--- Operation: replaceText
--- Kurzbeschreibung: Ersetzt alle Vorkommen eines Teilstrings in einem Quelltext.
--- Parameter: findText:text
--- Parameter: replaceText:text
--- Parameter: sourceText:text
--- Rueckgabe: text
+-- Replaces all occurrences of a substring in a source string.
+-- Parameters:
+--    findText:text substring to search for.
+--    replaceText:text replacement substring.
+--    sourceText:text source text to transform.
+-- Return: text computed result.
 on replaceText(findText, replaceText, sourceText)
 	set logCtx to my initialize("replaceText")
 	logger's trace(logCtx, "enter > " & findText & ", " & replaceText & ", " & sourceText)
@@ -866,14 +866,14 @@ on replaceText(findText, replaceText, sourceText)
 	return newText
 end replaceText
 
--- Operation: setCustomMetadata
--- Kurzbeschreibung: Berechnet den Zielwert fuer ein Custom-Metadata-Feld und schreibt ihn bei Aenderung.
--- Parameter: theIndex:integer
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Parameter: theFields:NSMutableDictionary
--- Parameter: theSupplemental:text
--- Parameter: theSupplementalAction:text (ADD|REPLACE)
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Computes and writes a custom metadata value when required.
+-- Parameters:
+--    theIndex:integer index of the configured metadata field.
+--    theRecord:DEVONthink record (class 'record' / DTrc) record to process.
+--    theFields:NSMutableDictionary field dictionary used for value lookup.
+--    theSupplemental:text supplemental text value.
+--    theSupplementalAction:text (ADD|REPLACE) supplemental merge mode.
+-- Return: none (side effects only).
 on setCustomMetadata(theIndex, theRecord, theFields, theSupplemental, theSupplementalAction)
 	set logCtx to my initialize("setCustomMetadata")
 	logger's trace(logCtx, "enter > theIndex: " & theIndex & "; theSupplemental: " & theSupplemental & "; theSupplementalAction: " & theSupplementalAction)
@@ -1011,12 +1011,12 @@ on setCustomMetadata(theIndex, theRecord, theFields, theSupplemental, theSupplem
 	logger's trace(logCtx, "exit")
 end setCustomMetadata
 
--- Operation: setDateTags
--- Kurzbeschreibung: Setzt Jahr/Monat/Tag-Tags anhand des Klassifikationsdatums, wenn sie noch fehlen.
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Parameter: theFields:NSMutableDictionary
--- Parameter: theClassificationDate:text
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Ensures date tags are set from the selected classification date.
+-- Parameters:
+--    theRecord:DEVONthink record (class 'record' / DTrc) record to process.
+--    theFields:NSMutableDictionary field dictionary used for value lookup.
+--    theClassificationDate:text configured classification date source.
+-- Return: none (side effects only).
 on setDateTags(theRecord, theFields, theClassificationDate)
 	set logCtx to my initialize("setDateTags")
 	logger's trace(logCtx, "enter")
@@ -1051,13 +1051,13 @@ on setDateTags(theRecord, theFields, theClassificationDate)
 	logger's trace(logCtx, "exit")
 end setDateTags
 
--- Operation: setField
--- Kurzbeschreibung: Ordnet ein Tag einer passenden Dimension zu und prueft dabei die Kardinalitaet.
--- Parameter: theTag:text
--- Parameter: theFields:NSMutableDictionary
--- Parameter: interactiveMode:boolean
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Rueckgabe: list{boolean, NSMutableDictionary}
+-- Assigns a tag to a matching dimension while enforcing cardinality rules.
+-- Parameters:
+--    theTag:text tag value to evaluate.
+--    theFields:NSMutableDictionary field dictionary used for value lookup.
+--    interactiveMode:boolean whether interactive fallback handling is enabled.
+--    theRecord:DEVONthink record (class 'record' / DTrc) record to process.
+-- Return: list{boolean, NSMutableDictionary} computed result.
 on setField(theTag, theFields, interactiveMode, theRecord)
 	set logCtx to my initialize("setField")
 	logger's trace(logCtx, "entry > theTag: " & theTag)
@@ -1094,11 +1094,11 @@ on setField(theTag, theFields, interactiveMode, theRecord)
 	return {hasFieldBeenSet, theFields}
 end setField
 
--- Operation: setFinderComment
--- Kurzbeschreibung: Uebernimmt einen Feldwert in den Kommentar des Records.
--- Parameter: theField:text
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Sets the record comment from a selected field value.
+-- Parameters:
+--    theField:text field name used for comment generation.
+--    theRecord:DEVONthink record (class 'record' / DTrc) record to process.
+-- Return: none (side effects only).
 on setFinderComment(theField, theRecord)
 	set logCtx to my initialize("setFinderComment")
 	logger's trace(logCtx, "enter > " & theField)
@@ -1124,11 +1124,11 @@ on setFinderComment(theField, theRecord)
 	logger's trace(logCtx, "exit")
 end setFinderComment
 
--- Operation: setName
--- Kurzbeschreibung: Berechnet den Record-Namen aus dem Namens-Template und setzt ihn bei Aenderung.
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Parameter: theFields:NSMutableDictionary
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Computes and applies the record name from the configured template.
+-- Parameters:
+--    theRecord:DEVONthink record (class 'record' / DTrc) record to process.
+--    theFields:NSMutableDictionary field dictionary used for value lookup.
+-- Return: none (side effects only).
 on setName(theRecord, theFields)
 	set logCtx to my initialize("setName")
 	logger's trace(logCtx, "enter")
@@ -1145,11 +1145,11 @@ on setName(theRecord, theFields)
 	logger's trace(logCtx, "exit")
 end setName
 
--- Operation: setNameForAsset
--- Kurzbeschreibung: Vergibt einen eindeutigen Asset-Namen aus Datumskomponenten und laufender Nummer.
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Parameter: f:record/dictionary mit tagYear, tagMonth, tagDay, tagSender
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Generates and assigns a unique asset name.
+-- Parameters:
+--    theRecord:DEVONthink record (class 'record' / DTrc) record to process.
+--    f:record/dictionary mit tagYear, tagMonth, tagDay, tagSender field record used for asset naming.
+-- Return: none (side effects only).
 on setNameForAsset(theRecord, f)
 	set logCtx to my initialize("setNameForAsset")
 	logger's trace(logCtx, "enter")
@@ -1204,13 +1204,13 @@ on setNameForAsset(theRecord, f)
 	logger's trace(logCtx, "exit")
 end setNameForAsset
 
--- Operation: setTagFromCompareRecord
--- Kurzbeschreibung: Uebernimmt ein passendes Tag aus dem besten Vergleichsrecord oberhalb des Schwellwerts.
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Parameter: theDatabase:DEVONthink database (class 'database' / DTkb)
--- Parameter: theFields:NSMutableDictionary
--- Parameter: theDimension:text
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Transfers a matching tag from the best compare record above threshold.
+-- Parameters:
+--    theRecord:DEVONthink record (class 'record' / DTrc) record to process.
+--    theDatabase:DEVONthink database (class 'database' / DTkb) database context used by the operation.
+--    theFields:NSMutableDictionary field dictionary used for value lookup.
+--    theDimension:text dimension key used for lookup and routing.
+-- Return: none (side effects only).
 on setTagFromCompareRecord(theRecord, theDatabase, theFields, theDimension)
 	set logCtx to my initialize("setTagFromCompareRecord")
 	logger's trace(logCtx, "enter > theDimension: " & theDimension)
@@ -1251,11 +1251,11 @@ on setTagFromCompareRecord(theRecord, theDatabase, theFields, theDimension)
 
 	logger's trace(logCtx, "exit")
 end setTagFromCompareRecord
--- Operation: subjectFromMetadata
--- Kurzbeschreibung: Liest bei PDF-Dateien den Titel aus Metadaten als Betreff.
--- Parameter: theRecord:DEVONthink record (class 'record' / DTrc)
--- Parameter: theSender:text|missing value
--- Rueckgabe: text|missing value
+-- Reads a subject value from metadata for supported records.
+-- Parameters:
+--    theRecord:DEVONthink record (class 'record' / DTrc) record to process.
+--    theSender:text|missing value sender value used for metadata lookup.
+-- Return: text|missing value computed result.
 on subjectFromMetadata(theRecord, theSender)
 	set logCtx to my initialize("subjectFromMetadata")
 	logger's trace(logCtx, "enter")
@@ -1280,10 +1280,10 @@ on subjectFromMetadata(theRecord, theSender)
 	return subjectFromPdfTitle
 end subjectFromMetadata
 
--- Operation: tagAlias
--- Kurzbeschreibung: Liefert fuer ein Tag den Alias, falls einer konfiguriert ist.
--- Parameter: theTag:text
--- Rueckgabe: text
+-- Returns the configured alias for a tag when available.
+-- Parameters:
+--    theTag:text tag value to evaluate.
+-- Return: text computed result.
 on tagAlias(theTag)
 	set logCtx to my initialize("tagAlias")
 	logger's trace(logCtx, "enter")
@@ -1298,18 +1298,18 @@ on tagAlias(theTag)
 	return theValue
 end tagAlias
 
--- Operation: twoDigit
--- Kurzbeschreibung: Formatiert einen Wert als zweistellige Zeichenkette.
--- Parameter: d:integer|text
--- Rueckgabe: text
+-- Formats a value as a two-digit string.
+-- Parameters:
+--    d:integer|text value to format as two digits.
+-- Return: text computed result.
 on twoDigit(d)
 	return text -2 thru -1 of ("00" & d)
 end twoDigit
 
--- Operation: updateRecordsMetadata
--- Kurzbeschreibung: Aktualisiert Name, Custom Metadata und Kommentare basierend auf ermittelten Feldern.
--- Parameter: theRecords:list<DEVONthink record (class 'record' / DTrc)>
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Updates record names, custom metadata, and comments from derived fields.
+-- Parameters:
+--    theRecords:list<DEVONthink record (class 'record' / DTrc)> records to process.
+-- Return: none (side effects only).
 on updateRecordsMetadata(theRecords)
 	set logCtx to my initialize("updateRecordsMetadata")
 	logger's trace(logCtx, "enter")
@@ -1361,10 +1361,10 @@ on updateRecordsMetadata(theRecords)
 	logger's trace(logCtx, "exit")
 end updateRecordsMetadata
 
--- Operation: verifyTags
--- Kurzbeschreibung: Prueft Records an einer Location auf Tag-Konsistenz und protokolliert Kennzahlen.
--- Parameter: theLocation:text (DEVONthink location prefix, z.B. '/05 Files')
--- Rueckgabe: kein Rueckgabewert (Seiteneffekte)
+-- Validates tag consistency for records at a location and logs metrics.
+-- Parameters:
+--    theLocation:text (DEVONthink location prefix, z.B. '/05 Files') location prefix to validate.
+-- Return: none (side effects only).
 on verifyTags(theLocation)
 	set logCtx to my initialize("verifyTags")
 	logger's trace(logCtx, "enter")
@@ -1412,3 +1412,4 @@ on verifyTags(theLocation)
 	end tell
 	logger's trace(logCtx, "exit")
 end verifyTags
+
