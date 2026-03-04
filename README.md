@@ -1,10 +1,12 @@
 # MailScripts
 
 **TL;DR**
-- Automates email and document workflows with AppleScript.
-- Connects Mail.app with DEVONthink (optional: Contacts/PopClip).
-- Imports, classifies, renames, and archives records.
-- Behavior is controlled via `Configuration/*.scpt`.
+
+- Automates document and email workflows with DEVONthink and AppleScript.
+	- Imports, classifies, renames, and archives records.
+- Implements a multi-dimemsional, fully customizable, Tag-based classification system.
+- Push and pull emails from Mail.app, takes over text with PopClip, connects with Contacts.app.
+- Simple, easy to configure, to use and to adapt - behavior is controlled on database level.
 - Start with `~/.mailscripts/config.scpt` and the user guide.
 
 MailScripts is a collection of AppleScript scripts for recurring workflows in Mail.app and DEVONthink.
@@ -15,20 +17,25 @@ The project reduces manual work in email and document processing. Standard tasks
 
 ## Feature Scope
 
-- Import emails from Mail.app into DEVONthink
-- Classify documents using tags/dimensions
-- Set file names and custom metadata
-- Move and archive records into defined target folders
+- Automatically import emails from Mail.app into DEVONthink with option for push and pull.
+- Works best with .pdf for documents (for scanned or digital sources) and .eml for email.
+- Multi-dimensional classification system to structure data as you need.
+- Simple templating mechanism for Custom Metadata fields to enrich classification data with custom information and/or to show classification data in a condensed format.
+- Simple templating mechanism for filename and archive folder structure, based on classification data.
+- Auto-classification for date and other dimensions, with different options for source date.
+- Auto-extraction of documente amounts for defined categories.
+- Custom Metadata can be enriched directly though PopClip.
+- Workflow can be run step-by-step (recommended for the beginning), partially automated (recommended for quality assurance) or fully automated.
+- Classification data can be changed at any time - dependend fields reflects the changes.
 - Optional contact/sender processing and smart-group creation
 
 ## Requirements
 
 - macOS
 - DEVONthink 4
-- Mail.app
-- Configuration file at `~/.mailscripts/config.scpt`
+- Mail.app (only needed when email import is requiered)
 
-Optional:
+Support for:
 
 - Contacts.app
 - PopClip
@@ -36,10 +43,11 @@ Optional:
 ## Quick Start
 
 1. Clone the repository.
-2. Copy `Configuration/config.scpt` to `~/.mailscripts/config.scpt`.
-3. In `~/.mailscripts/config.scpt`, set at least `pMailScriptsPath` and `pPrimaryEmailDatabase`.
-4. Adjust database configurations in `Configuration/` (`Database-Configuration-*.scpt`, `Default-Configuration-*.scpt`).
-5. Integrate required scripts as Mail Rules, DEVONthink menu scripts, or Smart Rules.
+2. Copy `Configuration/config.scpt` to `~/.mailscripts/config.scpt` and set at least:
+	- `pMailScriptsPath` to the MailScripts folder
+4. Create a copy of `Configuration/Database-Template.scpt` and rename it according to your DEVONthink database to `Database-<DATABASE NAME>.scpt` 
+	- check that `pConfigurationFile` is pointing to the proper configuration file (default configuration file is `Default-Configuration-Documents.scpt`)
+6. Integrate required scripts as Mail Rules, DEVONthink menu scripts, or Smart Rules.
 
 ## Documentation
 
@@ -51,3 +59,4 @@ Optional:
 - Many `.scpt` files are compiled AppleScript files.
 - Operational logic is located in the libraries under `Libs/`.
 - Behavior changes are typically made through configuration scripts.
+- `pClassificationDate` currently supports `DOCUMENT_CREATION_DATE`, `DATE_MODIFIED`, `DATE_CREATED`, and `RECORD_CREATION_DATE`.
