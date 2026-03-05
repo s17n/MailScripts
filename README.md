@@ -18,16 +18,17 @@ The project reduces manual work in email and document processing. Standard tasks
 ## Feature Scope
 
 - Automatically import emails from Mail.app into DEVONthink with option for push and pull.
-- Works best with .pdf for documents (for scanned or digital sources) and .eml for email.
-- Multi-dimensional classification system to structure data as you need.
-- Simple templating mechanism for Custom Metadata fields to enrich classification data with custom information and/or to show classification data in a condensed format.
-- Simple templating mechanism for filename and archive folder structure, based on classification data.
-- Auto-classification for date and other dimensions, with different options for source date.
+- Works best with .pdf for documents (for scanned or digital sources) and .eml for email.  
+- Multi-dimensional [classification system](Docs/classification-system.md) to structure data as you need.
+- Simple templating mechanism for [Custom Metadata](Docs/custom-metadata-enhancements.md) fields to enrich classification data with custom information and/or to show classification data in a condensed format.
+- Simple templating mechanism for [file names and filing folders](Docs/name-and-file-documents.md), based on classification data.
+- [Auto-classification](Docs/auto-classification.md) for date and other dimensions, with different options for source date.
 - Auto-extraction of documente amounts for defined categories.
 - Custom Metadata can be enriched directly though PopClip.
 - Workflow can be run step-by-step (recommended for the beginning), partially automated (recommended for quality assurance) or fully automated.
 - Classification data can be changed at any time - dependend fields reflects the changes.
-- Optional contact/sender processing and smart-group creation
+- Optional contact/sender processing and smart-group creation.
+- Database and content type specific [configurations](Docs/configuration.md) with reasonable defaults.
 
 ## Requirements
 
