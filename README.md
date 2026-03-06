@@ -43,17 +43,18 @@ Support for:
 
 ## Quick Start
 
-1. Clone the repository.
-2. Copy `Configuration/config.scpt` to `~/.mailscripts/config.scpt` and set at least:
-	- `pMailScriptsPath` to the MailScripts folder
-4. Create a copy of `Configuration/Database-Template.scpt` and rename it according to your DEVONthink database to `Database-<DATABASE NAME>.scpt` 
-	- check that `pConfigurationFile` is pointing to the proper configuration file (default configuration file is `Default-Configuration-Documents.scpt`)
-6. Integrate required scripts as Mail Rules, DEVONthink menu scripts, or Smart Rules.
+1. Clone the repository (Prereq: [Osagitfilter](https://github.com/doekman/osagitfilter))
+2. Copy [Configuration/config.scpt](Configuration/config.scpt) to `~/.mailscripts/config.scpt` and
+	- set `pMailScriptsPath` to your local MailScripts folder
+4. Create a [configuration](Docs/configuration.md) for the DEVONthink database you want to use.
+6. Setup your workflow
+	- Copy or alias [DEVONthink Menu](DEVONthink%20Menu) scripts and [DEVONthink Smart Rules](DEVONthink%20Smart%20Rules) to DEVONthink's scripts folders
+	- Copy [Mail Rules](Mail%20Rules) to Mail.app's scripts folder
+	- Install [PopClip](PopClip) extentsion
 
 ## Documentation
 
-- Documents Quick Start: [Docs/A Quick Start Guide for Documents.md](Docs/A%20Quick%20Start%20Guide%20for%20Documents.md)
-- Architecture Diagrams: [Docs/architecture-diagrams.md](Docs/architecture-diagrams.md)
+- Quick Start Guide for Documents: [Docs/A Quick Start Guide for Documents.md](Docs/A%20Quick%20Start%20Guide%20for%20Documents.md)
 
 ## Notes
 
