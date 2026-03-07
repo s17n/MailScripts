@@ -56,9 +56,7 @@ Support for:
 
 - Quick Start Guide for Documents: [Docs/A Quick Start Guide for Documents.md](Docs/A%20Quick%20Start%20Guide%20for%20Documents.md)
 
-## Notes
+## Known Issues
 
-- Many `.scpt` files are compiled AppleScript files.
-- Operational logic is located in the libraries under `Libs/`.
-- Behavior changes are typically made through configuration scripts.
-- `pClassificationDate` currently supports `DOCUMENT_CREATION_DATE`, `DATE_MODIFIED`, `DATE_CREATED`, and `RECORD_CREATION_DATE`.
+- Regression in AppleScript performance since DEVONthink 4.2 on macOS 26 Tahoe.
+
