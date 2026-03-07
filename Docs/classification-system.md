@@ -15,12 +15,20 @@ For example, for personal documents you could have a classification system with:
 
 You can have as much dimensions and categories as you want.
 
-Besides the usual usage scenarios where tags are helpful, classification system tags can do a more:
+Besides the usual usage scenarios where tags are helpful, classification system tags can do something more:
 
 - Dimensions can be linked to Custom Metadata fields to show the category and other dimension's categories in a well-defined, condensed format, along with the option to add document specific individual information.
 - Dimensions and categories can be used to name and file documents consistently.
 
-Even though classification data spans over to other parts of the solution it's important to know that classification system tags are leading. When a tag is changed Custom Metadata fields, document name and location in the file system will follow - automatically (trigged by Smart Rule) or manually (e.g. trigged by a keyboard shortcut).
+Since classification data spans accross the solution it's important to know that classification tags are leading. When a tag is changed Custom Metadata fields, document name and filing folders will follow - automatically (trigged by Smart Rules) or manually (e.g. trigged by a keyboard shortcut).
+
+## Auto-classification
+
+Auto-classification means that classification system tags are assiged to a record through scripting, which can be trigged by a Smart Rule, a menu bar script or a stand-alone AppleScript. So, based on the configuration, date tags and other dimension tags will be determined and assigend to the record automatically. The scripting logic itself is straight-forward:
+
+For Date, the corresponding tags will be determined from the record itself, based on the configuration (see pClassificationDate). For Non-Date tags, the corresponding tags will be taken over from the most similar record determined by DEVONthink's compare feature, with option for a threshold, where tags are not taken oven when the compare records score is below the threshold.
+
+
 
 ## Configuration
 

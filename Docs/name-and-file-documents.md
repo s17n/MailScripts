@@ -1,6 +1,10 @@
 # File names and filing folders
 
-Document names and archive destinations are generated from classification tags and configurable templates.
+File names and filing folder structure are considered to follow the classification system. Therefore they can be defined through simple templating patterns with dimension placeholders.
+
+The file name is set when record's metadata are updated through `Update Records Metadata`.
+
+The filing folder structure is used when a record is archived through `Archive Records`. 
 
 ## Configuration
 

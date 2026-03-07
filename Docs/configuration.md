@@ -42,8 +42,8 @@ The functional configuration consists of the following properties:
 	```applescript
 	property pLogLevel : 2
 	```
-- **Classification system** properties, documented [here](./classification-system.md#Configuration)
-- **Custom Metadata** related properties, documented [here](custom-metadata-enhancements.md#Configuration)
-- **Name and file documents** related properties, documented [here](./name-and-file-documents.md#Configuration)
+- **Classification system** properties pDimensionsHome, pDimensionsConstraints, pDateDimensions, pCompareDimensions, pCompareDimensionsScoreThreshold, pClassificationDate, pTagAliases, pMonths are documented [here](./classification-system.md#Configuration).
+- **Custom Metadata** related properties pCustomMetadataFields, pCustomMetadataDimensions, pCustomMetadataTypes, pCustomMetadataTemplates, pCustomMetadataFieldSeparator, pCommentsFields, pAmountLookupCategories are documented [here](custom-metadata-additions.md#Configuration).
+- **File names and filing** related properties pNameTemplate, pFilesHome are documented [here](./name-and-file-documents.md#Configuration).
 
 
