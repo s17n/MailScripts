@@ -5,3 +5,4 @@ Database-Configuration*.scpt
 /src/
 .agents/
 AGENTS.md
+logs/
