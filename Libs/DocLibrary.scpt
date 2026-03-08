@@ -101,7 +101,10 @@ end addTextToCustomMetadata
 --    theRecord:DEVONthink record (class 'record' / DTrc) record to process.
 -- Return: list<text> computed result.
 on addToTagList(theTagList, theRecord)
+	set logCtx to my initialize("addToTagList")
+	logger's trace(logCtx, "enter")
 	set end of theTagList to name of theRecord as string
+	logger's trace(logCtx, "exit")
 	return theTagList
 end addToTagList
 
@@ -148,12 +151,15 @@ end archiveRecords
 --    theConstraints:list<list{text,integer}> configured dimension cardinality constraints.
 -- Return: NSMutableDictionary<text,integer> computed result.
 on buildDimensionsConstraintsDictionary(theConstraints)
+	set logCtx to my initialize("buildDimensionsConstraintsDictionary")
+	logger's trace(logCtx, "enter")
 	set constraintsDictionary to current application's NSMutableDictionary's dictionary()
 	repeat with aDimensionConstraint in theConstraints
 		set theDimensionName to first item of aDimensionConstraint as string
 		set theCardinality to second item of aDimensionConstraint as integer
 		(constraintsDictionary's setObject:theCardinality forKey:theDimensionName)
 	end repeat
+	logger's trace(logCtx, "exit")
 	return constraintsDictionary
 end buildDimensionsConstraintsDictionary
 
@@ -162,6 +168,8 @@ end buildDimensionsConstraintsDictionary
 --    theMonths:list<list{text,text}> configured month mapping pairs.
 -- Return: list{NSMutableDictionary<text,text>, NSMutableDictionary<text,text>} computed result.
 on buildMonthDictionaries(theMonths)
+	set logCtx to my initialize("buildMonthDictionaries")
+	logger's trace(logCtx, "enter")
 	set byDigit to current application's NSMutableDictionary's dictionary()
 	set byName to current application's NSMutableDictionary's dictionary()
 	repeat with aMonth in theMonths
@@ -170,6 +178,7 @@ on buildMonthDictionaries(theMonths)
 		(byDigit's setObject:theName forKey:theNumber)
 		(byName's setObject:theNumber forKey:theName)
 	end repeat
+	logger's trace(logCtx, "exit")
 	return {byDigit, byName}
 end buildMonthDictionaries
 
@@ -178,12 +187,15 @@ end buildMonthDictionaries
 --    theTagAliases:list<list{text,text}> configured tag alias pairs.
 -- Return: NSMutableDictionary<text,text> computed result.
 on buildTagAliasDictionary(theTagAliases)
+	set logCtx to my initialize("buildTagAliasDictionary")
+	logger's trace(logCtx, "enter")
 	set aliasesDictionary to current application's NSMutableDictionary's dictionary()
 	repeat with aTagAlias in theTagAliases
 		set theTag to first item of aTagAlias as string
 		set theAlias to second item of aTagAlias as string
 		(aliasesDictionary's setObject:theAlias forKey:theTag)
 	end repeat
+	logger's trace(logCtx, "exit")
 	return aliasesDictionary
 end buildTagAliasDictionary
 
@@ -193,6 +205,7 @@ end buildTagAliasDictionary
 -- Return: none (side effects only).
 on classifyRecords(theRecords)
 	set logCtx to my initialize("classifyRecords")
+	logger's resetTraceMetrics()
 	logger's trace(logCtx, "enter")
 
 	tell application id "DNtp"
@@ -226,6 +239,7 @@ on classifyRecords(theRecords)
 	end tell
 
 	logger's trace(logCtx, "exit")
+	logger's logTraceMetrics()
 end classifyRecords
 
 -- Creates a sender smart group for the provided records.
@@ -250,6 +264,8 @@ end createSmartGroupForSender
 --    resultList:list<text> accumulator list for collected results.
 -- Return: list<text> computed result.
 on createTagList(theTags, resultList)
+	set logCtx to my initialize("createTagList")
+	logger's trace(logCtx, "enter")
 	tell application id "DNtp"
 		repeat with tagListItem in theTags
 			set theTagType to tag type of tagListItem
@@ -259,8 +275,8 @@ on createTagList(theTags, resultList)
 				set resultList to my createTagList(every child of tagListItem, resultList)
 			end if
 		end repeat
-		return resultList
 	end tell
+	logger's trace(logCtx, "exit")
 	return resultList
 end createTagList
 
@@ -635,8 +651,11 @@ end initializeDimensions
 --    theDatabaseName:text name of the target database.
 -- Return: text computed result.
 on initializeMailConfiguration(theDatabaseConfigurationFolder, theDatabaseName)
+	set logCtx to my initialize("initializeMailConfiguration")
+	logger's trace(logCtx, "enter > " & theDatabaseName)
 	mailLib's initializeDepencencies(logger, baseLib)
 	mailLib's initializeMailConfiguration(theDatabaseConfigurationFolder, theDatabaseName)
+	logger's trace(logCtx, "exit")
 end initializeMailConfiguration
 
 -- Logs a validation issue and updates issue-tracking state.
@@ -1024,7 +1043,7 @@ on setDateTags(theRecord, theFields, theClassificationDate)
 	set theYear to theFields's objectForKey:(first item of pDateDimensions)
 	set theMonth to theFields's objectForKey:(second item of pDateDimensions)
 	set theDay to theFields's objectForKey:(third item of pDateDimensions)
-	-- tell logger to trace(logCtx, "theYear: " & theYear & ", theMonth: " & theMonth & ", theDay: " & theDay)
+	-- logger's trace(logCtx, "theYear: " & theYear & ", theMonth: " & theMonth & ", theDay: " & theDay)
 
 	-- Date Tags will not be set if Year, Month or Day is already set
 	if theYear is not missing value or theMonth is not missing value or theDay is not missing value then
@@ -1303,7 +1322,11 @@ end tagAlias
 --    d:integer|text value to format as two digits.
 -- Return: text computed result.
 on twoDigit(d)
-	return text -2 thru -1 of ("00" & d)
+	set logCtx to my initialize("twoDigit")
+	logger's trace(logCtx, "enter")
+	set theResult to text -2 thru -1 of ("00" & d)
+	logger's trace(logCtx, "exit > " & theResult)
+	return theResult
 end twoDigit
 
 -- Updates record names, custom metadata, and comments from derived fields.
@@ -1412,4 +1435,3 @@ on verifyTags(theLocation)
 	end tell
 	logger's trace(logCtx, "exit")
 end verifyTags
-
