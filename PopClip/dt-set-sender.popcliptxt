@@ -1,12 +1,9 @@
 # PopClip DEVONthink Set Sender
-name: DEVONthink Set Sender
-icon: square SE
+name: Set Sender
+icon: square Se
 required apps: [com.devon-technologies.think]
-applescript: | # pipe character begins a multi-line string
-  property pScriptName : "PopClip Set Sender"
-  
+applescript: | # pipe character begins a multi-line string  
   set config to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
   set docLib to load script pDocLibraryPath of config
-    
   tell docLib to addTextToCustomMetadata("Sender", "{popclip text}")
 # the above line    

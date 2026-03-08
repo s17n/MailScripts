@@ -1,12 +1,9 @@
 # PopClip DEVONthink Set Subject
-name: DEVONthink Set Subject
-icon: square SU
+name: Set Subject
+icon: square Su
 required apps: [com.devon-technologies.think]
 applescript: | # pipe character begins a multi-line string
-  property pScriptName : "PopClip Set Subject"
-  
   set config to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
-  set docLib to load script pDocLibraryPath of config
-    
+  set docLib to load script pDocLibraryPath of config    
   tell docLib to addTextToCustomMetadata("Subject", "{popclip text}")
 # the above line    
