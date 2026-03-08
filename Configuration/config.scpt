@@ -23,3 +23,6 @@ property pPopClipLibraryPath : pMailScriptsPath & "/Libs/PopClipLibrary.scpt"
 
 -- Default Log Level - 1 DEBUG, 2 INFO, 3 ERROR
 property pLogLevel : 2
+
+-- Optional path for file logging; leave empty to disable file output
+property pLogFilePath : pMailScriptsPath & "/logs/mailscripts.log"
