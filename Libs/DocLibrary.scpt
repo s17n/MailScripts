@@ -95,19 +95,6 @@ on addTextToCustomMetadata(theCustomMetadataField, theText)
 	logger's trace(logCtx, "exit")
 end addTextToCustomMetadata
 
--- Appends a tag name to the current tag list.
--- Parameters:
---    theTagList:list<text> input value for this operation.
---    theRecord:DEVONthink record (class 'record' / DTrc) record to process.
--- Return: list<text> computed result.
-on addToTagList(theTagList, theRecord)
-	set logCtx to my initialize("addToTagList")
-	logger's trace(logCtx, "enter")
-	set end of theTagList to name of theRecord as string
-	logger's trace(logCtx, "exit")
-	return theTagList
-end addToTagList
-
 -- Archives records to a destination resolved from configured placeholders.
 -- Parameters:
 --    theRecords:list<DEVONthink record (class 'record' / DTrc)> records to process.
@@ -268,9 +255,9 @@ on createTagList(theTags, resultList)
 	logger's trace(logCtx, "enter")
 	tell application id "DNtp"
 		repeat with tagListItem in theTags
-			set theTagType to tag type of tagListItem
+			set {theName, theTagType} to {name, tag type} of tagListItem
 			if theTagType is ordinary tag then
-				set resultList to my addToTagList(resultList, tagListItem)
+				set end of resultList to theName
 			else
 				set resultList to my createTagList(every child of tagListItem, resultList)
 			end if
@@ -634,8 +621,8 @@ on initializeDimensions(theDatabase)
 		set theDimensions to every child of dimensionHome
 		repeat with aDimension in theDimensions
 
-			set dimensionName to name of aDimension
-			set categories to my createTagList(get every child of aDimension, {})
+			set {dimensionName, dimensionChilds} to {name, every child} of aDimension
+			set categories to my createTagList(dimensionChilds, {})
 			(pDimensionsDictionary's setObject:categories forKey:dimensionName)
 
 			tell logger to debug(logCtx, "Dimension '" & dimensionName & "' initialized with " & length of categories & " categories.")
