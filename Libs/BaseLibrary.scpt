@@ -39,6 +39,113 @@ on loadConfiguration(theDatabaseConfigurationFolder, theDatabaseName)
 	return configurationFile
 end loadConfiguration
 
+-- Resolves dimensions cache path from configuration with a safe default.
+-- Parameters:
+--    configurationFile:script object loaded from database configuration.
+--    theDatabaseName:text target database name.
+--    theDatabaseConfigurationFolder:text base folder for database configurations.
+-- Return: text computed cache path.
+on resolveDimensionsCachePath(configurationFile, theDatabaseName, theDatabaseConfigurationFolder)
+	set logCtx to my initialize("resolveDimensionsCachePath")
+	logger's trace(logCtx, "enter")
+
+	try
+		set configuredPath to pDimensionsCachePath of configurationFile
+		if configuredPath is not missing value and configuredPath is not "" then
+			logger's debug(logCtx, "Using configured dimensions cache path: " & configuredPath)
+			logger's trace(logCtx, "exit")
+			return configuredPath
+		end if
+	end try
+
+	set sanitizedDatabaseName to my sanitizeFilename(theDatabaseName as string)
+	set defaultPath to theDatabaseConfigurationFolder & "/cache/dimensions-" & sanitizedDatabaseName & ".json"
+	logger's debug(logCtx, "Using default dimensions cache path: " & defaultPath)
+	logger's trace(logCtx, "exit")
+	return defaultPath
+end resolveDimensionsCachePath
+
+-- Returns true when the dimensions cache file already exists.
+-- Parameters:
+--    cachePath:text absolute file path to the dimensions cache JSON file.
+-- Return: boolean computed result.
+on dimensionsCacheExists(cachePath)
+	if cachePath is missing value or cachePath is "" then return false
+	set fm to current application's NSFileManager's defaultManager()
+	return (fm's fileExistsAtPath:cachePath) as boolean
+end dimensionsCacheExists
+
+-- Loads dimensions from a JSON cache file.
+-- Parameters:
+--    cachePath:text absolute file path to the dimensions cache JSON file.
+-- Return: NSMutableDictionary<text,list<text>> computed result.
+on readDimensionsCache(cachePath)
+	set logCtx to my initialize("readDimensionsCache")
+	logger's trace(logCtx, "enter")
+
+	if cachePath is missing value or cachePath is "" then error "Dimensions cache path is not configured."
+
+	set fm to current application's NSFileManager's defaultManager()
+	if (fm's fileExistsAtPath:cachePath) as boolean is false then error "Dimensions cache file not found at: " & cachePath
+
+	set jsonData to current application's NSData's dataWithContentsOfFile:cachePath
+	if jsonData is missing value then error "Cannot read dimensions cache file: " & cachePath
+
+	set {payload, parseError} to current application's NSJSONSerialization's JSONObjectWithData:jsonData options:0 |error|:(reference)
+	if payload is missing value then error "Failed to parse dimensions cache JSON at: " & cachePath
+
+	set dimensionsPayload to payload's objectForKey:"dimensions"
+	if dimensionsPayload is missing value then error "Dimensions cache JSON does not contain key 'dimensions'."
+
+	logger's trace(logCtx, "exit")
+	return current application's NSMutableDictionary's dictionaryWithDictionary:dimensionsPayload
+end readDimensionsCache
+
+-- Writes dimensions to a JSON cache file and creates parent directories when needed.
+-- Parameters:
+--    cachePath:text absolute file path to the dimensions cache JSON file.
+--    dimensionsDictionary:NSMutableDictionary<text,list<text>> dimensions to persist.
+-- Return: none (side effects only).
+on writeDimensionsCache(cachePath, dimensionsDictionary)
+	set logCtx to my initialize("writeDimensionsCache")
+	logger's trace(logCtx, "enter")
+
+	if cachePath is missing value or cachePath is "" then error "Dimensions cache path is not configured."
+
+	set cachePathNSString to current application's NSString's stringWithString:cachePath
+	set cacheDirPath to cachePathNSString's stringByDeletingLastPathComponent()
+	set fm to current application's NSFileManager's defaultManager()
+
+	set {dirOk, dirError} to fm's createDirectoryAtPath:cacheDirPath withIntermediateDirectories:true attributes:(missing value) |error|:(reference)
+	if (dirOk as boolean) is false then error "Failed to create cache directory: " & (cacheDirPath as text)
+
+	set payload to current application's NSMutableDictionary's dictionary()
+	(payload's setObject:1 forKey:"version")
+	(payload's setObject:(current application's NSDate's |date|()'s description()) forKey:"updatedAt")
+	(payload's setObject:dimensionsDictionary forKey:"dimensions")
+
+	set {jsonData, jsonError} to current application's NSJSONSerialization's dataWithJSONObject:payload options:(current application's NSJSONWritingPrettyPrinted) |error|:(reference)
+	if jsonData is missing value then error "Failed to serialize dimensions cache JSON."
+
+	set writeOk to jsonData's writeToFile:cachePath atomically:true
+	if (writeOk as boolean) is false then error "Failed to write dimensions cache file: " & cachePath
+
+	logger's trace(logCtx, "exit")
+end writeDimensionsCache
+
+-- Replaces unsafe filename characters for cache file generation.
+-- Parameters:
+--    rawName:text input text.
+-- Return: text safe filename segment.
+on sanitizeFilename(rawName)
+	set safeName to rawName as string
+	set safeName to my replaceText("/", "_", safeName)
+	set safeName to my replaceText(":", "_", safeName)
+	set safeName to my replaceText("\\", "_", safeName)
+	set safeName to my replaceText(" ", "_", safeName)
+	return safeName
+end sanitizeFilename
+
 
 on showLogLevel()
 	my initialize()
