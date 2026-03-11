@@ -58,5 +58,4 @@ Support for:
 
 ## Known Issues
 
-- Regression in AppleScript performance since DEVONthink 4.2 on macOS 26 Tahoe.
-
+- Regression in AppleScript performance since DEVONthink 4.2 on macOS 26 Tahoe (see [issue](https://discourse.devontechnologies.com/t/regression-in-applescript-performance-with-dt-4-2) & [work-around](Docs/dimensions-cache-technical.md)).
