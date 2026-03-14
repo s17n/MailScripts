@@ -3,10 +3,6 @@ use AppleScript version "2.4"
 use framework "Foundation"
 use scripting additions
 
-on assertFilenameHasExtension(recordFilename, messageText, testLib)
-	testLib's assertTrue((recordFilename contains "."), messageText)
-end assertFilenameHasExtension
-
 on buildExpectedCommentFromFields(theRecord, commentFields)
 	set expectedComment to ""
 
@@ -39,64 +35,6 @@ on captureCustomMetadataValues(theRecord, fieldNames)
 	return capturedValues
 end captureCustomMetadataValues
 
-on findRecordByFilenameInDatabase(recordFilename, databaseName)
-	set lookupName to my recordNameFromFilename(recordFilename)
-	set matchingRecords to {}
-
-	tell application id "DNtp"
-		set lookupDatabase to missing value
-		try
-			set lookupDatabase to database databaseName
-		on error
-			error "No database found with exact name: " & databaseName
-		end try
-
-		set matchingRecords to every content of lookupDatabase whose name is lookupName
-	end tell
-
-	set matchesCount to count of matchingRecords
-	if matchesCount is 0 then error "No record found in database '" & databaseName & "' for filename '" & recordFilename & "' (lookup name: '" & lookupName & "')."
-	if matchesCount > 1 then error "Multiple records found in database '" & databaseName & "' for filename '" & recordFilename & "' (lookup name: '" & lookupName & "')."
-
-	set matchedRecord to first item of matchingRecords
-	tell application id "DNtp"
-		set matchedFilename to filename of matchedRecord
-	end tell
-	if matchedFilename as text is not recordFilename then
-		error "Found record by name '" & lookupName & "', but filename differs. Expected '" & recordFilename & "', got '" & matchedFilename & "'."
-	end if
-
-	return matchedRecord
-end findRecordByFilenameInDatabase
-
-on normalizeTagList(theTags)
-	set normalizedTags to {}
-	if theTags is missing value then return normalizedTags
-	repeat with aTag in theTags
-		set end of normalizedTags to aTag as text
-	end repeat
-	return normalizedTags
-end normalizeTagList
-
-on recordNameFromFilename(recordFilename)
-	set filenameText to recordFilename as text
-	if filenameText does not contain "." then return filenameText
-
-	set previousDelimiters to AppleScript's text item delimiters
-	set AppleScript's text item delimiters to "."
-	set filenameItems to text items of filenameText
-	set itemsCount to count of filenameItems
-	if itemsCount ≤ 1 then
-		set AppleScript's text item delimiters to previousDelimiters
-		return filenameText
-	end if
-	set nameItems to items 1 thru (itemsCount - 1) of filenameItems
-	set AppleScript's text item delimiters to "."
-	set lookupName to nameItems as text
-	set AppleScript's text item delimiters to previousDelimiters
-	return lookupName
-end recordNameFromFilename
-
 on restoreCustomMetadataValues(theRecord, metadataValues)
 	tell application id "DNtp"
 		repeat with aMetadataEntry in metadataValues
@@ -116,13 +54,13 @@ on restoreCustomMetadataValues(theRecord, metadataValues)
 	end tell
 end restoreCustomMetadataValues
 
-on restoreRecordState(theRecord, savedState)
+on restoreRecordState(theRecord, savedState, testLib)
 	set originalTags to originalTags of savedState
 	set originalName to originalName of savedState
 	set originalComment to originalComment of savedState
 	set originalCustomMetadataValues to originalCustomMetadataValues of savedState
 
-	my restoreRecordTags(theRecord, originalTags)
+	testLib's restoreRecordTags(theRecord, originalTags)
 	my restoreCustomMetadataValues(theRecord, originalCustomMetadataValues)
 
 	tell application id "DNtp"
@@ -130,25 +68,6 @@ on restoreRecordState(theRecord, savedState)
 		set comment of theRecord to originalComment
 	end tell
 end restoreRecordState
-
-on restoreRecordTags(theRecord, originalTags)
-	tell application id "DNtp"
-		set normalizedTags to my normalizeTagList(originalTags)
-
-		try
-			set tags of theRecord to normalizedTags
-			return
-		end try
-
-		-- Fallback for unstable bulk tag assignment in some DEVONthink states.
-		set tags of theRecord to {}
-		repeat with aTag in normalizedTags
-			try
-				set tags of theRecord to (tags of theRecord) & (aTag as rich text)
-			end try
-		end repeat
-	end tell
-end restoreRecordTags
 
 on runNameCommentsPilotScenario(docLib, testLib, theRecord)
 	tell application id "DNtp"
@@ -212,15 +131,10 @@ on runTestCase(docLib, testLib, testCase)
 	set databaseName to databaseName of testCase
 	set recordFilename to recordFilename of testCase
 	set scenarioId to scenarioId of testCase
-	set stepName to "resolve test case"
 
-	set stepName to "validate recordFilename"
-	my assertFilenameHasExtension(recordFilename, "recordFilename must include a file extension (e.g. .pdf).", testLib)
+	testLib's assertFilenameHasExtension(recordFilename, "recordFilename must include a file extension (e.g. .pdf).")
+	set theRecord to testLib's findRecordByFilenameInDatabase(recordFilename, databaseName)
 
-	set stepName to "find record by filename"
-	set theRecord to my findRecordByFilenameInDatabase(recordFilename, databaseName)
-
-	set stepName to "validate record type"
 	tell application id "DNtp"
 		set theRecordType to type of theRecord
 		set theDatabase to database of theRecord
@@ -230,33 +144,35 @@ on runTestCase(docLib, testLib, testCase)
 	end tell
 	testLib's assertTrue(theRecordType is not «constant DtypDTgr» and theRecordType is not «constant DtypDTsg», "Resolved item must be a regular record.")
 
-	set stepName to "capture custom metadata snapshot"
 	docLib's initializeDatabaseConfiguration(theDatabase)
 	set relevantMetadataFields to my uniqueTextList((docLib's pCustomMetadataFields), (docLib's pCommentsFields))
 	set originalCustomMetadataValues to my captureCustomMetadataValues(theRecord, relevantMetadataFields)
 	set savedState to {originalComment:originalComment, originalCustomMetadataValues:originalCustomMetadataValues, originalName:originalName, originalTags:originalTags}
 
-	try
-		set stepName to "run scenario"
-		my runScenarioById(docLib, testLib, theRecord, scenarioId)
-	on error errMsg number errNum
-		set failingStep to stepName
-		try
-			set stepName to "cleanup after failure"
-			my restoreRecordState(theRecord, savedState)
-		on error cleanupMsg number cleanupNum
-			error "Test failed at step '" & failingStep & "' (" & errNum & "): " & errMsg & " | Cleanup failed at step 'cleanup after failure' (" & cleanupNum & "): " & cleanupMsg
-		end try
-		error "Test failed at step '" & failingStep & "' (" & errNum & "): " & errMsg
-	end try
+	script runScript
+		property owner : me
+		property pDocLib : docLib
+		property pScenarioId : scenarioId
+		property pTestLib : testLib
+		property pTheRecord : theRecord
 
-	try
-		set stepName to "cleanup after success"
-		my restoreRecordState(theRecord, savedState)
-	on error cleanupMsg number cleanupNum
-		error "Cleanup failed at step '" & stepName & "' (" & cleanupNum & "): " & cleanupMsg
-	end try
+		on execute()
+			owner's runScenarioById(pDocLib, pTestLib, pTheRecord, pScenarioId)
+		end execute
+	end script
 
+	script cleanupScript
+		property owner : me
+		property pSavedState : savedState
+		property pTestLib : testLib
+		property pTheRecord : theRecord
+
+		on execute()
+			owner's restoreRecordState(pTheRecord, pSavedState, pTestLib)
+		end execute
+	end script
+
+	testLib's runWithCleanup(runScript, cleanupScript, "run scenario")
 	return "PASS [" & scenarioId & "] " & databaseName & " :: " & recordFilename
 end runTestCase
 
@@ -278,9 +194,6 @@ on uniqueTextList(primaryList, extraList)
 end uniqueTextList
 
 set currentStep to "start"
-
-set resultLines to {}
-set failedCount to 0
 
 try
 	set currentStep to "resolve config path"
@@ -305,28 +218,17 @@ try
 	set currentStep to "load test cases from json"
 	set testCases to testLib's loadTestCase05Cases(mailScriptsPath)
 
-	repeat with aTestCase in testCases
-		set testCaseRecordFilename to recordFilename of aTestCase
-		set testCaseScenarioId to scenarioId of aTestCase
-		set currentStep to "run testcase '" & testCaseScenarioId & "' for record '" & testCaseRecordFilename & "'"
-		try
-			set end of resultLines to my runTestCase(docLib, testLib, aTestCase)
-		on error errMsg number errNum
-			set failedCount to failedCount + 1
-			set end of resultLines to "FAIL [" & testCaseScenarioId & "] " & testCaseRecordFilename & " (" & errNum & "): " & errMsg
-		end try
-	end repeat
+	script caseRunner
+		property owner : me
+		property pDocLib : docLib
+		property pTestLib : testLib
 
-	set totalCount to count of testCases
-	set passedCount to totalCount - failedCount
-	set summaryLine to "TOTAL: " & totalCount & ", PASSED: " & passedCount & ", FAILED: " & failedCount
-	set details to testLib's joinLines(resultLines)
+		on runCase(testCase)
+			return owner's runTestCase(pDocLib, pTestLib, testCase)
+		end runCase
+	end script
 
-	if failedCount is 0 then
-		return "PASS: " & summaryLine & linefeed & details
-	else
-		return "FAIL: " & summaryLine & linefeed & details
-	end if
+	return testLib's runCasesWithSummary(testCases, caseRunner)
 on error errMsg number errNum
 	return "FAIL at step '" & currentStep & "' (" & errNum & "): " & errMsg
 end try
