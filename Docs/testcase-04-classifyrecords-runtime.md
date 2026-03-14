@@ -20,8 +20,11 @@ Refactoring is currently useful and has been applied for maintainability and dia
 
 - Scenario dispatch is separated into `runScenarioById(...)` to keep `runTestCase(...)` compact.
 - Trace assertions are centralized in `TestLib` via `validateClassifyRecordsTraceMetrics(...)`.
-- JSON loading and schema validation are centralized in `TestLib` via `loadTestCase04Cases(...)`.
-- Failure reporting now preserves the original failing step and reports cleanup failures separately.
+- JSON loading and schema validation are centralized in `TestLib` via a generic `loadTestCases(...)` helper (called by `loadTestCase04Cases(...)`).
+- Record lookup and filename validation are centralized in `TestLib` via `findRecordByFilenameInDatabase(...)`.
+- Cleanup flow is centralized in `TestLib` via `runWithCleanup(...)`.
+- Result aggregation is centralized in `TestLib` via `runCasesWithSummary(...)`.
+- Test execution wrappers are unified through `scripts/run-testcase.sh`.
 
 Not refactored intentionally:
 
@@ -31,6 +34,8 @@ Not refactored intentionally:
 
 - Source: `src/tests/classifyRecords/testcase-04-classifyrecords.applescript`
 - Compiled script: `tests/classifyRecords/testcase-04-classifyrecords.scpt`
+- Shared runner: `scripts/run-testcase.sh`
+- Wrapper runner: `scripts/run-testcase-04.sh`
 - Test utility library (source): `src/Libs/TestLib.applescript`
 - Test utility library (compiled): `Libs/TestLib.scpt`
 - Test case config: `Configuration/tests/testcase-04-classifyrecords-cases.json`
@@ -98,8 +103,16 @@ Recommended (wrapper runner):
 ./scripts/run-testcase-04.sh
 ```
 
-The runner executes the compiled script only.
-No compile step is performed during test execution.
+Compile + run from source in one command:
+
+```bash
+./scripts/run-testcase-04.sh --compile
+```
+
+The wrapper delegates to `scripts/run-testcase.sh`, which supports:
+
+- running an already compiled `.scpt`,
+- optional compile-before-run via `--compile` (requires the configured `--source` path).
 
 Exit codes:
 
@@ -130,6 +143,8 @@ Note:
   - `databaseName` does not match the DEVONthink database exactly.
 - `compiled script not found: ...`
   - expected `.scpt` is missing at `tests/classifyRecords/testcase-04-classifyrecords.scpt`.
+- `source script not found: ...`
+  - `--compile` was used and the configured source path is missing.
 - `JSON file not found: ...`
   - expected JSON config is missing at `Configuration/tests/testcase-04-classifyrecords-cases.json`.
 - `Failed to parse JSON file ...`
@@ -169,5 +184,8 @@ Keep each scenario deterministic:
 
 - `runTestCase(...)`: orchestration (resolve fixture, execute scenario, cleanup, result aggregation).
 - `runScenarioById(...)`: scenario dispatcher.
-- `TestLib.loadTestCase04Cases(...)`: JSON path resolution + read + parse + schema validation.
+- `TestLib.loadTestCase04Cases(...)`: testcase-specific wrapper around generic `loadTestCases(...)`.
+- `TestLib.findRecordByFilenameInDatabase(...)`: shared deterministic record resolution and filename verification.
+- `TestLib.runWithCleanup(...)`: shared cleanup execution for success and failure paths.
+- `TestLib.runCasesWithSummary(...)`: shared testcase loop + result aggregation.
 - `TestLib.validateClassifyRecordsTraceMetrics(...)`: centralized trace-metric checks for `classifyRecords`.

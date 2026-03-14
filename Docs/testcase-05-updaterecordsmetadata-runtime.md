@@ -20,6 +20,8 @@ See also:
 
 - Source: `src/tests/updateRecordsMetadata/testcase-05-updaterecordsmetadata.applescript`
 - Compiled script: `tests/updateRecordsMetadata/testcase-05-updaterecordsmetadata.scpt`
+- Shared runner: `scripts/run-testcase.sh`
+- Wrapper runner: `scripts/run-testcase-05.sh`
 - Test utility library (source): `src/Libs/TestLib.applescript`
 - Test utility library (compiled): `Libs/TestLib.scpt`
 - Test case config: `Configuration/tests/testcase-05-updaterecordsmetadata-cases.json`
@@ -88,6 +90,17 @@ Recommended (wrapper runner):
 ./scripts/run-testcase-05.sh
 ```
 
+Compile + run from source in one command:
+
+```bash
+./scripts/run-testcase-05.sh --compile
+```
+
+The wrapper delegates to `scripts/run-testcase.sh`, which supports:
+
+- running an already compiled `.scpt`,
+- optional compile-before-run via `--compile` (requires the configured `--source` path).
+
 Manual run (compiled script only):
 
 ```bash
@@ -112,9 +125,20 @@ Result format:
 - `Multiple records found ...`
 - `Found record by name ..., but filename differs ...`
 - `JSON file not found: ...`
+- `source script not found: ...`
+  - `--compile` was used and the configured source path is missing.
 - `Failed to parse JSON file ...`
 - `Invalid JSON schema ...`
 - `Precondition failed: Year/Month/Day dimension is missing.`
 - `pNameTemplate must be configured for this test.`
 - `pCommentsFields must not be empty for this test.`
 - cleanup failures when restoring tags/custom metadata/name/comments.
+
+## Internal Structure
+
+- `runTestCase(...)`: testcase-specific orchestration and metadata-state snapshot.
+- `runScenarioById(...)`: scenario dispatcher.
+- `TestLib.loadTestCase05Cases(...)`: testcase-specific wrapper around generic `loadTestCases(...)`.
+- `TestLib.findRecordByFilenameInDatabase(...)`: shared deterministic record resolution and filename verification.
+- `TestLib.runWithCleanup(...)`: shared cleanup execution for success and failure paths.
+- `TestLib.runCasesWithSummary(...)`: shared testcase loop + result aggregation.

@@ -5,6 +5,8 @@ sequenceDiagram
     autonumber
     participant Dev as Developer/Codex
     participant Runner as run-testcase-04.sh
+    participant SharedRunner as run-testcase.sh
+    participant Compiler as osacompile
     participant OSAScript as osascript
     participant Test as testcase-04-classifyrecords.scpt
     participant Config as ~/.mailscripts/config.scpt
@@ -15,7 +17,11 @@ sequenceDiagram
     participant Logger as Logger.scpt
 
     Dev->>Runner: Execute wrapper
-    Runner->>OSAScript: Run compiled test (.scpt only)
+    Runner->>SharedRunner: Delegate execution
+    opt Optional compile mode (--compile)
+        SharedRunner->>Compiler: Compile source to .scpt
+    end
+    SharedRunner->>OSAScript: Run compiled test
     OSAScript->>Test: Start test workflow
 
     Test->>Config: Load global config
