@@ -7,6 +7,38 @@ on assertFilenameHasExtension(recordFilename, messageText, testLib)
 	testLib's assertTrue((recordFilename contains "."), messageText)
 end assertFilenameHasExtension
 
+on buildExpectedCommentFromFields(theRecord, commentFields)
+	set expectedComment to ""
+
+	tell application id "DNtp"
+		repeat with aField in commentFields
+			set fieldName to aField as rich text
+			set theValue to get custom meta data for fieldName from theRecord
+			if theValue is not missing value then
+				set valueText to theValue as rich text
+				if (count of words of valueText) > 1 then
+					if expectedComment is not "" then set expectedComment to expectedComment & ", " & linefeed
+					set expectedComment to expectedComment & valueText
+				end if
+			end if
+		end repeat
+	end tell
+
+	return expectedComment
+end buildExpectedCommentFromFields
+
+on captureCustomMetadataValues(theRecord, fieldNames)
+	set capturedValues to {}
+	tell application id "DNtp"
+		repeat with aField in fieldNames
+			set fieldName to aField as rich text
+			set fieldValue to get custom meta data for fieldName from theRecord
+			set end of capturedValues to {fieldName:fieldName, fieldValue:fieldValue}
+		end repeat
+	end tell
+	return capturedValues
+end captureCustomMetadataValues
+
 on findRecordByFilenameInDatabase(recordFilename, databaseName)
 	set lookupName to my recordNameFromFilename(recordFilename)
 	set matchingRecords to {}
@@ -65,6 +97,40 @@ on recordNameFromFilename(recordFilename)
 	return lookupName
 end recordNameFromFilename
 
+on restoreCustomMetadataValues(theRecord, metadataValues)
+	tell application id "DNtp"
+		repeat with aMetadataEntry in metadataValues
+			set fieldName to fieldName of aMetadataEntry
+			set fieldValue to fieldValue of aMetadataEntry
+
+			if fieldValue is missing value then
+				try
+					add custom meta data missing value for fieldName to theRecord
+				on error
+					add custom meta data "" for fieldName to theRecord
+				end try
+			else
+				add custom meta data fieldValue for fieldName to theRecord
+			end if
+		end repeat
+	end tell
+end restoreCustomMetadataValues
+
+on restoreRecordState(theRecord, savedState)
+	set originalTags to originalTags of savedState
+	set originalName to originalName of savedState
+	set originalComment to originalComment of savedState
+	set originalCustomMetadataValues to originalCustomMetadataValues of savedState
+
+	my restoreRecordTags(theRecord, originalTags)
+	my restoreCustomMetadataValues(theRecord, originalCustomMetadataValues)
+
+	tell application id "DNtp"
+		set name of theRecord to originalName
+		set comment of theRecord to originalComment
+	end tell
+end restoreRecordState
+
 on restoreRecordTags(theRecord, originalTags)
 	tell application id "DNtp"
 		set normalizedTags to my normalizeTagList(originalTags)
@@ -84,16 +150,18 @@ on restoreRecordTags(theRecord, originalTags)
 	end tell
 end restoreRecordTags
 
-on runDateTagsPilotScenario(docLib, testLib, theRecord)
+on runNameCommentsPilotScenario(docLib, testLib, theRecord)
 	tell application id "DNtp"
 		set theDatabase to database of theRecord
 	end tell
 
 	docLib's initializeDatabaseConfiguration(theDatabase)
 
-	set classificationDateKey to docLib's pClassificationDate
-	set hasClassificationDate to (classificationDateKey is not missing value and classificationDateKey is not "")
-	testLib's assertTrue(hasClassificationDate, "pClassificationDate must be configured for this test.")
+	set nameTemplate to docLib's pNameTemplate
+	testLib's assertTrue((nameTemplate is not missing value and nameTemplate is not ""), "pNameTemplate must be configured for this test.")
+
+	set commentsFields to docLib's pCommentsFields
+	testLib's assertTrue(((count of commentsFields) > 0), "pCommentsFields must not be empty for this test.")
 
 	set dateDimensions to docLib's pDateDimensions
 	testLib's assertEquals((count of dateDimensions), 3, "pDateDimensions must contain exactly three entries: Year, Month, Day.")
@@ -102,22 +170,39 @@ on runDateTagsPilotScenario(docLib, testLib, theRecord)
 	set monthDimension to second item of dateDimensions as text
 	set dayDimension to third item of dateDimensions as text
 
-	set beforeFields to docLib's fieldsFromTags(theRecord, false)
-	testLib's assertMissing((beforeFields's objectForKey:yearDimension), "Precondition failed: Year dimension is already set.")
-	testLib's assertMissing((beforeFields's objectForKey:monthDimension), "Precondition failed: Month dimension is already set.")
-	testLib's assertMissing((beforeFields's objectForKey:dayDimension), "Precondition failed: Day dimension is already set.")
+	set tagFields to docLib's fieldsFromTags(theRecord, false)
+	testLib's assertNotMissing((tagFields's objectForKey:yearDimension), "Precondition failed: Year dimension is missing.")
+	testLib's assertNotMissing((tagFields's objectForKey:monthDimension), "Precondition failed: Month dimension is missing.")
+	testLib's assertNotMissing((tagFields's objectForKey:dayDimension), "Precondition failed: Day dimension is missing.")
 
-	docLib's classifyRecords({theRecord})
+	set allDimensions to docLib's pDimensionsDictionary's allKeys()
+	set expectedName to docLib's replaceDimensionPlaceholders(allDimensions, tagFields, nameTemplate)
 
-	set afterFields to docLib's fieldsFromTags(theRecord, false)
-	testLib's assertNotMissing((afterFields's objectForKey:yearDimension), "Year dimension was not set after classifyRecords.")
-	testLib's assertNotMissing((afterFields's objectForKey:monthDimension), "Month dimension was not set after classifyRecords.")
-	testLib's assertNotMissing((afterFields's objectForKey:dayDimension), "Day dimension was not set after classifyRecords.")
-end runDateTagsPilotScenario
+	set sentinelName to "TC05_SENTINEL_NAME"
+	set sentinelComment to "TC05_SENTINEL_COMMENT"
+	tell application id "DNtp"
+		set name of theRecord to sentinelName
+		set comment of theRecord to sentinelComment
+	end tell
+
+	docLib's updateRecordsMetadata({theRecord})
+
+	tell application id "DNtp"
+		set actualName to name of theRecord
+		set actualComment to comment of theRecord
+	end tell
+
+	set expectedComment to my buildExpectedCommentFromFields(theRecord, commentsFields)
+
+	testLib's assertTrue((actualName as text is not sentinelName), "Sentinel name was not overwritten by updateRecordsMetadata.")
+	testLib's assertTrue((actualComment as text is not sentinelComment), "Sentinel comment was not overwritten by updateRecordsMetadata.")
+	testLib's assertEquals((actualName as text), (expectedName as text), "Updated record name does not match pNameTemplate output.")
+	testLib's assertEquals((actualComment as text), (expectedComment as text), "Updated record comment does not match pCommentsFields reconstruction.")
+end runNameCommentsPilotScenario
 
 on runScenarioById(docLib, testLib, theRecord, scenarioId)
-	if scenarioId is "pilot-date-tags" then
-		my runDateTagsPilotScenario(docLib, testLib, theRecord)
+	if scenarioId is "pilot-name-comments" then
+		my runNameCommentsPilotScenario(docLib, testLib, theRecord)
 	else
 		error "Unknown scenarioId: " & scenarioId
 	end if
@@ -131,26 +216,34 @@ on runTestCase(docLib, testLib, testCase)
 
 	set stepName to "validate recordFilename"
 	my assertFilenameHasExtension(recordFilename, "recordFilename must include a file extension (e.g. .pdf).", testLib)
+
 	set stepName to "find record by filename"
 	set theRecord to my findRecordByFilenameInDatabase(recordFilename, databaseName)
-	set stepName to "capture record type and tags"
+
+	set stepName to "validate record type"
 	tell application id "DNtp"
 		set theRecordType to type of theRecord
+		set theDatabase to database of theRecord
+		set originalName to name of theRecord
+		set originalComment to comment of theRecord
 		set originalTags to tags of theRecord
 	end tell
 	testLib's assertTrue(theRecordType is not «constant DtypDTgr» and theRecordType is not «constant DtypDTsg», "Resolved item must be a regular record.")
 
+	set stepName to "capture custom metadata snapshot"
+	docLib's initializeDatabaseConfiguration(theDatabase)
+	set relevantMetadataFields to my uniqueTextList((docLib's pCustomMetadataFields), (docLib's pCommentsFields))
+	set originalCustomMetadataValues to my captureCustomMetadataValues(theRecord, relevantMetadataFields)
+	set savedState to {originalComment:originalComment, originalCustomMetadataValues:originalCustomMetadataValues, originalName:originalName, originalTags:originalTags}
+
 	try
 		set stepName to "run scenario"
 		my runScenarioById(docLib, testLib, theRecord, scenarioId)
-
-		set stepName to "read trace metrics"
-		testLib's validateClassifyRecordsTraceMetrics(docLib)
 	on error errMsg number errNum
 		set failingStep to stepName
 		try
 			set stepName to "cleanup after failure"
-			my restoreRecordTags(theRecord, originalTags)
+			my restoreRecordState(theRecord, savedState)
 		on error cleanupMsg number cleanupNum
 			error "Test failed at step '" & failingStep & "' (" & errNum & "): " & errMsg & " | Cleanup failed at step 'cleanup after failure' (" & cleanupNum & "): " & cleanupMsg
 		end try
@@ -159,13 +252,30 @@ on runTestCase(docLib, testLib, testCase)
 
 	try
 		set stepName to "cleanup after success"
-		my restoreRecordTags(theRecord, originalTags)
+		my restoreRecordState(theRecord, savedState)
 	on error cleanupMsg number cleanupNum
 		error "Cleanup failed at step '" & stepName & "' (" & cleanupNum & "): " & cleanupMsg
 	end try
 
 	return "PASS [" & scenarioId & "] " & databaseName & " :: " & recordFilename
 end runTestCase
+
+on uniqueTextList(primaryList, extraList)
+	set mergedList to {}
+	if primaryList is missing value then set primaryList to {}
+	if extraList is missing value then set extraList to {}
+
+	repeat with aValue in primaryList
+		set textValue to aValue as text
+		if mergedList does not contain textValue then set end of mergedList to textValue
+	end repeat
+	repeat with aValue in extraList
+		set textValue to aValue as text
+		if mergedList does not contain textValue then set end of mergedList to textValue
+	end repeat
+
+	return mergedList
+end uniqueTextList
 
 set currentStep to "start"
 
@@ -193,7 +303,7 @@ try
 	set testLib to load script (mailScriptsBasePath & "/Libs/TestLib.scpt")
 
 	set currentStep to "load test cases from json"
-	set testCases to testLib's loadTestCase04Cases(mailScriptsPath)
+	set testCases to testLib's loadTestCase05Cases(mailScriptsPath)
 
 	repeat with aTestCase in testCases
 		set testCaseRecordFilename to recordFilename of aTestCase
@@ -220,4 +330,3 @@ try
 on error errMsg number errNum
 	return "FAIL at step '" & currentStep & "' (" & errNum & "): " & errMsg
 end try
-
