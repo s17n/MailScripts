@@ -6,3 +6,4 @@ Database-Configuration*.scpt
 .agents/
 AGENTS.md
 logs/
+Configuration/tests

@@ -19,7 +19,8 @@ See also:
 Refactoring is currently useful and has been applied for maintainability and diagnostics:
 
 - Scenario dispatch is separated into `runScenarioById(...)` to keep `runTestCase(...)` compact.
-- Trace assertions are separated into `validateClassifyRecordsTraceMetrics(...)`.
+- Trace assertions are centralized in `TestLib` via `validateClassifyRecordsTraceMetrics(...)`.
+- JSON loading and schema validation are centralized in `TestLib` via `loadTestCase04Cases(...)`.
 - Failure reporting now preserves the original failing step and reports cleanup failures separately.
 
 Not refactored intentionally:
@@ -30,14 +31,27 @@ Not refactored intentionally:
 
 - Source: `src/tests/classifyRecords/testcase-04-record-driven-runtime.applescript`
 - Compiled script: `tests/classifyRecords/testcase-04-record-driven-runtime.scpt`
+- Test utility library (source): `src/Libs/TestLib.applescript`
+- Test utility library (compiled): `Libs/TestLib.scpt`
+- Test case config: `Configuration/tests/testcase-04-cases.json`
 - Production handler under test: `src/Libs/DocLibrary.applescript` (`classifyRecords`)
 
 ## Test Data Contract
 
-`testCases` is a list of records with this shape:
+Test cases are loaded by `TestLib` from:
 
-```applescript
-{databaseName:"<exact database name>", recordFilename:"<exact filename.ext>", scenarioId:"pilot-date-tags"}
+- `Configuration/tests/testcase-04-cases.json`
+
+JSON schema (top-level array):
+
+```json
+[
+  {
+    "databaseName": "<exact database name>",
+    "recordFilename": "<exact filename.ext>",
+    "scenarioId": "pilot-date-tags"
+  }
+]
 ```
 
 Rules:
@@ -48,6 +62,8 @@ Rules:
 - record resolution is done by exact record name match in the selected database.
 - after resolution, the record filename (`DTfe`) is validated against the exact `recordFilename` input.
 - if zero or multiple records match, the test case fails.
+- top-level JSON value must be a non-empty array.
+- each field must be a non-empty string.
 
 ## Scenario: `pilot-date-tags`
 
@@ -114,7 +130,13 @@ Note:
   - `databaseName` does not match the DEVONthink database exactly.
 - `compiled script not found: ...`
   - expected `.scpt` is missing at `tests/classifyRecords/testcase-04-record-driven-runtime.scpt`.
-- `No record found in database '...' with exact filename: ...`
+- `JSON file not found: ...`
+  - expected JSON config is missing at `Configuration/tests/testcase-04-cases.json`.
+- `Failed to parse JSON file ...`
+  - JSON syntax is invalid.
+- `Invalid JSON schema ...`
+  - root is not an array, array is empty, object shape is invalid, or required fields are missing/empty.
+- `No record found in database '...' for filename '...' (lookup name: '...').`
   - no record name matches the extension-stripped lookup name in that database.
 - `Multiple records found ...`
   - lookup name is not unique in the selected database.
@@ -129,12 +151,12 @@ Note:
 
 ## Extending the Test
 
-To add more cases, append entries to `testCases` with:
+To add more cases, append entries to `Configuration/tests/testcase-04-cases.json` with:
 
 - the same `databaseName`/`recordFilename` keys,
 - a new `scenarioId`.
 
-Then implement the scenario branch in `runTestCase`.
+Then implement the scenario branch in `runScenarioById`.
 
 Keep each scenario deterministic:
 
@@ -145,6 +167,7 @@ Keep each scenario deterministic:
 
 ## Internal Structure
 
-- `runTestCase(...)`: orchestration (resolve fixture, execute scenario, validate metrics, cleanup).
+- `runTestCase(...)`: orchestration (resolve fixture, execute scenario, cleanup, result aggregation).
 - `runScenarioById(...)`: scenario dispatcher.
-- `validateClassifyRecordsTraceMetrics(...)`: centralized trace-metric checks for `classifyRecords`.
+- `TestLib.loadTestCase04Cases(...)`: JSON path resolution + read + parse + schema validation.
+- `TestLib.validateClassifyRecordsTraceMetrics(...)`: centralized trace-metric checks for `classifyRecords`.

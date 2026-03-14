@@ -8,6 +8,8 @@ sequenceDiagram
     participant OSAScript as osascript
     participant Test as testcase-04-record-driven-runtime.scpt
     participant Config as ~/.mailscripts/config.scpt
+    participant TestLib as TestLib.scpt
+    participant CasesJson as Configuration/tests/testcase-04-cases.json
     participant DocLib as DocLibrary.scpt
     participant DTP as DEVONthink
     participant Logger as Logger.scpt
@@ -18,29 +20,41 @@ sequenceDiagram
 
     Test->>Config: Load global config
     Config-->>Test: pDocLibraryPath
+    Test->>TestLib: Load utility library
+    Test->>TestLib: loadTestCase04Cases(mailScriptsPath)
+    TestLib->>CasesJson: Load and parse JSON test cases
+    CasesJson-->>TestLib: Array of {databaseName, recordFilename, scenarioId}
+    TestLib-->>Test: Parsed and validated test cases
     Test->>DocLib: Load library script
 
-    Test->>DTP: Resolve database by exact name
-    Test->>DTP: Resolve record by derived lookup name
-    Test->>DTP: Validate filename equals expected filename
-    Test->>DTP: Capture original tags
+    loop For each test case from JSON
+        Test->>DTP: Resolve database by exact name
+        Test->>DTP: Resolve record by derived lookup name
+        Test->>DTP: Validate filename equals expected filename
+        Test->>DTP: Capture original tags
 
-    Test->>DocLib: Run scenario (pilot-date-tags)
-    DocLib->>DTP: initializeDatabaseConfiguration(...)
-    DocLib->>DTP: classifyRecords({record})
-    DocLib->>Logger: resetTraceMetrics / trace / logTraceMetrics
-    DocLib-->>Test: Scenario finished
+        Test->>DocLib: Run scenario (pilot-date-tags)
+        DocLib->>DTP: initializeDatabaseConfiguration(...)
+        DocLib->>DTP: classifyRecords({record})
+        DocLib->>Logger: resetTraceMetrics / trace / logTraceMetrics
+        DocLib-->>Test: Scenario finished
 
-    Test->>Logger: getTraceMetrics()
-    Test->>Test: Assert classifyRecords metric + runtime values
+        Test->>TestLib: validateClassifyRecordsTraceMetrics(docLib)
+        TestLib->>Logger: getTraceMetrics()
+        TestLib->>TestLib: Assert classifyRecords metric + runtime values
 
-    alt Scenario or assertion failed
-        Test->>DTP: Restore original tags (cleanup after failure)
+        alt Scenario or assertion failed
+            Test->>DTP: Restore original tags (cleanup after failure)
+        else Scenario and assertions passed
+            Test->>DTP: Restore original tags (cleanup after success)
+        end
+    end
+
+    alt At least one case failed
         Test-->>OSAScript: FAIL output
         OSAScript-->>Runner: Process completed
         Runner-->>Dev: Exit 1 (test failure)
-    else Scenario and assertions passed
-        Test->>DTP: Restore original tags (cleanup after success)
+    else All cases passed
         Test-->>OSAScript: PASS output
         OSAScript-->>Runner: Process completed
         Runner-->>Dev: Exit 0 (success)

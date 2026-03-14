@@ -3,31 +3,9 @@ use AppleScript version "2.4"
 use framework "Foundation"
 use scripting additions
 
-on assertEquals(actualValue, expectedValue, messageText)
-	if actualValue is not expectedValue then error "Assertion failed: " & messageText & " (expected: " & expectedValue & ", actual: " & actualValue & ")."
-end assertEquals
-
-on assertFilenameHasExtension(recordFilename, messageText)
-	my assertTrue((recordFilename contains "."), messageText)
+on assertFilenameHasExtension(recordFilename, messageText, testLib)
+	testLib's assertTrue((recordFilename contains "."), messageText)
 end assertFilenameHasExtension
-
-on assertGreaterThanZero(valueToCheck, messageText)
-	if valueToCheck is missing value then error "Assertion failed: " & messageText & " (value is missing)."
-	set numericValue to valueToCheck as real
-	if numericValue ≤ 0 then error "Assertion failed: " & messageText & " (value: " & numericValue & ")."
-end assertGreaterThanZero
-
-on assertMissing(valueToCheck, messageText)
-	if valueToCheck is not missing value then error "Assertion failed: " & messageText
-end assertMissing
-
-on assertNotMissing(valueToCheck, messageText)
-	if valueToCheck is missing value then error "Assertion failed: " & messageText
-end assertNotMissing
-
-on assertTrue(conditionValue, messageText)
-	if conditionValue is not true then error "Assertion failed: " & messageText
-end assertTrue
 
 on findRecordByFilenameInDatabase(recordFilename, databaseName)
 	set lookupName to my recordNameFromFilename(recordFilename)
@@ -58,21 +36,6 @@ on findRecordByFilenameInDatabase(recordFilename, databaseName)
 
 	return matchedRecord
 end findRecordByFilenameInDatabase
-
-on findTraceMetricByOperationName(metrics, operationName)
-	repeat with aMetric in metrics
-		if operationName of aMetric is operationName then return aMetric
-	end repeat
-	return missing value
-end findTraceMetricByOperationName
-
-on joinLines(theLines)
-	set previousDelimiters to AppleScript's text item delimiters
-	set AppleScript's text item delimiters to linefeed
-	set joinedText to theLines as text
-	set AppleScript's text item delimiters to previousDelimiters
-	return joinedText
-end joinLines
 
 on normalizeTagList(theTags)
 	set normalizedTags to {}
@@ -121,7 +84,7 @@ on restoreRecordTags(theRecord, originalTags)
 	end tell
 end restoreRecordTags
 
-on runDateTagsPilotScenario(docLib, theRecord)
+on runDateTagsPilotScenario(docLib, testLib, theRecord)
 	tell application id "DNtp"
 		set theDatabase to database of theRecord
 	end tell
@@ -130,44 +93,44 @@ on runDateTagsPilotScenario(docLib, theRecord)
 
 	set classificationDateKey to docLib's pClassificationDate
 	set hasClassificationDate to (classificationDateKey is not missing value and classificationDateKey is not "")
-	my assertTrue(hasClassificationDate, "pClassificationDate must be configured for this test.")
+	testLib's assertTrue(hasClassificationDate, "pClassificationDate must be configured for this test.")
 
 	set dateDimensions to docLib's pDateDimensions
-	my assertEquals((count of dateDimensions), 3, "pDateDimensions must contain exactly three entries: Year, Month, Day.")
+	testLib's assertEquals((count of dateDimensions), 3, "pDateDimensions must contain exactly three entries: Year, Month, Day.")
 
 	set yearDimension to first item of dateDimensions as text
 	set monthDimension to second item of dateDimensions as text
 	set dayDimension to third item of dateDimensions as text
 
 	set beforeFields to docLib's fieldsFromTags(theRecord, false)
-	my assertMissing((beforeFields's objectForKey:yearDimension), "Precondition failed: Year dimension is already set.")
-	my assertMissing((beforeFields's objectForKey:monthDimension), "Precondition failed: Month dimension is already set.")
-	my assertMissing((beforeFields's objectForKey:dayDimension), "Precondition failed: Day dimension is already set.")
+	testLib's assertMissing((beforeFields's objectForKey:yearDimension), "Precondition failed: Year dimension is already set.")
+	testLib's assertMissing((beforeFields's objectForKey:monthDimension), "Precondition failed: Month dimension is already set.")
+	testLib's assertMissing((beforeFields's objectForKey:dayDimension), "Precondition failed: Day dimension is already set.")
 
 	docLib's classifyRecords({theRecord})
 
 	set afterFields to docLib's fieldsFromTags(theRecord, false)
-	my assertNotMissing((afterFields's objectForKey:yearDimension), "Year dimension was not set after classifyRecords.")
-	my assertNotMissing((afterFields's objectForKey:monthDimension), "Month dimension was not set after classifyRecords.")
-	my assertNotMissing((afterFields's objectForKey:dayDimension), "Day dimension was not set after classifyRecords.")
+	testLib's assertNotMissing((afterFields's objectForKey:yearDimension), "Year dimension was not set after classifyRecords.")
+	testLib's assertNotMissing((afterFields's objectForKey:monthDimension), "Month dimension was not set after classifyRecords.")
+	testLib's assertNotMissing((afterFields's objectForKey:dayDimension), "Day dimension was not set after classifyRecords.")
 end runDateTagsPilotScenario
 
-on runScenarioById(docLib, theRecord, scenarioId)
+on runScenarioById(docLib, testLib, theRecord, scenarioId)
 	if scenarioId is "pilot-date-tags" then
-		my runDateTagsPilotScenario(docLib, theRecord)
+		my runDateTagsPilotScenario(docLib, testLib, theRecord)
 	else
 		error "Unknown scenarioId: " & scenarioId
 	end if
 end runScenarioById
 
-on runTestCase(docLib, testCase)
+on runTestCase(docLib, testLib, testCase)
 	set databaseName to databaseName of testCase
 	set recordFilename to recordFilename of testCase
 	set scenarioId to scenarioId of testCase
 	set stepName to "resolve test case"
 
 	set stepName to "validate recordFilename"
-	my assertFilenameHasExtension(recordFilename, "recordFilename must include a file extension (e.g. .pdf).")
+	my assertFilenameHasExtension(recordFilename, "recordFilename must include a file extension (e.g. .pdf).", testLib)
 	set stepName to "find record by filename"
 	set theRecord to my findRecordByFilenameInDatabase(recordFilename, databaseName)
 	set stepName to "capture record type and tags"
@@ -175,14 +138,14 @@ on runTestCase(docLib, testCase)
 		set theRecordType to type of theRecord
 		set originalTags to tags of theRecord
 	end tell
-	my assertTrue(theRecordType is not «constant DtypDTgr» and theRecordType is not «constant DtypDTsg», "Resolved item must be a regular record.")
+	testLib's assertTrue(theRecordType is not «constant DtypDTgr» and theRecordType is not «constant DtypDTsg», "Resolved item must be a regular record.")
 
 	try
 		set stepName to "run scenario"
-		my runScenarioById(docLib, theRecord, scenarioId)
+		my runScenarioById(docLib, testLib, theRecord, scenarioId)
 
 		set stepName to "read trace metrics"
-		my validateClassifyRecordsTraceMetrics(docLib)
+		testLib's validateClassifyRecordsTraceMetrics(docLib)
 	on error errMsg number errNum
 		set failingStep to stepName
 		try
@@ -204,19 +167,7 @@ on runTestCase(docLib, testCase)
 	return "PASS [" & scenarioId & "] " & databaseName & " :: " & recordFilename
 end runTestCase
 
-on validateClassifyRecordsTraceMetrics(docLib)
-	set loggerInstance to docLib's logger
-	my assertNotMissing(loggerInstance, "docLib logger is not initialized.")
-	set metrics to loggerInstance's getTraceMetrics()
-	set classifyMetric to my findTraceMetricByOperationName(metrics, "classifyRecords")
-	my assertNotMissing(classifyMetric, "Trace metric for operation 'classifyRecords' was not found.")
-	my assertEquals((callCount of classifyMetric), 1, "Trace metric callCount must be 1.")
-	my assertGreaterThanZero((exclusiveTotalMs of classifyMetric), "Trace metric exclusiveTotalMs must be > 0.")
-	my assertGreaterThanZero((inclusiveTotalMs of classifyMetric), "Trace metric inclusiveTotalMs must be > 0.")
-end validateClassifyRecordsTraceMetrics
-
 set currentStep to "start"
-set testCases to {{databaseName:"Dokumente-Steffen", recordFilename:"2026-03-08_Hallesche_Information.pdf", scenarioId:"pilot-date-tags"}}
 
 set resultLines to {}
 set failedCount to 0
@@ -229,15 +180,27 @@ try
 	set currentStep to "load config"
 	set config to load script configPath
 
+	set currentStep to "resolve mail scripts path"
+	set mailScriptsPath to pMailScriptsPath of config
+	set mailScriptsBasePath to mailScriptsPath as text
+	if mailScriptsBasePath is "" then error "pMailScriptsPath in ~/.mailscripts/config.scpt must not be empty."
+	if mailScriptsBasePath ends with "/" then set mailScriptsBasePath to text 1 thru -2 of mailScriptsBasePath
+
 	set currentStep to "load docLib"
 	set docLib to load script (pDocLibraryPath of config)
+
+	set currentStep to "load testLib"
+	set testLib to load script (mailScriptsBasePath & "/Libs/TestLib.scpt")
+
+	set currentStep to "load test cases from json"
+	set testCases to testLib's loadTestCase04Cases(mailScriptsPath)
 
 	repeat with aTestCase in testCases
 		set testCaseRecordFilename to recordFilename of aTestCase
 		set testCaseScenarioId to scenarioId of aTestCase
 		set currentStep to "run testcase '" & testCaseScenarioId & "' for record '" & testCaseRecordFilename & "'"
 		try
-			set end of resultLines to my runTestCase(docLib, aTestCase)
+			set end of resultLines to my runTestCase(docLib, testLib, aTestCase)
 		on error errMsg number errNum
 			set failedCount to failedCount + 1
 			set end of resultLines to "FAIL [" & testCaseScenarioId & "] " & testCaseRecordFilename & " (" & errNum & "): " & errMsg
@@ -247,7 +210,7 @@ try
 	set totalCount to count of testCases
 	set passedCount to totalCount - failedCount
 	set summaryLine to "TOTAL: " & totalCount & ", PASSED: " & passedCount & ", FAILED: " & failedCount
-	set details to my joinLines(resultLines)
+	set details to testLib's joinLines(resultLines)
 
 	if failedCount is 0 then
 		return "PASS: " & summaryLine & linefeed & details
