@@ -319,6 +319,58 @@ on formatDateTime(theDate, includeTime)
 	return result
 end formatDateTime
 
+-- Returns runtime details about the DEVONthink app resolved via bundle identifier.
+-- Return: record {applicationName:text, version:text, applicationVersion:text, bundleIdentifier:text, applicationPath:text}
+on getDEVONthinkRuntimeInfo()
+	set logCtx to my initialize("getDEVONthinkRuntimeInfo")
+	tell logger to debug(logCtx, "enter")
+
+	set theBundleIdentifier to "DNtp"
+	try
+		set theApplicationName to ""
+		set theVersion to ""
+		set theApplicationPath to POSIX path of (path to application id theBundleIdentifier)
+		set plistPath to theApplicationPath & "Contents/Info.plist"
+		set fallbackCommands to {"defaults read " & quoted form of plistPath & " CFBundleShortVersionString", "defaults read " & quoted form of plistPath & " CFBundleVersion", "mdls -name kMDItemVersion -raw " & quoted form of theApplicationPath}
+
+		tell application id theBundleIdentifier
+			set theApplicationName to name
+			set theVersion to version
+		end tell
+
+		if theApplicationName is "" then
+			try
+				set theApplicationName to do shell script "defaults read " & quoted form of plistPath & " CFBundleName"
+			end try
+		end if
+
+		set theVersion to do shell script "printf %s " & quoted form of (theVersion as text) & " | tr -d '\\r\\n\\t'"
+		set theVersion to my trim(theVersion)
+
+		set commandIndex to 1
+		repeat while (theVersion is "" or theVersion is "version" or theVersion is "missing value" or theVersion is "null" or theVersion is "(null)") and commandIndex ≤ (count fallbackCommands)
+			try
+				set theVersion to do shell script (item commandIndex of fallbackCommands)
+			on error
+				set theVersion to ""
+			end try
+
+			set theVersion to do shell script "printf %s " & quoted form of (theVersion as text) & " | tr -d '\\r\\n\\t'"
+			set theVersion to my trim(theVersion)
+			set commandIndex to commandIndex + 1
+		end repeat
+
+		if theVersion is "" or theVersion is "version" or theVersion is "missing value" or theVersion is "null" or theVersion is "(null)" then error "Unable to determine DEVONthink version from runtime, Info.plist, and Spotlight metadata."
+
+		set runtimeInfo to {applicationName:theApplicationName as text, version:theVersion as text, applicationVersion:theVersion as text, bundleIdentifier:theBundleIdentifier, applicationPath:theApplicationPath as text}
+
+		tell logger to debug(logCtx, "exit => " & theApplicationName & " " & theVersion & " @ " & theApplicationPath)
+		return runtimeInfo
+	on error error_message number error_number
+		error "DEVONthink runtime information is unavailable (" & error_number & "): " & error_message
+	end try
+end getDEVONthinkRuntimeInfo
+
 
 -- https://apple.stackexchange.com/questions/106350/how-do-i-save-a-screenshot-with-the-iso-8601-date-format-with-applescript
 on date_to_iso(dt)
@@ -380,5 +432,3 @@ on isoStringToDate(isoString)
 	tell logger to debug(logCtx, "exit => d: " & d as text)
 	return d
 end isoStringToDate
-
-

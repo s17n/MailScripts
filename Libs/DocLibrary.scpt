@@ -539,6 +539,9 @@ on initialize(loggingContext)
 		set pDatabaseConfigurationFolder to pDatabaseConfigurationFolder of config
 		set pExiftool to pExiftool of config
 
+		set dtInfo to baseLib's getDEVONthinkRuntimeInfo()
+		tell logger to info(logCtx, (applicationName of dtInfo) & " " & (applicationVersion of dtInfo) & " " & (applicationPath of dtInfo))
+
 		set pIsInitialized to true
 		tell logger to debug(logCtx, "Initialization finished")
 	end if
