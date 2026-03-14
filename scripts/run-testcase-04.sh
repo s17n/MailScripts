@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-COMPILED_SCRIPT="$ROOT_DIR/tests/classifyRecords/testcase-04-record-driven-runtime.scpt"
+COMPILED_SCRIPT="$ROOT_DIR/tests/classifyRecords/testcase-04-classifyrecords.scpt"
 
 if [[ ! -f "$COMPILED_SCRIPT" ]]; then
   echo "[testcase-04] compiled script not found: $COMPILED_SCRIPT" >&2

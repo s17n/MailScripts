@@ -6,10 +6,10 @@ sequenceDiagram
     participant Dev as Developer/Codex
     participant Runner as run-testcase-04.sh
     participant OSAScript as osascript
-    participant Test as testcase-04-record-driven-runtime.scpt
+    participant Test as testcase-04-classifyrecords.scpt
     participant Config as ~/.mailscripts/config.scpt
     participant TestLib as TestLib.scpt
-    participant CasesJson as Configuration/tests/testcase-04-cases.json
+    participant CasesJson as Configuration/tests/testcase-04-classifyrecords-cases.json
     participant DocLib as DocLibrary.scpt
     participant DTP as DEVONthink
     participant Logger as Logger.scpt

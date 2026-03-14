@@ -117,7 +117,7 @@ on testCase04JsonPath(mailScriptsPath)
 	set basePath to mailScriptsPath as text
 	if basePath is "" then error "pMailScriptsPath in ~/.mailscripts/config.scpt must not be empty."
 	if basePath ends with "/" then set basePath to text 1 thru -2 of basePath
-	return basePath & "/Configuration/tests/testcase-04-cases.json"
+	return basePath & "/Configuration/tests/testcase-04-classifyrecords-cases.json"
 end testCase04JsonPath
 
 on validateClassifyRecordsTraceMetrics(docLib)

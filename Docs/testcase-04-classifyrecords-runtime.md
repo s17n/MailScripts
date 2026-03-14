@@ -29,18 +29,18 @@ Not refactored intentionally:
 
 ## Files
 
-- Source: `src/tests/classifyRecords/testcase-04-record-driven-runtime.applescript`
-- Compiled script: `tests/classifyRecords/testcase-04-record-driven-runtime.scpt`
+- Source: `src/tests/classifyRecords/testcase-04-classifyrecords.applescript`
+- Compiled script: `tests/classifyRecords/testcase-04-classifyrecords.scpt`
 - Test utility library (source): `src/Libs/TestLib.applescript`
 - Test utility library (compiled): `Libs/TestLib.scpt`
-- Test case config: `Configuration/tests/testcase-04-cases.json`
+- Test case config: `Configuration/tests/testcase-04-classifyrecords-cases.json`
 - Production handler under test: `src/Libs/DocLibrary.applescript` (`classifyRecords`)
 
 ## Test Data Contract
 
 Test cases are loaded by `TestLib` from:
 
-- `Configuration/tests/testcase-04-cases.json`
+- `Configuration/tests/testcase-04-classifyrecords-cases.json`
 
 JSON schema (top-level array):
 
@@ -110,7 +110,7 @@ Exit codes:
 Manual run (compiled script only):
 
 ```bash
-osascript "tests/classifyRecords/testcase-04-record-driven-runtime.scpt"
+osascript "tests/classifyRecords/testcase-04-classifyrecords.scpt"
 ```
 
 Result format:
@@ -129,9 +129,9 @@ Note:
 - `No database found with exact name: ...`
   - `databaseName` does not match the DEVONthink database exactly.
 - `compiled script not found: ...`
-  - expected `.scpt` is missing at `tests/classifyRecords/testcase-04-record-driven-runtime.scpt`.
+  - expected `.scpt` is missing at `tests/classifyRecords/testcase-04-classifyrecords.scpt`.
 - `JSON file not found: ...`
-  - expected JSON config is missing at `Configuration/tests/testcase-04-cases.json`.
+  - expected JSON config is missing at `Configuration/tests/testcase-04-classifyrecords-cases.json`.
 - `Failed to parse JSON file ...`
   - JSON syntax is invalid.
 - `Invalid JSON schema ...`
@@ -151,7 +151,7 @@ Note:
 
 ## Extending the Test
 
-To add more cases, append entries to `Configuration/tests/testcase-04-cases.json` with:
+To add more cases, append entries to `Configuration/tests/testcase-04-classifyrecords-cases.json` with:
 
 - the same `databaseName`/`recordFilename` keys,
 - a new `scenarioId`.
