@@ -1365,6 +1365,7 @@ end updateDimensionsCache
 -- Return: none (side effects only).
 on updateRecordsMetadata(theRecords)
 	set logCtx to my initialize("updateRecordsMetadata")
+	logger's resetTraceMetrics()
 	logger's trace(logCtx, "enter")
 
 	tell application id "DNtp"
@@ -1412,6 +1413,7 @@ on updateRecordsMetadata(theRecords)
 	end tell
 
 	logger's trace(logCtx, "exit")
+	logger's logTraceMetrics()
 end updateRecordsMetadata
 
 -- Validates tag consistency for records at a location and logs metrics.
