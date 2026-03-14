@@ -633,49 +633,6 @@ on initializeDimensions(theDatabase)
 	logger's trace(logCtx, "exit")
 end initializeDimensions
 
--- Explicitly refreshes the dimensions cache for a database name.
--- Parameters:
---    theDatabaseName:text name of the target database.
--- Return: none (side effects only).
-on updateDimensionsCache(theDatabaseName)
-	set logCtx to my initialize("updateDimensionsCache")
-	logger's trace(logCtx, "enter > " & theDatabaseName)
-
-	tell application id "DNtp" to set theDatabase to database named theDatabaseName
-	my initializeDatabaseConfiguration(theDatabase)
-	my refreshDimensionsCache(theDatabase)
-
-	logger's trace(logCtx, "exit")
-end updateDimensionsCache
-
--- Rebuilds dimensions from DEVONthink and writes the filesystem cache.
--- Parameters:
---    theDatabase:DEVONthink database (class 'database' / DTkb) database context used by the operation.
--- Return: none (side effects only).
-on refreshDimensionsCache(theDatabase)
-	set logCtx to my initialize("refreshDimensionsCache")
-	logger's trace(logCtx, "enter")
-
-	if pDimensionsCachePath is missing value or pDimensionsCachePath is "" then error "Dimensions cache path is not configured."
-
-	set dimensionsDictionary to current application's NSMutableDictionary's dictionary()
-	tell application id "DNtp"
-		set dimensionHome to get record at pDimensionsHome in theDatabase
-		set theDimensions to every child of dimensionHome
-		repeat with aDimension in theDimensions
-			set {dimensionName, dimensionChilds} to {name, every child} of aDimension
-			set categories to my createTagList(dimensionChilds, {})
-			(dimensionsDictionary's setObject:categories forKey:dimensionName)
-			tell logger to debug(logCtx, "Dimension '" & dimensionName & "' refreshed with " & length of categories & " categories.")
-		end repeat
-	end tell
-
-	baseLib's writeDimensionsCache(pDimensionsCachePath, dimensionsDictionary)
-	set pDimensionsDictionary to dimensionsDictionary
-
-	logger's trace(logCtx, "exit")
-end refreshDimensionsCache
-
 -- Initializes mail library configuration for a target database.
 -- Parameters:
 --    theDatabaseName:text name of the target database.
@@ -773,6 +730,34 @@ on processDocuments(theRecords)
 
 	logger's trace(logCtx, "exit")
 end processDocuments
+
+-- Rebuilds dimensions from DEVONthink and writes the filesystem cache.
+-- Parameters:
+--    theDatabase:DEVONthink database (class 'database' / DTkb) database context used by the operation.
+-- Return: none (side effects only).
+on refreshDimensionsCache(theDatabase)
+	set logCtx to my initialize("refreshDimensionsCache")
+	logger's trace(logCtx, "enter")
+
+	if pDimensionsCachePath is missing value or pDimensionsCachePath is "" then error "Dimensions cache path is not configured."
+
+	set dimensionsDictionary to current application's NSMutableDictionary's dictionary()
+	tell application id "DNtp"
+		set dimensionHome to get record at pDimensionsHome in theDatabase
+		set theDimensions to every child of dimensionHome
+		repeat with aDimension in theDimensions
+			set {dimensionName, dimensionChilds} to {name, every child} of aDimension
+			set categories to my createTagList(dimensionChilds, {})
+			(dimensionsDictionary's setObject:categories forKey:dimensionName)
+			tell logger to debug(logCtx, "Dimension '" & dimensionName & "' refreshed with " & length of categories & " categories.")
+		end repeat
+	end tell
+
+	baseLib's writeDimensionsCache(pDimensionsCachePath, dimensionsDictionary)
+	set pDimensionsDictionary to dimensionsDictionary
+
+	logger's trace(logCtx, "exit")
+end refreshDimensionsCache
 
 -- Removes trailing bracket blocks from a string value.
 -- Parameters:
@@ -1358,6 +1343,21 @@ on twoDigit(d)
 	logger's trace(logCtx, "exit > " & theResult)
 	return theResult
 end twoDigit
+
+-- Explicitly refreshes the dimensions cache for a database name.
+-- Parameters:
+--    theDatabaseName:text name of the target database.
+-- Return: none (side effects only).
+on updateDimensionsCache(theDatabaseName)
+	set logCtx to my initialize("updateDimensionsCache")
+	logger's trace(logCtx, "enter > " & theDatabaseName)
+
+	tell application id "DNtp" to set theDatabase to database named theDatabaseName
+	my initializeDatabaseConfiguration(theDatabase)
+	my refreshDimensionsCache(theDatabase)
+
+	logger's trace(logCtx, "exit")
+end updateDimensionsCache
 
 -- Updates record names, custom metadata, and comments from derived fields.
 -- Parameters:
