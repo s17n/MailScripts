@@ -717,6 +717,43 @@ on moveRecord(theRecord, theDestinationFolderName)
 	logger's trace(logCtx, "exit")
 end moveRecord
 
+-- Opens or creates smart groups for a custom metadata value and reveals them.
+-- Parameters:
+--    theSmartGroupSpecifier:record with customMetadataIdentifier:text and smartgroupsFolder:text.
+--    theRecords:list<DEVONthink record (class 'record' / DTrc)> records used to derive metadata values.
+-- Return: none (side effects only).
+on openCustomMetadataSmartGroup(theSmartGroupSpecifier, theRecords)
+	set logCtx to my initialize("openCustomMetadataSmartGroup")
+	logger's trace(logCtx, "enter")
+
+	set customMetadataIdentifier to customMetadataIdentifier of theSmartGroupSpecifier
+	set smartgroupsFolder to smartgroupsFolder of theSmartGroupSpecifier
+
+	repeat with theRecord in theRecords
+		tell application id "DNtp"
+			set theDatabase to database of theRecord
+			set theValue to get custom meta data for customMetadataIdentifier from theRecord
+
+			set theSmartGroup to missing value
+			set theSmartGroupLocation to smartgroupsFolder & "/" & theValue
+			if not (exists record at theSmartGroupLocation in theDatabase) then
+				set theSmartGroupsRecord to get record at smartgroupsFolder in theDatabase
+				set theSmartGroup to create record with {name:theValue, record type:smart group, search predicates:"md" & customMetadataIdentifier & ":" & theValue} in theSmartGroupsRecord
+				logger's info(logCtx, "Create smart group: " & theSmartGroupLocation)
+			else
+				set theSmartGroup to get record at theSmartGroupLocation in theDatabase
+			end if
+
+			if theSmartGroup is missing value then error "No Smart Group found."
+
+			open window for record theSmartGroup
+
+		end tell
+	end repeat
+
+	logger's trace(logCtx, "exit")
+end openCustomMetadataSmartGroup
+
 -- Runs the standard document workflow for classification and metadata updates.
 -- Parameters:
 --    theRecords:list<DEVONthink record (class 'record' / DTrc)> records to process.
