@@ -197,7 +197,6 @@ on classifyRecords(theRecords)
 	logger's trace(logCtx, "enter")
 
 	tell application id "DNtp"
-
 		set theDatabase to database of first item of theRecords
 
 		my initializeDatabaseConfiguration(theDatabase)
@@ -540,7 +539,7 @@ on initialize(loggingContext)
 		set pExiftool to pExiftool of config
 
 		set dtInfo to baseLib's getDEVONthinkRuntimeInfo()
-		tell logger to info(logCtx, (applicationName of dtInfo) & " " & (applicationVersion of dtInfo) & " " & (applicationPath of dtInfo))
+		tell logger to info(logCtx, "DEVONthink " & (applicationVersion of dtInfo))
 
 		set pIsInitialized to true
 		tell logger to debug(logCtx, "Initialization finished")

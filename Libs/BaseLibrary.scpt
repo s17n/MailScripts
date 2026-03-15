@@ -320,62 +320,83 @@ on formatDateTime(theDate, includeTime)
 end formatDateTime
 
 -- Returns runtime details about the DEVONthink app resolved via bundle identifier.
--- Return: record {applicationName:text, version:text, applicationVersion:text, bundleIdentifier:text, applicationPath:text}
+-- Return: record {application:text, applicationName:text, version:text, applicationVersion:text, bundleIdentifier:text, applicationPath:text}
 on getDEVONthinkRuntimeInfo()
 	set logCtx to my initialize("getDEVONthinkRuntimeInfo")
 	tell logger to debug(logCtx, "enter")
 
-	set theBundleIdentifier to "DNtp"
+	set preferredBundleIdentifiers to {"com.devon-technologies.think", "com.devon-technologies.think3", "com.devon-technologies.thinkpro2", "DNtp"}
+	set plistCandidates to {"/Applications/DEVONthink.app/Contents/Info.plist", "/Applications/Setapp/DEVONthink.app/Contents/Info.plist", "/Applications/DEVONthink 3.app/Contents/Info.plist"}
+	set plistSuffix to "/Contents/Info.plist"
+	set theBundleIdentifier to item 1 of preferredBundleIdentifiers
+	set theApplicationName to "DEVONthink"
+	set theVersion to ""
+	set theApplicationPath to ""
+
 	try
-		set theApplicationName to "DEVONthink"
-		set theVersion to ""
-		set theApplicationPath to ""
-		set plistPath to ""
-		set fallbackCommands to {}
-
-		try
-			tell current application
-				set theApplicationPath to POSIX path of (path to application id theBundleIdentifier)
-			end tell
-			set plistPath to theApplicationPath & "Contents/Info.plist"
-			set fallbackCommands to {"defaults read " & quoted form of plistPath & " CFBundleShortVersionString", "defaults read " & quoted form of plistPath & " CFBundleVersion", "mdls -name kMDItemVersion -raw " & quoted form of theApplicationPath}
-		end try
-
-		try
-			tell application id theBundleIdentifier
-				set theApplicationName to name
-				set theVersion to version
-			end tell
-		end try
-
-		if theApplicationName is "" and plistPath is not "" then
+		repeat with candidateIdentifier in preferredBundleIdentifiers
 			try
-				set theApplicationName to do shell script "defaults read " & quoted form of plistPath & " CFBundleName"
+				tell application id (candidateIdentifier as text)
+					set queriedApplicationName to name as text
+					set queriedVersion to version as text
+				end tell
+
+				if queriedApplicationName is not "" and queriedApplicationName is not "application" and queriedApplicationName is not "missing value" and queriedApplicationName is not "null" and queriedApplicationName is not "(null)" then
+					set theApplicationName to queriedApplicationName
+				end if
+
+				if queriedVersion is not "" and queriedVersion is not "version" and queriedVersion is not "missing value" and queriedVersion is not "null" and queriedVersion is not "(null)" then
+					set theVersion to queriedVersion
+					set theBundleIdentifier to candidateIdentifier as text
+					exit repeat
+				end if
 			end try
-		end if
+		end repeat
+
+		set fm to current application's NSFileManager's defaultManager()
+		repeat with plistCandidate in plistCandidates
+			set plistPath to plistCandidate as text
+			if (fm's fileExistsAtPath:plistPath) as boolean then
+				if theApplicationPath is "" and plistPath ends with plistSuffix then
+					set theApplicationPath to text 1 thru ((length of plistPath) - (length of plistSuffix)) of plistPath
+				end if
+
+				if theVersion is "" or theVersion is "version" or theVersion is "missing value" or theVersion is "null" or theVersion is "(null)" then
+					try
+						set theVersion to do shell script "/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' " & quoted form of plistPath
+					on error
+						try
+							set theVersion to do shell script "/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' " & quoted form of plistPath
+						end try
+					end try
+				end if
+
+				try
+					set theBundleIdentifier to do shell script "/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' " & quoted form of plistPath
+				end try
+
+				try
+					set theApplicationName to do shell script "/usr/libexec/PlistBuddy -c 'Print :CFBundleName' " & quoted form of plistPath
+				end try
+
+				exit repeat
+			end if
+		end repeat
 
 		set theVersion to do shell script "printf %s " & quoted form of (theVersion as text) & " | tr -d '\\r\\n\\t'"
 		set theVersion to my trim(theVersion)
-
-		set commandIndex to 1
-		repeat while (theVersion is "" or theVersion is "version" or theVersion is "missing value" or theVersion is "null" or theVersion is "(null)") and commandIndex ≤ (count fallbackCommands)
-			try
-				set theVersion to do shell script (item commandIndex of fallbackCommands)
-			on error
-				set theVersion to ""
-			end try
-
-			set theVersion to do shell script "printf %s " & quoted form of (theVersion as text) & " | tr -d '\\r\\n\\t'"
-			set theVersion to my trim(theVersion)
-			set commandIndex to commandIndex + 1
-		end repeat
-
 		if theVersion is "" or theVersion is "version" or theVersion is "missing value" or theVersion is "null" or theVersion is "(null)" then set theVersion to "unknown"
-		if theApplicationPath is "" then set theApplicationPath to "unresolved"
 
-		set runtimeInfo to {applicationName:theApplicationName as text, version:theVersion as text, applicationVersion:theVersion as text, bundleIdentifier:theBundleIdentifier, applicationPath:theApplicationPath as text}
+		set theApplicationName to do shell script "printf %s " & quoted form of (theApplicationName as text) & " | tr -d '\\r\\n\\t'"
+		set theApplicationName to my trim(theApplicationName)
+		if theApplicationName is "" or theApplicationName is "application" or theApplicationName is "missing value" or theApplicationName is "null" or theApplicationName is "(null)" then set theApplicationName to "DEVONthink"
 
-		tell logger to debug(logCtx, "exit => " & theApplicationName & " " & theVersion & " @ " & theApplicationPath)
+		set theBundleIdentifier to do shell script "printf %s " & quoted form of (theBundleIdentifier as text) & " | tr -d '\\r\\n\\t'"
+		set theBundleIdentifier to my trim(theBundleIdentifier)
+		if theBundleIdentifier is "" then set theBundleIdentifier to "com.devon-technologies.think"
+
+		set runtimeInfo to {application:theApplicationName as text, applicationName:theApplicationName as text, version:theVersion as text, applicationVersion:theVersion as text, bundleIdentifier:theBundleIdentifier, applicationPath:theApplicationPath as text}
+		tell logger to debug(logCtx, "exit => " & theApplicationName & " " & theVersion)
 		return runtimeInfo
 	on error error_message number error_number
 		error "DEVONthink runtime information is unavailable (" & error_number & "): " & error_message
