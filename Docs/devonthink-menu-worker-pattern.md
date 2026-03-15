@@ -25,19 +25,6 @@ Each converted menu script follows this handler layout:
 - `run argv`
 - `runCore()`
 
-This keeps handlers alphabetically sorted and the runtime behavior consistent.
-
-## Current Scripts Using This Pattern
-
-- `DEVONthink Menu/Classify Records___Cmd-Ctrl-Shift-C.scpt`
-- `DEVONthink Menu/Update Records Metadata___Cmd-Ctrl-Shift-U.scpt`
-- `DEVONthink Menu/Archive Records___Cmd-Ctrl-Shift-A.scpt`
-
-## Notes
-
-- Error handling shows `display alert "DEVONthink"` with message and error number.
-- `DocLibrary` remains unchanged; behavior changes are isolated to menu-script launch mechanics.
-
 ## Sources
 
 - AppleScript Language Guide, Commands Reference (`do shell script`, `load script`, `get`): [developer.apple.com](https://developer.apple.com/library/archive/documentation/AppleScript/Conceptual/AppleScriptLangGuide/reference/ASLR_cmds.html)

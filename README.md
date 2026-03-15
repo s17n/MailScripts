@@ -58,4 +58,8 @@ Support for:
 
 ## Known Issues
 
-- Regression in AppleScript performance since DEVONthink 4.2 on macOS 26 Tahoe (see [issue](https://discourse.devontechnologies.com/t/regression-in-applescript-performance-with-dt-4-2) & [work-around](Docs/dimensions-cache-technical.md)).
+
+- Regression in AppleScript performance since DEVONthink 4.2 on macOS 26 Tahoe (see the issue description [here](https://discourse.devontechnologies.com/t/regression-in-applescript-performance-with-dt-4-2)). Two workarounds have been identified to mitigate the issue:
+
+	1. Caching tag data as JSON on disk (see [here](Docs/dimensions-cache-technical.md)).
+	2. Running time-consuming DEVONthink menu scripts via an external `osascript`, which reduces overall elapsed time (see [here](Docs/devonthink-menu-worker-pattern.md)).
