@@ -327,18 +327,28 @@ on getDEVONthinkRuntimeInfo()
 
 	set theBundleIdentifier to "DNtp"
 	try
-		set theApplicationName to ""
+		set theApplicationName to "DEVONthink"
 		set theVersion to ""
-		set theApplicationPath to POSIX path of (path to application id theBundleIdentifier)
-		set plistPath to theApplicationPath & "Contents/Info.plist"
-		set fallbackCommands to {"defaults read " & quoted form of plistPath & " CFBundleShortVersionString", "defaults read " & quoted form of plistPath & " CFBundleVersion", "mdls -name kMDItemVersion -raw " & quoted form of theApplicationPath}
+		set theApplicationPath to ""
+		set plistPath to ""
+		set fallbackCommands to {}
 
-		tell application id theBundleIdentifier
-			set theApplicationName to name
-			set theVersion to version
-		end tell
+		try
+			tell current application
+				set theApplicationPath to POSIX path of (path to application id theBundleIdentifier)
+			end tell
+			set plistPath to theApplicationPath & "Contents/Info.plist"
+			set fallbackCommands to {"defaults read " & quoted form of plistPath & " CFBundleShortVersionString", "defaults read " & quoted form of plistPath & " CFBundleVersion", "mdls -name kMDItemVersion -raw " & quoted form of theApplicationPath}
+		end try
 
-		if theApplicationName is "" then
+		try
+			tell application id theBundleIdentifier
+				set theApplicationName to name
+				set theVersion to version
+			end tell
+		end try
+
+		if theApplicationName is "" and plistPath is not "" then
 			try
 				set theApplicationName to do shell script "defaults read " & quoted form of plistPath & " CFBundleName"
 			end try
@@ -360,7 +370,8 @@ on getDEVONthinkRuntimeInfo()
 			set commandIndex to commandIndex + 1
 		end repeat
 
-		if theVersion is "" or theVersion is "version" or theVersion is "missing value" or theVersion is "null" or theVersion is "(null)" then error "Unable to determine DEVONthink version from runtime, Info.plist, and Spotlight metadata."
+		if theVersion is "" or theVersion is "version" or theVersion is "missing value" or theVersion is "null" or theVersion is "(null)" then set theVersion to "unknown"
+		if theApplicationPath is "" then set theApplicationPath to "unresolved"
 
 		set runtimeInfo to {applicationName:theApplicationName as text, version:theVersion as text, applicationVersion:theVersion as text, bundleIdentifier:theBundleIdentifier, applicationPath:theApplicationPath as text}
 

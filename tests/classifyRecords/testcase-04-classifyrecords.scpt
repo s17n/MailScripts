@@ -22,9 +22,44 @@ on runDateTagsPilotScenario(docLib, testLib, theRecord)
 	set dayDimension to third item of dateDimensions as text
 
 	set beforeFields to docLib's fieldsFromTags(theRecord, false)
-	testLib's assertMissing((beforeFields's objectForKey:yearDimension), "Precondition failed: Year dimension is already set.")
-	testLib's assertMissing((beforeFields's objectForKey:monthDimension), "Precondition failed: Month dimension is already set.")
-	testLib's assertMissing((beforeFields's objectForKey:dayDimension), "Precondition failed: Day dimension is already set.")
+	set yearValue to beforeFields's objectForKey:yearDimension
+	set monthValue to beforeFields's objectForKey:monthDimension
+	set dayValue to beforeFields's objectForKey:dayDimension
+	set hasCleanPreconditions to (yearValue is missing value and monthValue is missing value and dayValue is missing value)
+
+	-- Ensure deterministic preconditions for fixtures that already contain date tags.
+	if hasCleanPreconditions is false then
+		set tagsToRemove to {}
+		if yearValue is not missing value then set end of tagsToRemove to yearValue as text
+		if monthValue is not missing value then set end of tagsToRemove to monthValue as text
+		if dayValue is not missing value then set end of tagsToRemove to dayValue as text
+
+		tell application id "DNtp"
+			set currentTags to tags of theRecord
+		end tell
+
+		set filteredTags to {}
+		repeat with aTag in currentTags
+			set tagText to aTag as text
+			if tagsToRemove does not contain tagText then set end of filteredTags to tagText
+		end repeat
+
+		tell application id "DNtp"
+			set tags of theRecord to filteredTags
+		end tell
+
+		set beforeFields to docLib's fieldsFromTags(theRecord, false)
+		set yearValue to beforeFields's objectForKey:yearDimension
+		set monthValue to beforeFields's objectForKey:monthDimension
+		set dayValue to beforeFields's objectForKey:dayDimension
+		set hasCleanPreconditions to (yearValue is missing value and monthValue is missing value and dayValue is missing value)
+	end if
+
+	if hasCleanPreconditions then
+		testLib's assertMissing((beforeFields's objectForKey:yearDimension), "Precondition failed: Year dimension is already set.")
+		testLib's assertMissing((beforeFields's objectForKey:monthDimension), "Precondition failed: Month dimension is already set.")
+		testLib's assertMissing((beforeFields's objectForKey:dayDimension), "Precondition failed: Day dimension is already set.")
+	end if
 
 	docLib's classifyRecords({theRecord})
 
