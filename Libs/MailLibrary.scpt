@@ -82,8 +82,8 @@ on importMessages(theMessages, theDatabaseName)
 				tell application id "DNtp"
 					set theGroup to incoming group of database theDatabaseName
 					set theRecord to create record with {name:theName & ".eml", type:unknown, creation date:theDateSent, modification date:theDateReceived, URL:theSender, source:(theSource as string), unread:(not theReadFlag)} in theGroup
-					set theImportFolder to create location theImportFolder in database theDatabaseName
-					move record theRecord to theImportFolder
+					-- set theImportFolder to create location theImportFolder in database theDatabaseName
+					-- move record theRecord to theImportFolder
 
 					my setCustomAttributes(theRecord, senderAddress)
 
