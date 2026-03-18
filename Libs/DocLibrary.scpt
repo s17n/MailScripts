@@ -14,6 +14,7 @@ property pContentType : missing value
 property pDimensionsDictionary : missing value
 property pDimensionsConstraintsDictionary : missing value
 property pDimensionsCachePath : missing value
+property pUseDimensionsFilesystemCache : false
 property pAmountFormatter : missing value
 property tagAliases : missing value
 property monthsByName : missing value
@@ -186,6 +187,30 @@ on buildTagAliasDictionary(theTagAliases)
 	logger's trace(logCtx, "exit")
 	return aliasesDictionary
 end buildTagAliasDictionary
+
+-- Builds a dimension dictionary directly from DEVONthink tags.
+-- Parameters:
+--    theDatabase:DEVONthink database (class 'database' / DTkb) database context used by the operation.
+-- Return: NSMutableDictionary<text,list<text>> computed result.
+on buildDimensionsDictionaryFromDEVONthink(theDatabase)
+	set logCtx to my initialize("buildDimensionsDictionaryFromDEVONthink")
+	logger's trace(logCtx, "enter")
+
+	set dimensionsDictionary to current application's NSMutableDictionary's dictionary()
+	tell application id "DNtp"
+		set dimensionHome to get record at pDimensionsHome in theDatabase
+		set theDimensions to every child of dimensionHome
+		repeat with aDimension in theDimensions
+			set {dimensionName, dimensionChilds} to {name, every child} of aDimension
+			set categories to my createTagList(dimensionChilds, {})
+			(dimensionsDictionary's setObject:categories forKey:dimensionName)
+			tell logger to debug(logCtx, "Dimension '" & dimensionName & "' refreshed with " & length of categories & " categories.")
+		end repeat
+	end tell
+
+	logger's trace(logCtx, "exit")
+	return dimensionsDictionary
+end buildDimensionsDictionaryFromDEVONthink
 
 -- Classifies records by date tags and compare-based dimension inference.
 -- Parameters:
@@ -484,14 +509,16 @@ on handleUncategorizedTag(theTag)
 
 		-- Tag zu Categories der entsprechenden Dimension hinzufügen
 		if theItem is not {} and theItem is not false then
+			set theDimensionName to first item of theItem as string
 
 			-- Dictionary
-			set theCategories to (pDimensionsDictionary's objectForKey:theItem) as list
+			set theCategories to (pDimensionsDictionary's objectForKey:theDimensionName) as list
 			set end of theCategories to name of theUncategorizedRecord as string
-			(pDimensionsDictionary's setObject:theCategories forKey:theItem)
+			(pDimensionsDictionary's setObject:theCategories forKey:theDimensionName)
+			my persistDimensionsCacheIfEnabled()
 
 			-- Tag Group
-			set theDimensionRecord to get record at pDimensionsHome & "/" & theItem
+			set theDimensionRecord to get record at pDimensionsHome & "/" & theDimensionName
 			move record theUncategorizedRecord to theDimensionRecord
 		end if
 
@@ -567,7 +594,15 @@ on initializeDatabaseConfiguration(theDatabase)
 
 	-- Dimensions
 	set pDimensionsHome to pDimensionsHome of configurationFile
-	set pDimensionsCachePath to baseLib's resolveDimensionsCachePath(configurationFile, theDatabaseName, pDatabaseConfigurationFolder)
+	set pUseDimensionsFilesystemCache to false
+	try
+		set pUseDimensionsFilesystemCache to pUseDimensionsFilesystemCache of configurationFile
+	end try
+	if pUseDimensionsFilesystemCache is true then
+		set pDimensionsCachePath to baseLib's resolveDimensionsCachePath(configurationFile, theDatabaseName, pDatabaseConfigurationFolder)
+	else
+		set pDimensionsCachePath to missing value
+	end if
 	set pDateDimensions to pDateDimensions of configurationFile
 	set pCompareDimensions to pCompareDimensions of configurationFile
 	set pCompareDimensionsScoreThreshold to pCompareDimensionsScoreThreshold of configurationFile
@@ -617,6 +652,13 @@ end initializeDatabaseConfiguration
 on initializeDimensions(theDatabase)
 	set logCtx to my initialize("initializeDimensions")
 	logger's trace(logCtx, "enter")
+
+	if pUseDimensionsFilesystemCache is false then
+		set pDimensionsDictionary to my buildDimensionsDictionaryFromDEVONthink(theDatabase)
+		logger's debug(logCtx, "Dimensions loaded directly from DEVONthink.")
+		logger's trace(logCtx, "exit")
+		return
+	end if
 
 	if (baseLib's dimensionsCacheExists(pDimensionsCachePath)) is false then
 		logger's info(logCtx, "Dimensions cache file missing. Creating: " & pDimensionsCachePath)
@@ -754,6 +796,27 @@ on openCustomMetadataSmartGroup(theSmartGroupSpecifier, theRecords)
 	logger's trace(logCtx, "exit")
 end openCustomMetadataSmartGroup
 
+-- Persists the current in-memory dimensions dictionary when filesystem caching is enabled.
+-- Parameters: none.
+-- Return: none (side effects only).
+on persistDimensionsCacheIfEnabled()
+	set logCtx to my initialize("persistDimensionsCacheIfEnabled")
+	logger's trace(logCtx, "enter")
+
+	if pUseDimensionsFilesystemCache is false then
+		logger's debug(logCtx, "Dimensions filesystem cache disabled. Skipping persistence.")
+		logger's trace(logCtx, "exit")
+		return
+	end if
+
+	if pDimensionsCachePath is missing value or pDimensionsCachePath is "" then error "Dimensions cache path is not configured."
+
+	logger's debug(logCtx, "Persisting dimensions cache to: " & pDimensionsCachePath)
+	baseLib's writeDimensionsCache(pDimensionsCachePath, pDimensionsDictionary)
+
+	logger's trace(logCtx, "exit")
+end persistDimensionsCacheIfEnabled
+
 -- Runs the standard document workflow for classification and metadata updates.
 -- Parameters:
 --    theRecords:list<DEVONthink record (class 'record' / DTrc)> records to process.
@@ -778,19 +841,13 @@ on refreshDimensionsCache(theDatabase)
 	set logCtx to my initialize("refreshDimensionsCache")
 	logger's trace(logCtx, "enter")
 
-	if pDimensionsCachePath is missing value or pDimensionsCachePath is "" then error "Dimensions cache path is not configured."
+	if pDimensionsCachePath is missing value or pDimensionsCachePath is "" then
+		tell application id "DNtp" to set theDatabaseName to name of theDatabase
+		set configurationFile to baseLib's loadConfiguration(pDatabaseConfigurationFolder, theDatabaseName)
+		set pDimensionsCachePath to baseLib's resolveDimensionsCachePath(configurationFile, theDatabaseName, pDatabaseConfigurationFolder)
+	end if
 
-	set dimensionsDictionary to current application's NSMutableDictionary's dictionary()
-	tell application id "DNtp"
-		set dimensionHome to get record at pDimensionsHome in theDatabase
-		set theDimensions to every child of dimensionHome
-		repeat with aDimension in theDimensions
-			set {dimensionName, dimensionChilds} to {name, every child} of aDimension
-			set categories to my createTagList(dimensionChilds, {})
-			(dimensionsDictionary's setObject:categories forKey:dimensionName)
-			tell logger to debug(logCtx, "Dimension '" & dimensionName & "' refreshed with " & length of categories & " categories.")
-		end repeat
-	end tell
+	set dimensionsDictionary to my buildDimensionsDictionaryFromDEVONthink(theDatabase)
 
 	baseLib's writeDimensionsCache(pDimensionsCachePath, dimensionsDictionary)
 	set pDimensionsDictionary to dimensionsDictionary
