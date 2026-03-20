@@ -759,28 +759,32 @@ on moveRecord(theRecord, theDestinationFolderName)
 	logger's trace(logCtx, "exit")
 end moveRecord
 
--- Opens or creates smart groups for a custom metadata value and reveals them.
+-- Opens or creates smart groups for the tag value derived from a configured dimension.
 -- Parameters:
---    theSmartGroupSpecifier:record with customMetadataIdentifier:text and smartgroupsFolder:text.
---    theRecords:list<DEVONthink record (class 'record' / DTrc)> records used to derive metadata values.
+--    theSmartGroupSpecifier:record with dimension:text and smartgroupsFolder:text.
+--    theRecords:list<DEVONthink record (class 'record' / DTrc)> records used to derive tag values.
 -- Return: none (side effects only).
-on openCustomMetadataSmartGroup(theSmartGroupSpecifier, theRecords)
-	set logCtx to my initialize("openCustomMetadataSmartGroup")
+on openSmartGroup(theSmartGroupSpecifier, theRecords)
+	set logCtx to my initialize("openSmartGroup")
 	logger's trace(logCtx, "enter")
 
-	set customMetadataIdentifier to customMetadataIdentifier of theSmartGroupSpecifier
+	set theDimension to dimension of theSmartGroupSpecifier
 	set smartgroupsFolder to smartgroupsFolder of theSmartGroupSpecifier
 
-	repeat with theRecord in theRecords
-		tell application id "DNtp"
-			set theDatabase to database of theRecord
-			set theValue to get custom meta data for customMetadataIdentifier from theRecord
+	tell application id "DNtp"
+		set theDatabase to database of first item of theRecords
+
+		my initializeDatabaseConfiguration(theDatabase)
+		repeat with theRecord in theRecords
+			set theFields to my fieldsFromTags(theRecord, true)
+
+			set theValue to (theFields's objectForKey:theDimension) as string
 
 			set theSmartGroup to missing value
 			set theSmartGroupLocation to smartgroupsFolder & "/" & theValue
 			if not (exists record at theSmartGroupLocation in theDatabase) then
 				set theSmartGroupsRecord to get record at smartgroupsFolder in theDatabase
-				set theSmartGroup to create record with {name:theValue, record type:smart group, search predicates:"md" & customMetadataIdentifier & ":" & theValue} in theSmartGroupsRecord
+				set theSmartGroup to create record with {name:theValue, record type:smart group, search predicates:"tags:" & theValue} in theSmartGroupsRecord
 				logger's info(logCtx, "Create smart group: " & theSmartGroupLocation)
 			else
 				set theSmartGroup to get record at theSmartGroupLocation in theDatabase
@@ -790,11 +794,11 @@ on openCustomMetadataSmartGroup(theSmartGroupSpecifier, theRecords)
 
 			open window for record theSmartGroup
 
-		end tell
-	end repeat
+		end repeat
+	end tell
 
 	logger's trace(logCtx, "exit")
-end openCustomMetadataSmartGroup
+end openSmartGroup
 
 -- Persists the current in-memory dimensions dictionary when filesystem caching is enabled.
 -- Parameters: none.
