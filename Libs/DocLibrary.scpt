@@ -760,6 +760,7 @@ on moveRecord(theRecord, theDestinationFolderName)
 end moveRecord
 
 -- Opens or creates smart groups for the tag value derived from a configured dimension.
+-- If dimension value was not found and a customMetadataField is present the smart groups is created with Custom Metadata.
 -- Parameters:
 --    theSmartGroupSpecifier:record with dimension:text and smartgroupsFolder:text.
 --    theRecords:list<DEVONthink record (class 'record' / DTrc)> records used to derive tag values.
@@ -769,7 +770,12 @@ on openSmartGroup(theSmartGroupSpecifier, theRecords)
 	logger's trace(logCtx, "enter")
 
 	set theDimension to dimension of theSmartGroupSpecifier
+	set customMetadataField to customMetadataField of theSmartGroupSpecifier
 	set smartgroupsFolder to smartgroupsFolder of theSmartGroupSpecifier
+	logger's debug(logCtx, "theSmartGroupSpecifier > theDimension: " & theDimension & ", customMetadataField: " & customMetadataField & ", smartgroupsFolder: " & smartgroupsFolder)
+
+
+	set smartGroupConditionField to "Tags"
 
 	tell application id "DNtp"
 		set theDatabase to database of first item of theRecords
@@ -779,12 +785,26 @@ on openSmartGroup(theSmartGroupSpecifier, theRecords)
 			set theFields to my fieldsFromTags(theRecord, true)
 
 			set theValue to (theFields's objectForKey:theDimension) as string
+			logger's debug(logCtx, "xxxtheValue: " & theValue)
+			if theValue is missing value or theValue is equal to "missing value" then
+				set theValue to get custom meta data for customMetadataField from theRecord
+				set smartGroupConditionField to "CustomMetadata"
+			end if
+
+			set theSmartGroupsRecord to get record at smartgroupsFolder in theDatabase
+			if theSmartGroupsRecord is missing value then
+				set theSmartGroupsRecord to create location smartgroupsFolder in database of theRecord
+			end if
 
 			set theSmartGroup to missing value
 			set theSmartGroupLocation to smartgroupsFolder & "/" & theValue
 			if not (exists record at theSmartGroupLocation in theDatabase) then
-				set theSmartGroupsRecord to get record at smartgroupsFolder in theDatabase
-				set theSmartGroup to create record with {name:theValue, record type:smart group, search predicates:"tags:" & theValue} in theSmartGroupsRecord
+				if smartGroupConditionField is equal to "Tags" then
+					set theSmartGroup to create record with {name:theValue, record type:smart group, search predicates:"tags:" & theValue} in theSmartGroupsRecord
+				else
+					set theSmartGroup to create record with {name:theValue, record type:smart group, search predicates:"md" & customMetadataField & ":" & theValue} in theSmartGroupsRecord
+
+				end if
 				logger's info(logCtx, "Create smart group: " & theSmartGroupLocation)
 			else
 				set theSmartGroup to get record at theSmartGroupLocation in theDatabase
