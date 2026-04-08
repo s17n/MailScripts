@@ -735,6 +735,58 @@ on moveByDimension(theRecords, theDimension, theFolderPrefix)
 	logger's trace(logCtx, "exit")
 end moveByDimension
 
+-- Moves selected tags into a child group named after the first character of the tag name.
+-- DEVONthink-specific notes:
+--    - Use `tag type` to distinguish tags from normal groups because `type` alone returns `group` for both.
+--    - Use `location group` as the stable parent-group reference for selected tags.
+-- Parameters:
+--    theRecords:list<DEVONthink record (class 'record' / DTrc)> records to process.
+-- Return: none (side effects only).
+on moveByFirstCharacter(theRecords)
+	set logCtx to my initialize("moveByFirstCharacter")
+	logger's trace(logCtx, "enter")
+
+	tell application id "DNtp"
+		repeat with theRecord in theRecords
+			set tagType to missing value
+			try
+				set tagType to tag type of theRecord
+			end try
+
+			if tagType is missing value then
+				logger's info(logCtx, "Record skipped because it is not a tag: " & (name of theRecord as string))
+			else
+				set currentGroup to location group of theRecord
+				if currentGroup is missing value then
+					logger's info(logCtx, "Record skipped because no location group is available: " & (name of theRecord as string))
+				else
+					set recordName to name of theRecord as string
+					set trimmedRecordName to baseLib's trim(recordName)
+					if trimmedRecordName is "" then
+						logger's info(logCtx, "Record skipped because it has no usable name: " & recordName)
+					else
+						set normalizedRecordName to ((current application's NSString's stringWithString:trimmedRecordName)'s uppercaseString()) as string
+						set firstCharacter to rich texts 1 thru 1 of trimmedRecordName
+						set firstCharacter to ((current application's NSString's stringWithString:firstCharacter)'s uppercaseString()) as string
+						set currentGroupName to baseLib's trim(name of currentGroup as string)
+						set currentGroupName to ((current application's NSString's stringWithString:currentGroupName)'s uppercaseString()) as string
+
+						if currentGroupName is equal to firstCharacter then
+							logger's debug(logCtx, "Record already located in matching subgroup: " & recordName)
+						else if normalizedRecordName is equal to firstCharacter then
+							logger's debug(logCtx, "Record skipped because it already looks like an alphabetical subgroup: " & recordName)
+						else
+							my moveRecordToChildGroupNamed(theRecord, currentGroup, firstCharacter)
+						end if
+					end if
+				end if
+			end if
+		end repeat
+	end tell
+
+	logger's trace(logCtx, "exit")
+end moveByFirstCharacter
+
 -- Moves a record to a destination group and creates it if needed.
 -- Parameters:
 --    theRecord:DEVONthink record (class 'record' / DTrc) record to process.
@@ -759,8 +811,50 @@ on moveRecord(theRecord, theDestinationFolderName)
 	logger's trace(logCtx, "exit")
 end moveRecord
 
+-- Moves a record into a named child group below a parent group and creates that child group if needed.
+-- This is used by the first-character tag rule so the alphabet bucket is created on demand.
+-- The alphabet bucket is a normal group inside the Tags hierarchy with `exclude from tagging`
+-- enabled, matching the DEVONthink UI command "Exclude from Tagging".
+-- Parameters:
+--    theRecord:DEVONthink record (class 'record' / DTrc) record to process.
+--    theParentGroup:DEVONthink group (class 'group' / DTgr) parent group used for child lookup.
+--    theChildGroupName:text destination child group name.
+-- Return: none (side effects only).
+on moveRecordToChildGroupNamed(theRecord, theParentGroup, theChildGroupName)
+	set logCtx to my initialize("moveRecordToChildGroupNamed")
+	logger's trace(logCtx, "enter > theChildGroupName: " & theChildGroupName)
+
+	tell application id "DNtp"
+		set destinationGroup to missing value
+		set normalizedChildGroupName to baseLib's trim(theChildGroupName as string)
+		set normalizedChildGroupName to ((current application's NSString's stringWithString:normalizedChildGroupName)'s uppercaseString()) as string
+
+		repeat with aChildRecord in every child of theParentGroup
+			if type of aChildRecord is group then
+				set candidateGroupName to baseLib's trim(name of aChildRecord as string)
+				set candidateGroupName to ((current application's NSString's stringWithString:candidateGroupName)'s uppercaseString()) as string
+				if candidateGroupName is equal to normalizedChildGroupName then
+					set destinationGroup to aChildRecord
+					exit repeat
+				end if
+			end if
+		end repeat
+
+		if destinationGroup is missing value then
+			logger's info(logCtx, "Group will be created now: " & normalizedChildGroupName)
+			set destinationGroup to create record with {name:normalizedChildGroupName, record type:group, exclude from tagging:true} in theParentGroup
+		end if
+
+		if exclude from tagging of destinationGroup is not true then set exclude from tagging of destinationGroup to true
+
+		logger's debug(logCtx, "Record moved from group: " & (name of theParentGroup as string) & " to subgroup: " & normalizedChildGroupName)
+		move record theRecord from theParentGroup to destinationGroup
+	end tell
+
+	logger's trace(logCtx, "exit")
+end moveRecordToChildGroupNamed
+
 -- Opens or creates smart groups for the tag value derived from a configured dimension.
--- If dimension value was not found and a customMetadataField is present the smart groups is created with Custom Metadata.
 -- Parameters:
 --    theSmartGroupSpecifier:record with dimension:text and smartgroupsFolder:text.
 --    theRecords:list<DEVONthink record (class 'record' / DTrc)> records used to derive tag values.
@@ -770,12 +864,7 @@ on openSmartGroup(theSmartGroupSpecifier, theRecords)
 	logger's trace(logCtx, "enter")
 
 	set theDimension to dimension of theSmartGroupSpecifier
-	set customMetadataField to customMetadataField of theSmartGroupSpecifier
 	set smartgroupsFolder to smartgroupsFolder of theSmartGroupSpecifier
-	logger's debug(logCtx, "theSmartGroupSpecifier > theDimension: " & theDimension & ", customMetadataField: " & customMetadataField & ", smartgroupsFolder: " & smartgroupsFolder)
-
-
-	set smartGroupConditionField to "Tags"
 
 	tell application id "DNtp"
 		set theDatabase to database of first item of theRecords
@@ -785,26 +874,12 @@ on openSmartGroup(theSmartGroupSpecifier, theRecords)
 			set theFields to my fieldsFromTags(theRecord, true)
 
 			set theValue to (theFields's objectForKey:theDimension) as string
-			logger's debug(logCtx, "xxxtheValue: " & theValue)
-			if theValue is missing value or theValue is equal to "missing value" then
-				set theValue to get custom meta data for customMetadataField from theRecord
-				set smartGroupConditionField to "CustomMetadata"
-			end if
-
-			set theSmartGroupsRecord to get record at smartgroupsFolder in theDatabase
-			if theSmartGroupsRecord is missing value then
-				set theSmartGroupsRecord to create location smartgroupsFolder in database of theRecord
-			end if
 
 			set theSmartGroup to missing value
 			set theSmartGroupLocation to smartgroupsFolder & "/" & theValue
 			if not (exists record at theSmartGroupLocation in theDatabase) then
-				if smartGroupConditionField is equal to "Tags" then
-					set theSmartGroup to create record with {name:theValue, record type:smart group, search predicates:"tags:" & theValue} in theSmartGroupsRecord
-				else
-					set theSmartGroup to create record with {name:theValue, record type:smart group, search predicates:"md" & customMetadataField & ":" & theValue} in theSmartGroupsRecord
-
-				end if
+				set theSmartGroupsRecord to get record at smartgroupsFolder in theDatabase
+				set theSmartGroup to create record with {name:theValue, record type:smart group, search predicates:"tags:" & theValue} in theSmartGroupsRecord
 				logger's info(logCtx, "Create smart group: " & theSmartGroupLocation)
 			else
 				set theSmartGroup to get record at theSmartGroupLocation in theDatabase
