@@ -254,6 +254,54 @@ on classifyRecords(theRecords)
 	logger's logTraceMetrics()
 end classifyRecords
 
+-- Shows a chooser for existing smart groups in a configured smart groups folder.
+-- Parameters:
+--    smartgroupsFolder:text DEVONthink location path for smart groups.
+--    theDatabase:DEVONthink database (class 'database' / DTkb) database context.
+-- Return: DEVONthink record (class 'record' / DTrc)|missing value selected smart group or missing value on cancel.
+on chooseSmartGroupFromFolder(smartgroupsFolder, theDatabase)
+	set logCtx to my initialize("chooseSmartGroupFromFolder")
+	logger's trace(logCtx, "enter > " & smartgroupsFolder)
+
+	set chooserItems to {}
+	set theSelectedSmartGroup to missing value
+
+	tell application id "DNtp"
+		set theSmartGroupsRecord to get record at smartgroupsFolder in theDatabase
+		if theSmartGroupsRecord is missing value then error "Smart groups folder not found: " & smartgroupsFolder
+
+		repeat with aRecord in every child of theSmartGroupsRecord
+			if type of aRecord is smart group then
+				set end of chooserItems to (name of aRecord as string)
+			end if
+		end repeat
+	end tell
+
+	if chooserItems is {} then error "No smart groups found in folder '" & smartgroupsFolder & "'."
+	set chooserItems to my sortTextListCaseInsensitive(chooserItems)
+
+	set selectedItems to choose from list chooserItems with title "Open Smart Group" with prompt ("Choose a smart group in '" & smartgroupsFolder & "'.") without multiple selections allowed
+	if selectedItems is false then
+		logger's info(logCtx, "Smart group chooser canceled.")
+		logger's trace(logCtx, "exit")
+		return missing value
+	end if
+
+	set selectedItemLabel to first item of selectedItems
+	tell application id "DNtp"
+		repeat with aRecord in every child of theSmartGroupsRecord
+			if type of aRecord is smart group and (name of aRecord as string) is selectedItemLabel then
+				set theSelectedSmartGroup to aRecord
+				exit repeat
+			end if
+		end repeat
+	end tell
+	if theSelectedSmartGroup is missing value then error "Failed to resolve selected smart group."
+
+	logger's trace(logCtx, "exit")
+	return theSelectedSmartGroup
+end chooseSmartGroupFromFolder
+
 -- Creates a sender smart group for the provided records.
 -- Parameters:
 --    theRecords:list<DEVONthink record (class 'record' / DTrc)> records to process.
@@ -919,8 +967,23 @@ on openSmartGroup(theSmartGroupSpecifier, theRecords)
 	set logCtx to my initialize("openSmartGroup")
 	logger's trace(logCtx, "enter")
 
+	set smartgroupsFolder to smartgroupsFolder of theSmartGroupSpecifier
+
 	if theRecords is {} then
-		logger's info(logCtx, "No record selected. Nothing to open.")
+		tell application id "DNtp"
+			set theDatabase to current database
+		end tell
+
+		set selectedSmartGroup to my chooseSmartGroupFromFolder(smartgroupsFolder, theDatabase)
+		if selectedSmartGroup is missing value then
+			logger's trace(logCtx, "exit")
+			return
+		end if
+
+		tell application id "DNtp"
+			open window for record selectedSmartGroup
+		end tell
+
 		logger's trace(logCtx, "exit")
 		return
 	end if
@@ -929,7 +992,6 @@ on openSmartGroup(theSmartGroupSpecifier, theRecords)
 
 	set theDimension to dimension of theSmartGroupSpecifier
 	set customMetadataField to customMetadataField of theSmartGroupSpecifier
-	set smartgroupsFolder to smartgroupsFolder of theSmartGroupSpecifier
 	logger's debug(logCtx, "theSmartGroupSpecifier > theDimension: " & theDimension & ", customMetadataField: " & customMetadataField & ", smartgroupsFolder: " & smartgroupsFolder)
 
 	tell application id "DNtp"
@@ -1563,6 +1625,46 @@ on setTagFromCompareRecord(theRecord, theDatabase, theFields, theDimension)
 
 	logger's trace(logCtx, "exit")
 end setTagFromCompareRecord
+
+-- Sorts a text list in case-insensitive ascending order.
+-- Parameters:
+--    theItems:list<text> list to sort.
+-- Return: list<text> sorted list.
+on sortTextListCaseInsensitive(theItems)
+	set logCtx to my initialize("sortTextListCaseInsensitive")
+	logger's trace(logCtx, "enter")
+
+	set sortedItems to {}
+	repeat with candidate in theItems
+		set candidate to candidate as string
+
+		if sortedItems is {} then
+			set sortedItems to {candidate}
+		else
+			set newSortedItems to {}
+			set didInsert to false
+
+			repeat with existingItem in sortedItems
+				set existingItem to existingItem as string
+				if didInsert is false then
+					set compareResult to ((current application's NSString's stringWithString:candidate)'s localizedCaseInsensitiveCompare:existingItem)
+					if compareResult is current application's NSOrderedAscending then
+						set end of newSortedItems to candidate
+						set didInsert to true
+					end if
+				end if
+				set end of newSortedItems to existingItem
+			end repeat
+
+			if didInsert is false then set end of newSortedItems to candidate
+			set sortedItems to newSortedItems
+		end if
+	end repeat
+
+	logger's trace(logCtx, "exit")
+	return sortedItems
+end sortTextListCaseInsensitive
+
 -- Reads a subject value from metadata for supported records.
 -- Parameters:
 --    theRecord:DEVONthink record (class 'record' / DTrc) record to process.
