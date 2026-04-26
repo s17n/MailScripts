@@ -1,9 +1,5 @@
 .DS_Store
 *.local*
-*.applescript
-Database-Configuration*.scpt
-/src/
-.agents/
-AGENTS.md
+src/
 logs/
 Configuration/tests
