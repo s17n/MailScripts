@@ -346,6 +346,26 @@ on displayNotification(theRecords, pMessagePrefix, pFieldForMessage)
 	logger's trace(logCtx, "exit")
 end displayNotification
 
+-- Ensures the configured smart groups folder exists.
+-- Parameters:
+--    smartgroupsFolder:text DEVONthink location path for smart groups.
+--    theDatabase:DEVONthink database (class 'database' / DTkb) database context.
+-- Return: DEVONthink record (class 'record' / DTrc) smart groups folder record.
+on ensureSmartGroupsFolder(smartgroupsFolder, theDatabase)
+	set logCtx to my initialize("ensureSmartGroupsFolder")
+	logger's trace(logCtx, "enter > " & smartgroupsFolder)
+
+	tell application id "DNtp"
+		set theSmartGroupsRecord to get record at smartgroupsFolder in theDatabase
+		if theSmartGroupsRecord is missing value then
+			set theSmartGroupsRecord to create location smartgroupsFolder in theDatabase
+		end if
+	end tell
+
+	logger's trace(logCtx, "exit")
+	return theSmartGroupsRecord
+end ensureSmartGroupsFolder
+
 -- Checks whether all requested dimensions are present in the field dictionary.
 -- Parameters:
 --    theFields:NSMutableDictionary field dictionary used for value lookup.
@@ -431,6 +451,41 @@ on fieldsFromTags(theRecord, interactiveMode)
 	logger's trace(logCtx, "exit")
 	return fields
 end fieldsFromTags
+
+-- Finds an existing smart group or creates it with the requested predicate.
+-- Parameters:
+--    smartGroupInfo:record with value:text and conditionField:text.
+--    customMetadataField:text custom metadata field used for metadata predicates.
+--    smartgroupsFolder:text DEVONthink location path for smart groups.
+--    theSmartGroupsRecord:DEVONthink record (class 'record' / DTrc) parent group.
+--    theDatabase:DEVONthink database (class 'database' / DTkb) database context.
+-- Return: DEVONthink record (class 'record' / DTrc) smart group record.
+on findOrCreateSmartGroup(smartGroupInfo, customMetadataField, smartgroupsFolder, theSmartGroupsRecord, theDatabase)
+	set logCtx to my initialize("findOrCreateSmartGroup")
+
+	set theValue to value of smartGroupInfo
+	set smartGroupConditionField to conditionField of smartGroupInfo
+	set theSmartGroupLocation to smartgroupsFolder & "/" & theValue
+	logger's trace(logCtx, "enter > " & theSmartGroupLocation)
+
+	tell application id "DNtp"
+		if not (exists record at theSmartGroupLocation in theDatabase) then
+			if smartGroupConditionField is equal to "Tags" then
+				set theSmartGroup to create record with {name:theValue, record type:smart group, search predicates:"tags:" & theValue} in theSmartGroupsRecord
+			else
+				set theSmartGroup to create record with {name:theValue, record type:smart group, search predicates:"md" & customMetadataField & ":" & theValue} in theSmartGroupsRecord
+			end if
+			logger's info(logCtx, "Create smart group: " & theSmartGroupLocation)
+		else
+			set theSmartGroup to get record at theSmartGroupLocation in theDatabase
+		end if
+	end tell
+
+	if theSmartGroup is missing value then error "No Smart Group found."
+
+	logger's trace(logCtx, "exit")
+	return theSmartGroup
+end findOrCreateSmartGroup
 
 -- Determines the effective date to use for classification.
 -- Parameters:
@@ -864,51 +919,29 @@ on openSmartGroup(theSmartGroupSpecifier, theRecords)
 	set logCtx to my initialize("openSmartGroup")
 	logger's trace(logCtx, "enter")
 
+	if theRecords is {} then
+		logger's info(logCtx, "No record selected. Nothing to open.")
+		logger's trace(logCtx, "exit")
+		return
+	end if
+
+	if length of theRecords > 1 then error "openSmartGroup expects zero or one record."
+
 	set theDimension to dimension of theSmartGroupSpecifier
 	set customMetadataField to customMetadataField of theSmartGroupSpecifier
 	set smartgroupsFolder to smartgroupsFolder of theSmartGroupSpecifier
 	logger's debug(logCtx, "theSmartGroupSpecifier > theDimension: " & theDimension & ", customMetadataField: " & customMetadataField & ", smartgroupsFolder: " & smartgroupsFolder)
 
-
-	set smartGroupConditionField to "Tags"
-
 	tell application id "DNtp"
 		set theDatabase to database of first item of theRecords
 
 		my initializeDatabaseConfiguration(theDatabase)
+		set theSmartGroupsRecord to my ensureSmartGroupsFolder(smartgroupsFolder, theDatabase)
+
 		repeat with theRecord in theRecords
-			set theFields to my fieldsFromTags(theRecord, true)
-
-			set theValue to (theFields's objectForKey:theDimension) as string
-			logger's debug(logCtx, "xxxtheValue: " & theValue)
-			if theValue is missing value or theValue is equal to "missing value" then
-				set theValue to get custom meta data for customMetadataField from theRecord
-				set smartGroupConditionField to "CustomMetadata"
-			end if
-
-			set theSmartGroupsRecord to get record at smartgroupsFolder in theDatabase
-			if theSmartGroupsRecord is missing value then
-				set theSmartGroupsRecord to create location smartgroupsFolder in database of theRecord
-			end if
-
-			set theSmartGroup to missing value
-			set theSmartGroupLocation to smartgroupsFolder & "/" & theValue
-			if not (exists record at theSmartGroupLocation in theDatabase) then
-				if smartGroupConditionField is equal to "Tags" then
-					set theSmartGroup to create record with {name:theValue, record type:smart group, search predicates:"tags:" & theValue} in theSmartGroupsRecord
-				else
-					set theSmartGroup to create record with {name:theValue, record type:smart group, search predicates:"md" & customMetadataField & ":" & theValue} in theSmartGroupsRecord
-
-				end if
-				logger's info(logCtx, "Create smart group: " & theSmartGroupLocation)
-			else
-				set theSmartGroup to get record at theSmartGroupLocation in theDatabase
-			end if
-
-			if theSmartGroup is missing value then error "No Smart Group found."
-
+			set smartGroupInfo to my resolveSmartGroupInfoForRecord(theSmartGroupSpecifier, theRecord)
+			set theSmartGroup to my findOrCreateSmartGroup(smartGroupInfo, customMetadataField, smartgroupsFolder, theSmartGroupsRecord, theDatabase)
 			open window for record theSmartGroup
-
 		end repeat
 	end tell
 
@@ -1114,6 +1147,36 @@ on replaceText(findText, replaceText, sourceText)
 	logger's trace(logCtx, "exit > " & newText)
 	return newText
 end replaceText
+
+-- Resolves the smart group value and predicate source for a record.
+-- Parameters:
+--    theSmartGroupSpecifier:record with dimension:text and customMetadataField:text.
+--    theRecord:DEVONthink record (class 'record' / DTrc) record used for lookup.
+-- Return: record with value:text and conditionField:text.
+on resolveSmartGroupInfoForRecord(theSmartGroupSpecifier, theRecord)
+	set logCtx to my initialize("resolveSmartGroupInfoForRecord")
+	logger's trace(logCtx, "enter")
+
+	set theDimension to dimension of theSmartGroupSpecifier
+	set customMetadataField to customMetadataField of theSmartGroupSpecifier
+	set smartGroupConditionField to "Tags"
+
+	set theFields to my fieldsFromTags(theRecord, true)
+	set theValue to theFields's objectForKey:theDimension
+
+	if theValue is missing value then
+		tell application id "DNtp" to set theValue to get custom meta data for customMetadataField from theRecord
+		set smartGroupConditionField to "CustomMetadata"
+	end if
+
+	if theValue is missing value then error "No value found for smart group dimension '" & theDimension & "' or custom metadata field '" & customMetadataField & "'."
+	set theValue to theValue as string
+	if theValue is "" or theValue is "missing value" then error "No value found for smart group dimension '" & theDimension & "' or custom metadata field '" & customMetadataField & "'."
+
+	logger's debug(logCtx, "Smart group value: " & theValue & ", conditionField: " & smartGroupConditionField)
+	logger's trace(logCtx, "exit")
+	return {value:theValue, conditionField:smartGroupConditionField}
+end resolveSmartGroupInfoForRecord
 
 -- Computes and writes a custom metadata value when required.
 -- Parameters:
