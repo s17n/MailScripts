@@ -15,7 +15,9 @@ This is an engineering inference from AppleEvent/OSA behavior and observed runti
 2. The script relaunches itself externally via:
    `/usr/bin/osascript -l AppleScript "<same-script-path>" --worker`
 3. In worker mode (`--worker`), the script executes `runCore()`.
-4. `runCore()` loads `~/.mailscripts/config.scpt`, resolves `DocLibrary.scpt`, reads `selection`, and executes the business handler.
+4. `runCore()` loads `~/.mailscripts/config.scpt`, resolves `DocLibrary.scpt`, reads `selection` (which can be empty), and executes the business handler.
+
+For handlers that support an empty selection (for example smart-group navigation commands), the fallback behavior is implemented inside the library handler itself.
 
 ## Script Structure
 

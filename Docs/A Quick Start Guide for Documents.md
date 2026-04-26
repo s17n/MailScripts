@@ -97,6 +97,7 @@ The following scripts has been created to be added to the Scripts menu:
 - **Set Name and Metadata** ⌃⇧⌘U: Set record name and updates metadata. At least one record must be selected.
 - **Archive Records** ⌃⇧⌘A: Move record to archive folder. At least one record must be selected.
 - **Verify Records** ⌃⇧⌘V: Start verification of record tags, field values and formats.
+- **Open Year / Sender / Subject / Context** ⌥⇧⌘3 / ⌥⇧⌘4 / ⌥⇧⌘5 / ⌥⇧⌘6: With one selected record, resolves the target value and opens (or creates) the corresponding smart group in the configured smart-groups folder; with no selected record, shows an alphabetically sorted chooser with existing smart groups under the configured `smartgroupsFolder` and opens the selected smart group.
 
 The following script has been created to be attached to a Smart Rule:
 
@@ -184,4 +185,3 @@ In a nutshell, a good fit for me is working with:
 
 - `Replicants` for Projects and
 - `Smart Groups`for Areas 
-
