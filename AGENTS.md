@@ -14,6 +14,12 @@
 1. Write all documentation in English.
 2. When updating existing documentation, translate affected German content to English.
 
+## Code Documentation (mandatory)
+
+1. For non-trivial handlers, add short comments for each functional block so the flow stays readable.
+2. Do not comment every line; avoid obvious comments that only restate the code.
+3. When behavior changes, update related comments in the same edit.
+
 ## DEVONthink Automation Dictionary (mandatory)
 
 1. For DEVONthink automation work, use `/Applications/DEVONthink.app/Contents/Resources/DEVONthink.sdef` as the primary AppleScript dictionary reference.

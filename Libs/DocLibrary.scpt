@@ -266,10 +266,23 @@ on chooseSmartGroupFromFolder(smartgroupsFolder, theDatabase)
 	set chooserItems to {}
 	set theSelectedSmartGroup to missing value
 
+	-- Resolve the configured smart groups folder in the preferred database context.
+	-- If the explicit context fails, retry with DEVONthink's default/current context.
 	tell application id "DNtp"
-		set theSmartGroupsRecord to get record at smartgroupsFolder in theDatabase
+		set theSmartGroupsRecord to missing value
+		if theDatabase is missing value then
+			set theSmartGroupsRecord to get record at smartgroupsFolder
+		else
+			try
+				set theSmartGroupsRecord to get record at smartgroupsFolder in theDatabase
+			on error
+				set theSmartGroupsRecord to get record at smartgroupsFolder
+			end try
+		end if
+
 		if theSmartGroupsRecord is missing value then error "Smart groups folder not found: " & smartgroupsFolder
 
+		-- Build chooser labels from direct child smart groups only.
 		repeat with aRecord in every child of theSmartGroupsRecord
 			if type of aRecord is smart group then
 				set end of chooserItems to (name of aRecord as string)
@@ -278,8 +291,20 @@ on chooseSmartGroupFromFolder(smartgroupsFolder, theDatabase)
 	end tell
 
 	if chooserItems is {} then error "No smart groups found in folder '" & smartgroupsFolder & "'."
-	set chooserItems to my sortTextListCaseInsensitive(chooserItems)
 
+	-- Sort labels case-insensitively via shell `sort` and always restore TIDs.
+	set oldTIDs to AppleScript's text item delimiters
+	try
+		set AppleScript's text item delimiters to linefeed
+		set sortedText to do shell script "/usr/bin/printf %s " & quoted form of (chooserItems as text) & " | /usr/bin/sort -f"
+		set chooserItems to paragraphs of sortedText
+	on error errMsg number errNum
+		set AppleScript's text item delimiters to oldTIDs
+		error errMsg number errNum
+	end try
+	set AppleScript's text item delimiters to oldTIDs
+
+	-- Let the user choose one smart group; cancel keeps behavior non-destructive.
 	set selectedItems to choose from list chooserItems with title "Open Smart Group" with prompt ("Choose a smart group in '" & smartgroupsFolder & "'.") without multiple selections allowed
 	if selectedItems is false then
 		logger's info(logCtx, "Smart group chooser canceled.")
@@ -287,6 +312,7 @@ on chooseSmartGroupFromFolder(smartgroupsFolder, theDatabase)
 		return missing value
 	end if
 
+	-- Resolve the selected label back to its record object.
 	set selectedItemLabel to first item of selectedItems
 	tell application id "DNtp"
 		repeat with aRecord in every child of theSmartGroupsRecord
@@ -969,10 +995,23 @@ on openSmartGroup(theSmartGroupSpecifier, theRecords)
 
 	set smartgroupsFolder to smartgroupsFolder of theSmartGroupSpecifier
 
+	-- Interactive mode: no selection means pick an existing smart group from folder.
 	if theRecords is {} then
+		set theDatabase to missing value
+
+		-- Resolve an active database robustly (current database first, then current group -> database).
 		tell application id "DNtp"
-			set theDatabase to current database
+			try
+				set theDatabase to get current database
+			end try
+			if theDatabase is missing value then
+				try
+					set theCurrentGroup to get current group
+					if theCurrentGroup is not missing value then set theDatabase to database of theCurrentGroup
+				end try
+			end if
 		end tell
+		if theDatabase is missing value then error "No current database available."
 
 		set selectedSmartGroup to my chooseSmartGroupFromFolder(smartgroupsFolder, theDatabase)
 		if selectedSmartGroup is missing value then
@@ -988,6 +1027,7 @@ on openSmartGroup(theSmartGroupSpecifier, theRecords)
 		return
 	end if
 
+	-- Derived mode: exactly one source record is supported.
 	if length of theRecords > 1 then error "openSmartGroup expects zero or one record."
 
 	set theDimension to dimension of theSmartGroupSpecifier
@@ -997,6 +1037,7 @@ on openSmartGroup(theSmartGroupSpecifier, theRecords)
 	tell application id "DNtp"
 		set theDatabase to database of first item of theRecords
 
+		-- Resolve/create folder context and open/create the target smart group from derived value.
 		my initializeDatabaseConfiguration(theDatabase)
 		set theSmartGroupsRecord to my ensureSmartGroupsFolder(smartgroupsFolder, theDatabase)
 
@@ -1625,45 +1666,6 @@ on setTagFromCompareRecord(theRecord, theDatabase, theFields, theDimension)
 
 	logger's trace(logCtx, "exit")
 end setTagFromCompareRecord
-
--- Sorts a text list in case-insensitive ascending order.
--- Parameters:
---    theItems:list<text> list to sort.
--- Return: list<text> sorted list.
-on sortTextListCaseInsensitive(theItems)
-	set logCtx to my initialize("sortTextListCaseInsensitive")
-	logger's trace(logCtx, "enter")
-
-	set sortedItems to {}
-	repeat with candidate in theItems
-		set candidate to candidate as string
-
-		if sortedItems is {} then
-			set sortedItems to {candidate}
-		else
-			set newSortedItems to {}
-			set didInsert to false
-
-			repeat with existingItem in sortedItems
-				set existingItem to existingItem as string
-				if didInsert is false then
-					set compareResult to ((current application's NSString's stringWithString:candidate)'s localizedCaseInsensitiveCompare:existingItem)
-					if compareResult is current application's NSOrderedAscending then
-						set end of newSortedItems to candidate
-						set didInsert to true
-					end if
-				end if
-				set end of newSortedItems to existingItem
-			end repeat
-
-			if didInsert is false then set end of newSortedItems to candidate
-			set sortedItems to newSortedItems
-		end if
-	end repeat
-
-	logger's trace(logCtx, "exit")
-	return sortedItems
-end sortTextListCaseInsensitive
 
 -- Reads a subject value from metadata for supported records.
 -- Parameters:
