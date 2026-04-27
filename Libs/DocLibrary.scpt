@@ -228,24 +228,22 @@ on classifyRecords(theRecords)
 		set {recordsSelected, recordsProcessed} to {0, 0}
 		repeat with theRecord in theRecords
 			set recordsSelected to recordsSelected + 1
-			if type of theRecord is not group and type of theRecord is not smart group then
-				set recordsProcessed to recordsProcessed + 1
+			set recordsProcessed to recordsProcessed + 1
 
-				set tagFields to my fieldsFromTags(theRecord, true)
+			set tagFields to my fieldsFromTags(theRecord, true)
 
-				-- Date, wenn ClassificationDate gesetzt
-				if pClassificationDate is not missing value and pClassificationDate is not "" then
-					if length of pDateDimensions > 0 then
-						my setDateTags(theRecord, tagFields, pClassificationDate)
-					end if
+			-- Date, wenn ClassificationDate gesetzt
+			if pClassificationDate is not missing value and pClassificationDate is not "" then
+				if length of pDateDimensions > 0 then
+					my setDateTags(theRecord, tagFields, pClassificationDate)
 				end if
-
-				-- restliche Dimensionen
-				repeat with aCompareDimension in pCompareDimensions
-					my setTagFromCompareRecord(theRecord, theDatabase, tagFields, aCompareDimension)
-				end repeat
-
 			end if
+
+			-- restliche Dimensionen
+			repeat with aCompareDimension in pCompareDimensions
+				my setTagFromCompareRecord(theRecord, theDatabase, tagFields, aCompareDimension)
+			end repeat
+
 		end repeat
 		tell logger to info(logCtx, "Records selected: " & recordsSelected & ", Records processed:  " & recordsProcessed)
 	end tell
@@ -1758,35 +1756,31 @@ on updateRecordsMetadata(theRecords)
 		set {recordsSelected, recordsProcessed} to {0, 0}
 		repeat with theRecord in theRecords
 			set recordsSelected to recordsSelected + 1
-			if type of theRecord is group or type of theRecord is smart group then
-				set comment of theRecord to ""
+			set tagFields to my fieldsFromTags(theRecord, true)
+
+			if not my existDimension(tagFields, pDateDimensions) then
+				tell logger to info_r(theRecord, "Can't update metadata due to missing Date tag(s).")
 			else
-				set tagFields to my fieldsFromTags(theRecord, true)
+				set recordsProcessed to recordsProcessed + 1
 
-				if not my existDimension(tagFields, pDateDimensions) then
-					tell logger to info_r(theRecord, "Can't update metadata due to missing Date tag(s).")
-				else
-					set recordsProcessed to recordsProcessed + 1
+				-- Set Name
+				if pNameTemplate is not missing value and pNameTemplate is not "" then
+					my setName(theRecord, tagFields)
+				end if
 
-					-- Set Name
-					if pNameTemplate is not missing value and pNameTemplate is not "" then
-						my setName(theRecord, tagFields)
-					end if
+				-- Set Custom Metadata
+				set customMetadataFieldIndex to 0
+				repeat with aCustomMetadataField in pCustomMetadataFields
+					set customMetadataFieldIndex to customMetadataFieldIndex + 1
+					my setCustomMetadata(customMetadataFieldIndex, theRecord, tagFields, "", "")
+				end repeat
 
-					-- Set Custom Metadata
-					set customMetadataFieldIndex to 0
-					repeat with aCustomMetadataField in pCustomMetadataFields
-						set customMetadataFieldIndex to customMetadataFieldIndex + 1
-						my setCustomMetadata(customMetadataFieldIndex, theRecord, tagFields, "", "")
+				-- Set Comments
+				if length of pCommentsFields > 0 then
+					set comment of theRecord to ""
+					repeat with aFinderCommentsField in pCommentsFields
+						my setFinderComment(aFinderCommentsField, theRecord)
 					end repeat
-
-					-- Set Comments
-					if length of pCommentsFields > 0 then
-						set comment of theRecord to ""
-						repeat with aFinderCommentsField in pCommentsFields
-							my setFinderComment(aFinderCommentsField, theRecord)
-						end repeat
-					end if
 				end if
 			end if
 		end repeat
