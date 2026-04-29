@@ -27,7 +27,7 @@ The project reduces manual work in email and document processing. Standard tasks
 - Custom Metadata can be enriched directly though PopClip.
 - Workflow can be run step-by-step (recommended for the beginning), partially automated (recommended for quality assurance) or fully automated.
 - Classification data can be changed at any time - dependend fields reflects the changes.
-- Optional contact/sender processing and smart-group creation.
+- Optional contact/sender processing and smart-group navigation for classification values and DEVONthink labels.
 - Database and content type specific [configurations](Docs/configuration.md) with reasonable defaults.
 
 ## Requirements

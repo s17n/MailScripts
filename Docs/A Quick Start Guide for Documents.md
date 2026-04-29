@@ -98,6 +98,7 @@ The following scripts has been created to be added to the Scripts menu:
 - **Archive Records** ⌃⇧⌘A: Move record to archive folder. At least one record must be selected.
 - **Verify Records** ⌃⇧⌘V: Start verification of record tags, field values and formats.
 - **Open Year / Sender / Subject / Context** ⌥⇧⌘3 / ⌥⇧⌘4 / ⌥⇧⌘5 / ⌥⇧⌘6: With one selected record, resolves the target value and opens (or creates) the corresponding smart group in the configured smart-groups folder; with no selected record, shows an alphabetically sorted chooser with existing smart groups under the configured `smartgroupsFolder` and opens the selected smart group.
+- **Open Label** ⌥⇧⌘L: With one selected record, opens (or creates) a smart group for the record's assigned DEVONthink label under `03 Resources/Label`. If the selected record has no label, the script shows a label chooser and creates or opens the smart group for the chosen label. With no selected record, it behaves like the other smart-group navigation commands and lets you choose an existing smart group from the configured label smart-groups folder.
 
 The following script has been created to be attached to a Smart Rule:
 
