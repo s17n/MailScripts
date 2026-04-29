@@ -6,8 +6,8 @@ set docLib to load script (pDocLibraryPath of config)
 try
 	tell application id "DNtp" to set theSelection to every selected record
 
-	set theSmartGroupSpecifier to {dimension:"03 Year", customMetadataField:"date", smartgroupsFolder:"03 Resources/Date"}
-	docLib's openSmartGroup(theSmartGroupSpecifier, theSelection)
+	set theSmartGroupSpecifier to {smartgroupsFolder:"03 Resources/Label"}
+	docLib's openLabelSmartGroup(theSmartGroupSpecifier, theSelection)
 on error errorMessage number errorNumber
 	display alert "DEVONthink" message (errorMessage & " (" & errorNumber & ")") as warning
 end try

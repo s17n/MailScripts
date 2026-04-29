@@ -252,6 +252,53 @@ on classifyRecords(theRecords)
 	logger's logTraceMetrics()
 end classifyRecords
 
+-- Resolves the effective label for a record, optionally asking the user to choose one.
+-- Parameters:
+--    theRecord:DEVONthink record (class 'record' / DTrc) record used for lookup.
+-- Return: record with labelIndex:integer and labelName:text, or missing value on cancel.
+on chooseLabelInfoForRecord(theRecord)
+	set logCtx to my initialize("chooseLabelInfoForRecord")
+	logger's trace(logCtx, "enter")
+
+	set labelIndex to 0
+	set labelNames to {}
+
+	tell application id "DNtp"
+		set labelIndex to label of theRecord
+		set labelNames to label names
+	end tell
+
+	if labelNames is missing value or labelNames is {} then error "No DEVONthink labels are available."
+	if labelIndex > 0 then
+		if labelIndex > (count of labelNames) then error "Label index out of range: " & labelIndex
+		set labelName to item labelIndex of labelNames as string
+		logger's trace(logCtx, "exit")
+		return {labelIndex:labelIndex, labelName:labelName}
+	end if
+
+	-- No label assigned: let the user pick one explicit label index from DEVONthink's label list.
+	set selectedItems to choose from list labelNames with title "Open Label Smart Group" with prompt "No label is assigned to the selected record. Choose a label." OK button name "Choose" cancel button name "Cancel" without multiple selections allowed
+	if selectedItems is false then
+		logger's info(logCtx, "Label chooser canceled.")
+		logger's trace(logCtx, "exit")
+		return missing value
+	end if
+
+	set selectedLabelName to first item of selectedItems as string
+	set selectedLabelIndex to 0
+	repeat with labelListIndex from 1 to count of labelNames
+		if item labelListIndex of labelNames as string is selectedLabelName then
+			set selectedLabelIndex to labelListIndex
+			exit repeat
+		end if
+	end repeat
+
+	if selectedLabelIndex is 0 then error "Failed to resolve selected label index."
+
+	logger's trace(logCtx, "exit")
+	return {labelIndex:selectedLabelIndex, labelName:selectedLabelName}
+end chooseLabelInfoForRecord
+
 -- Shows a chooser for existing smart groups in a configured smart groups folder.
 -- Parameters:
 --    smartgroupsFolder:text DEVONthink location path for smart groups.
@@ -526,7 +573,7 @@ end fieldsFromTags
 
 -- Finds an existing smart group or creates it with the requested predicate.
 -- Parameters:
---    smartGroupInfo:record with value:text and conditionField:text.
+--    smartGroupInfo:record with value:text, conditionField:text, and optional queryValue:text.
 --    customMetadataField:text custom metadata field used for metadata predicates.
 --    smartgroupsFolder:text DEVONthink location path for smart groups.
 --    theSmartGroupsRecord:DEVONthink record (class 'record' / DTrc) parent group.
@@ -537,15 +584,25 @@ on findOrCreateSmartGroup(smartGroupInfo, customMetadataField, smartgroupsFolder
 
 	set theValue to value of smartGroupInfo
 	set smartGroupConditionField to conditionField of smartGroupInfo
+	set smartGroupQueryValue to theValue
+	try
+		set smartGroupQueryValue to queryValue of smartGroupInfo
+	end try
+	if smartGroupQueryValue is missing value then set smartGroupQueryValue to theValue
+	set smartGroupQueryValue to smartGroupQueryValue as string
 	set theSmartGroupLocation to smartgroupsFolder & "/" & theValue
 	logger's trace(logCtx, "enter > " & theSmartGroupLocation)
 
 	tell application id "DNtp"
 		if not (exists record at theSmartGroupLocation in theDatabase) then
 			if smartGroupConditionField is equal to "Tags" then
-				set theSmartGroup to create record with {name:theValue, record type:smart group, search predicates:"tags:" & theValue} in theSmartGroupsRecord
+				set theSmartGroup to create record with {name:theValue, record type:smart group, search predicates:"tags:" & smartGroupQueryValue} in theSmartGroupsRecord
+			else if smartGroupConditionField is equal to "CustomMetadata" then
+				set theSmartGroup to create record with {name:theValue, record type:smart group, search predicates:"md" & customMetadataField & ":" & smartGroupQueryValue} in theSmartGroupsRecord
+			else if smartGroupConditionField is equal to "Label" then
+				set theSmartGroup to create record with {name:theValue, record type:smart group, search predicates:"label:" & smartGroupQueryValue} in theSmartGroupsRecord
 			else
-				set theSmartGroup to create record with {name:theValue, record type:smart group, search predicates:"md" & customMetadataField & ":" & theValue} in theSmartGroupsRecord
+				error "Unsupported smart group condition field: " & smartGroupConditionField
 			end if
 			logger's info(logCtx, "Create smart group: " & theSmartGroupLocation)
 		else
@@ -980,6 +1037,76 @@ on moveRecordToChildGroupNamed(theRecord, theParentGroup, theChildGroupName)
 
 	logger's trace(logCtx, "exit")
 end moveRecordToChildGroupNamed
+
+-- Opens or creates a smart group for the record label.
+-- If the record has no label, the user can select one from DEVONthink label names.
+-- Parameters:
+--    theSmartGroupSpecifier:record with smartgroupsFolder:text.
+--    theRecords:list<DEVONthink record (class 'record' / DTrc)> records used to derive label values.
+-- Return: none (side effects only).
+on openLabelSmartGroup(theSmartGroupSpecifier, theRecords)
+	set logCtx to my initialize("openLabelSmartGroup")
+	logger's trace(logCtx, "enter")
+
+	set smartgroupsFolder to smartgroupsFolder of theSmartGroupSpecifier
+
+	-- Interactive mode: no selection means pick an existing smart group from folder.
+	if theRecords is {} then
+		set theDatabase to missing value
+
+		-- Resolve an active database robustly (current database first, then current group -> database).
+		tell application id "DNtp"
+			try
+				set theDatabase to get current database
+			end try
+			if theDatabase is missing value then
+				try
+					set theCurrentGroup to get current group
+					if theCurrentGroup is not missing value then set theDatabase to database of theCurrentGroup
+				end try
+			end if
+		end tell
+		if theDatabase is missing value then error "No current database available."
+
+		set selectedSmartGroup to my chooseSmartGroupFromFolder(smartgroupsFolder, theDatabase)
+		if selectedSmartGroup is missing value then
+			logger's trace(logCtx, "exit")
+			return
+		end if
+
+		tell application id "DNtp"
+			open window for record selectedSmartGroup
+		end tell
+
+		logger's trace(logCtx, "exit")
+		return
+	end if
+
+	-- Derived mode: exactly one source record is supported.
+	if length of theRecords > 1 then error "openLabelSmartGroup expects zero or one record."
+
+	set theRecord to first item of theRecords
+	set labelInfo to my chooseLabelInfoForRecord(theRecord)
+	if labelInfo is missing value then
+		logger's trace(logCtx, "exit")
+		return
+	end if
+
+	set labelIndex to labelIndex of labelInfo
+	set labelName to labelName of labelInfo
+	set smartGroupInfo to {value:labelName, queryValue:(labelIndex as string), conditionField:"Label"}
+
+	tell application id "DNtp"
+		set theDatabase to database of theRecord
+
+		my initializeDatabaseConfiguration(theDatabase)
+		set theSmartGroupsRecord to my ensureSmartGroupsFolder(smartgroupsFolder, theDatabase)
+		set theSmartGroup to my findOrCreateSmartGroup(smartGroupInfo, "", smartgroupsFolder, theSmartGroupsRecord, theDatabase)
+		open window for record theSmartGroup
+	end tell
+
+	logger's trace(logCtx, "exit")
+end openLabelSmartGroup
 
 -- Opens or creates smart groups for the tag value derived from a configured dimension.
 -- If the dimension value was not found and a customMetadataField is present, the smart group is created with custom metadata.

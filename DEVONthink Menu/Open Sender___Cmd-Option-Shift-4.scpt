@@ -4,7 +4,7 @@ set config to load script configPath
 set docLib to load script (pDocLibraryPath of config)
 
 try
-	tell application id "DNtp" to set theSelection to get selection
+	tell application id "DNtp" to set theSelection to every selected record
 
 	set theSmartGroupSpecifier to {dimension:"04 Sender", customMetadataField:"sender", smartgroupsFolder:"03 Resources/Sender"}
 	docLib's openSmartGroup(theSmartGroupSpecifier, theSelection)
