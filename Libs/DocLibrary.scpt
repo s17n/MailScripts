@@ -23,6 +23,7 @@ property pIssueCount : 0
 property pSmartGroupConditionCustomMetadata : "CustomMetadata"
 property pSmartGroupConditionLabel : "Label"
 property pSmartGroupConditionTags : "Tags"
+property pPerformanceTraceManagedByCaller : false
 
 --- DATABASE CONFIGURATION PROPERTIES: START
 
@@ -138,6 +139,17 @@ on archiveRecords(theRecords)
 	logger's trace(logCtx, "exit")
 end archiveRecords
 
+-- Starts a caller-managed performance trace run.
+-- Parameters:
+--    theTraceName:text human-readable caller/run name.
+-- Return: none (side effects only).
+on beginPerformanceTrace(theTraceName)
+	set logCtx to my initialize("beginPerformanceTrace")
+	set pPerformanceTraceManagedByCaller to true
+	logger's resetTraceMetrics()
+	logger's debug(logCtx, "Started performance trace: " & theTraceName)
+end beginPerformanceTrace
+
 -- Builds a dimension-to-cardinality dictionary from configuration data.
 -- Parameters:
 --    theConstraints:list<list{text,integer}> configured dimension cardinality constraints.
@@ -221,7 +233,7 @@ end buildDimensionsDictionaryFromDEVONthink
 -- Return: none (side effects only).
 on classifyRecords(theRecords)
 	set logCtx to my initialize("classifyRecords")
-	logger's resetTraceMetrics()
+	if not pPerformanceTraceManagedByCaller then logger's resetTraceMetrics()
 	logger's trace(logCtx, "enter")
 
 	tell application id "DNtp"
@@ -252,7 +264,7 @@ on classifyRecords(theRecords)
 	end tell
 
 	logger's trace(logCtx, "exit")
-	logger's logTraceMetrics()
+	if not pPerformanceTraceManagedByCaller then logger's logTraceMetrics()
 end classifyRecords
 
 -- Resolves the effective label for a record, optionally asking the user to choose one.
@@ -624,6 +636,17 @@ on findOrCreateSmartGroup(smartGroupInfo, customMetadataField, smartgroupsFolder
 	logger's trace(logCtx, "exit")
 	return theSmartGroup
 end findOrCreateSmartGroup
+
+-- Finishes a caller-managed performance trace run and writes metrics.
+-- Parameters:
+--    theTraceName:text human-readable caller/run name.
+-- Return: none (side effects only).
+on finishPerformanceTrace(theTraceName)
+	set logCtx to my initialize("finishPerformanceTrace")
+	logger's debug(logCtx, "Finished performance trace: " & theTraceName)
+	logger's logTraceMetrics()
+	set pPerformanceTraceManagedByCaller to false
+end finishPerformanceTrace
 
 -- Determines the effective date to use for classification.
 -- Parameters:
@@ -1877,7 +1900,7 @@ end updateDimensionsCache
 -- Return: none (side effects only).
 on updateRecordsMetadata(theRecords)
 	set logCtx to my initialize("updateRecordsMetadata")
-	logger's resetTraceMetrics()
+	if not pPerformanceTraceManagedByCaller then logger's resetTraceMetrics()
 	logger's trace(logCtx, "enter")
 
 	tell application id "DNtp"
@@ -1921,7 +1944,7 @@ on updateRecordsMetadata(theRecords)
 	end tell
 
 	logger's trace(logCtx, "exit")
-	logger's logTraceMetrics()
+	if not pPerformanceTraceManagedByCaller then logger's logTraceMetrics()
 end updateRecordsMetadata
 
 -- Validates tag consistency for records at a location and logs metrics.

@@ -2,6 +2,13 @@
 use AppleScript version "2.4"
 use scripting additions
 
+on configPath()
+	set homePath to do shell script "/usr/bin/printf %s \"$HOME\""
+	if homePath is missing value or homePath is "" then set homePath to POSIX path of (path to home folder)
+	if homePath does not end with "/" then set homePath to homePath & "/"
+	return homePath & ".mailscripts/config.scpt"
+end configPath
+
 on hasWorkerFlag(theArgs)
 	if class of theArgs is not list then return false
 	repeat with anArg in theArgs
@@ -17,7 +24,7 @@ on run argv
 		my runCore()
 	else
 		try
-			set selfPath to POSIX path of (path to me)
+			set selfPath to my scriptPath()
 			do shell script ("/usr/bin/osascript -l AppleScript " & quoted form of selfPath & " --worker")
 		on error errorMessage number errorNumber
 			display alert "DEVONthink" message ("Failed to launch external worker: " & errorMessage & " (" & errorNumber & ")") as warning
@@ -26,8 +33,7 @@ on run argv
 end run
 
 on runCore()
-	set configPath to (POSIX path of (path to home folder)) & ".mailscripts/config.scpt"
-	set config to load script configPath
+	set config to load script (my configPath())
 	set docLib to load script (pDocLibraryPath of config)
 
 	try
@@ -39,3 +45,8 @@ on runCore()
 		display alert "DEVONthink" message (errorMessage & " (" & errorNumber & ")") as warning
 	end try
 end runCore
+
+on scriptPath()
+	set config to load script (my configPath())
+	return (pMailScriptsPath of config) & "/DEVONthink Menu/Update Records Metadata___Cmd-Ctrl-Shift-U.scpt"
+end scriptPath

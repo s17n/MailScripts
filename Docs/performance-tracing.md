@@ -11,7 +11,8 @@ This document explains how runtime tracing works in `Logger.scpt` and what must 
   - inclusive total runtime
   - exclusive total runtime (child operation time is subtracted)
   - max exclusive runtime
-- `classifyRecords` starts a clean run with `logger's resetTraceMetrics()` and prints results with `logger's logTraceMetrics()`.
+- Most DEVONthink menu scripts start a clean run with `docLib's beginPerformanceTrace(...)` before calling a `DocLibrary` handler and print results with `docLib's finishPerformanceTrace(...)` after the handler returns.
+- `classifyRecords` and `updateRecordsMetadata` start and print their own trace run directly in `DocLibrary`, including when invoked from `/DEVONthink Menu`.
 
 ## Output
 
