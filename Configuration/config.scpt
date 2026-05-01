@@ -26,3 +26,6 @@ property pLogLevel : 2
 
 -- Optional path for file logging; leave empty to disable file output
 property pLogFilePath : pMailScriptsPath & "/logs/mailscripts.log"
+
+-- Global toggle for DEVONthink menu worker execution pattern.
+property pUseWorker : true

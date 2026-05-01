@@ -1,24 +1,18 @@
 #@osa-lang:AppleScript
-set config to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
-set docLib to load script pDocLibraryPath of config
-set traceName to "DEVONthink Menu/Import Mail Messages___Cmd-Ctrl-Shift-I.scpt"
-set traceStarted to false
+use AppleScript version "2.4"
+use scripting additions
 
-try
+on configPath()
+	return (POSIX path of (path to home folder)) & ".mailscripts/config.scpt"
+end configPath
 
-	set theEmailDatabase to pPrimaryEmailDatabase of config
-	docLib's beginPerformanceTrace(traceName)
-	set traceStarted to true
-	tell docLib to importMailMessages(theEmailDatabase)
-	docLib's finishPerformanceTrace(traceName)
-	set traceStarted to false
-
-on error error_message number error_number
-	if traceStarted then
-		try
-			docLib's finishPerformanceTrace(traceName)
-		end try
-	end if
-	display alert "DEVONthink" message error_message as warning
-end try
+on run argv
+	try
+		set config to load script (my configPath())
+		set docLib to load script (pDocLibraryPath of config)
+		docLib's runCommand(argv, "import_mail")
+	on error errorMessage number errorNumber
+		display alert "DEVONthink" message (errorMessage & " (" & errorNumber & ")") as warning
+	end try
+end run
 

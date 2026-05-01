@@ -1,26 +1,18 @@
 #@osa-lang:AppleScript
-set config to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
-set docLib to load script pDocLibraryPath of config
-set traceName to "DEVONthink Menu/Update Dimensions Cache___Cmd-Ctrl-Shift-D.scpt"
-set traceStarted to false
+use AppleScript version "2.4"
+use scripting additions
 
-try
-	tell application id "DNtp"
-		set theDatabaseName to name of current database
-	end tell
+on configPath()
+	return (POSIX path of (path to home folder)) & ".mailscripts/config.scpt"
+end configPath
 
-	docLib's beginPerformanceTrace(traceName)
-	set traceStarted to true
-	docLib's updateDimensionsCache(theDatabaseName)
-	docLib's finishPerformanceTrace(traceName)
-	set traceStarted to false
-
-on error error_message number error_number
-	if traceStarted then
-		try
-			docLib's finishPerformanceTrace(traceName)
-		end try
-	end if
-	display alert "DEVONthink" message error_message as warning
-end try
+on run argv
+	try
+		set config to load script (my configPath())
+		set docLib to load script (pDocLibraryPath of config)
+		docLib's runCommand(argv, "update_dimensions_cache")
+	on error errorMessage number errorNumber
+		display alert "DEVONthink" message (errorMessage & " (" & errorNumber & ")") as warning
+	end try
+end run
 

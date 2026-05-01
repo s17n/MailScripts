@@ -1,24 +1,17 @@
 #@osa-lang:AppleScript
-set configPath to (POSIX path of (path to home folder)) & ".mailscripts/config.scpt"
-set config to load script configPath
-set docLib to load script (pDocLibraryPath of config)
-set traceName to "DEVONthink Menu/Open Subject___Cmd-Option-Shift-5.scpt"
-set traceStarted to false
+use AppleScript version "2.4"
+use scripting additions
 
-try
-	tell application id "DNtp" to set theSelection to every selected record
+on configPath()
+	return (POSIX path of (path to home folder)) & ".mailscripts/config.scpt"
+end configPath
 
-	set theSmartGroupSpecifier to {dimension:"05 Subject", customMetadataField:"subject", smartgroupsFolder:"03 Resources/Subject"}
-	docLib's beginPerformanceTrace(traceName)
-	set traceStarted to true
-	docLib's openSmartGroup(theSmartGroupSpecifier, theSelection)
-	docLib's finishPerformanceTrace(traceName)
-	set traceStarted to false
-on error errorMessage number errorNumber
-	if traceStarted then
-		try
-			docLib's finishPerformanceTrace(traceName)
-		end try
-	end if
-	display alert "DEVONthink" message (errorMessage & " (" & errorNumber & ")") as warning
-end try
+on run argv
+	try
+		set config to load script (my configPath())
+		set docLib to load script (pDocLibraryPath of config)
+		docLib's runCommand(argv, "open_subject")
+	on error errorMessage number errorNumber
+		display alert "DEVONthink" message (errorMessage & " (" & errorNumber & ")") as warning
+	end try
+end run

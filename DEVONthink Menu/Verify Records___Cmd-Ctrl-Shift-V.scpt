@@ -1,23 +1,17 @@
 #@osa-lang:AppleScript
-set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
-set docLib to (load script (pDocLibraryPath of mailscriptsConfig))
-set traceName to "DEVONthink Menu/Verify Records___Cmd-Ctrl-Shift-V.scpt"
-set traceStarted to false
+use AppleScript version "2.4"
+use scripting additions
 
-try
-	-- set locationSuffix to "2010-2019/2015/11" -- issue, record lag in 05 in zwei Foldern
-	set theLocation to "/05 Files"
-	docLib's beginPerformanceTrace(traceName)
-	set traceStarted to true
-	tell docLib to verifyTags(theLocation)
-	docLib's finishPerformanceTrace(traceName)
-	set traceStarted to false
+on configPath()
+	return (POSIX path of (path to home folder)) & ".mailscripts/config.scpt"
+end configPath
 
-on error error_message number error_number
-	if traceStarted then
-		try
-			docLib's finishPerformanceTrace(traceName)
-		end try
-	end if
-	display alert "DEVONthink" message error_message as warning
-end try
+on run argv
+	try
+		set config to load script (my configPath())
+		set docLib to load script (pDocLibraryPath of config)
+		docLib's runCommand(argv, "verify_records")
+	on error errorMessage number errorNumber
+		display alert "DEVONthink" message (errorMessage & " (" & errorNumber & ")") as warning
+	end try
+end run

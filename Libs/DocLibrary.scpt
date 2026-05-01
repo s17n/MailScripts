@@ -235,9 +235,14 @@ on classifyRecords(theRecords)
 	set logCtx to my initialize("classifyRecords")
 	if not pPerformanceTraceManagedByCaller then logger's resetTraceMetrics()
 	logger's trace(logCtx, "enter")
+	set theRecords to my normalizeRecordsForProcessing(theRecords)
 
 	tell application id "DNtp"
-		set theDatabase to database of first item of theRecords
+		try
+			set theDatabase to current database
+		on error
+			set theDatabase to database of first item of theRecords
+		end try
 
 		my initializeDatabaseConfiguration(theDatabase)
 		set {recordsSelected, recordsProcessed} to {0, 0}
@@ -697,6 +702,20 @@ on getClassificationDate(theRecord, theClassificationDate)
 	return theDate
 end getClassificationDate
 
+-- Returns true when the argv list contains the worker flag.
+-- Parameters:
+--    theArgs:list command-line arguments passed to the script.
+-- Return: boolean true when "--worker" is present.
+on hasWorkerFlag(theArgs)
+	if class of theArgs is not list then return false
+	repeat with anArg in theArgs
+		try
+			if (anArg as text) is "--worker" then return true
+		end try
+	end repeat
+	return false
+end hasWorkerFlag
+
 -- Handles interactive assignment for an uncategorized tag.
 -- Parameters:
 --    theTag:text tag value to evaluate.
@@ -761,6 +780,23 @@ on importMailMessages(theDatabaseName)
 	end tell
 	logger's trace(logCtx, "exit")
 end importMailMessages
+
+-- Returns true when the command should be wrapped in a performance trace.
+-- Parameters:
+--    commandKey:text logical DEVONthink menu command identifier.
+-- Return: boolean trace flag.
+on isTraceCommand(commandKey)
+	if commandKey is "archive" then return true
+	if commandKey is "import_mail" then return true
+	if commandKey is "open_context" then return true
+	if commandKey is "open_label" then return true
+	if commandKey is "open_sender" then return true
+	if commandKey is "open_subject" then return true
+	if commandKey is "open_year" then return true
+	if commandKey is "update_dimensions_cache" then return true
+	if commandKey is "verify_records" then return true
+	return false
+end isTraceCommand
 
 -- Initializes configuration and library dependencies for this module.
 -- Parameters:
@@ -904,6 +940,14 @@ on initializeMailConfiguration(theDatabaseConfigurationFolder, theDatabaseName)
 	mailLib's initializeMailConfiguration(theDatabaseConfigurationFolder, theDatabaseName)
 	logger's trace(logCtx, "exit")
 end initializeMailConfiguration
+
+-- Relaunches the current script externally with worker flag.
+-- Parameters:
+--    scriptPath:text absolute script path.
+-- Return: none (side effects only).
+on launchWorker(scriptPath)
+	do shell script ("/usr/bin/osascript -l AppleScript " & quoted form of scriptPath & " --worker")
+end launchWorker
 
 -- Logs a validation issue and updates issue-tracking state.
 -- Parameters:
@@ -1069,6 +1113,25 @@ on moveRecordToChildGroupNamed(theRecord, theParentGroup, theChildGroupName)
 
 	logger's trace(logCtx, "exit")
 end moveRecordToChildGroupNamed
+
+-- Normalizes incoming record collections to a concrete non-empty list of DEVONthink records.
+-- Parameters:
+--    theRecords:any list-like record collection from menu handlers.
+-- Return: list<DEVONthink record (class 'record' / DTrc)> normalized list.
+on normalizeRecordsForProcessing(theRecords)
+	if class of theRecords is list then
+		set normalizedRecords to theRecords
+	else
+		try
+			set normalizedRecords to theRecords as list
+		on error
+			set normalizedRecords to {}
+		end try
+	end if
+
+	if (count of normalizedRecords) is 0 then error "Please select some contents."
+	return normalizedRecords
+end normalizeRecordsForProcessing
 
 -- Opens or creates a smart group for the record label.
 -- If the record has no label, the user can select one from DEVONthink label names.
@@ -1379,6 +1442,118 @@ on replaceText(findText, replaceText, sourceText)
 	logger's trace(logCtx, "exit > " & newText)
 	return newText
 end replaceText
+
+-- Central entrypoint for DEVONthink menu scripts with optional worker execution.
+-- Parameters:
+--    argv:list command-line arguments passed by AppleScript/osascript.
+--    commandKey:text logical DEVONthink menu command identifier.
+-- Return: none (side effects only).
+on runCommand(argv, commandKey)
+	set config to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
+
+	if my shouldUseWorker(argv, config) then
+		set scriptPath to POSIX path of (path to me)
+		my launchWorker(scriptPath)
+		return
+	end if
+
+	set traceName to "DEVONthink Menu/" & commandKey
+	set traceStarted to false
+	try
+		if my isTraceCommand(commandKey) then
+			my beginPerformanceTrace(traceName)
+			set traceStarted to true
+		end if
+
+		my runMenuCommand(commandKey, config)
+
+		if traceStarted then
+			my finishPerformanceTrace(traceName)
+			set traceStarted to false
+		end if
+	on error errorMessage number errorNumber
+		if traceStarted then
+			try
+				my finishPerformanceTrace(traceName)
+			end try
+		end if
+		display alert "DEVONthink" message (errorMessage & " (" & errorNumber & ")") as warning
+	end try
+end runCommand
+
+-- Executes one DEVONthink menu command by logical key.
+-- Parameters:
+--    commandKey:text logical DEVONthink menu command identifier.
+--    config:script object loaded global config.
+-- Return: none (side effects only).
+on runMenuCommand(commandKey, config)
+	set logCtx to my initialize("runMenuCommand")
+	logger's trace(logCtx, "enter > " & commandKey)
+
+	if commandKey is "archive" then
+		set theSelection to my selectedRecordsOrError()
+		my archiveRecords(theSelection)
+	else if commandKey is "classify" then
+		set theSelection to my selectedRecordsOrError()
+		my classifyRecords(theSelection)
+	else if commandKey is "import_mail" then
+		my importMailMessages(pPrimaryEmailDatabase of config)
+	else if commandKey is "open_context" then
+		tell application id "DNtp"
+			set theSelection to every selected record
+		end tell
+		set theSmartGroupSpecifier to {dimension:"06 Context", customMetadataField:"", smartgroupsFolder:"03 Resources/Context"}
+		my openSmartGroup(theSmartGroupSpecifier, theSelection)
+	else if commandKey is "open_label" then
+		tell application id "DNtp"
+			set theSelection to every selected record
+		end tell
+		set theSmartGroupSpecifier to {smartgroupsFolder:"03 Resources/Label"}
+		my openLabelSmartGroup(theSmartGroupSpecifier, theSelection)
+	else if commandKey is "open_sender" then
+		tell application id "DNtp"
+			set theSelection to every selected record
+		end tell
+		set theSmartGroupSpecifier to {dimension:"04 Sender", customMetadataField:"sender", smartgroupsFolder:"03 Resources/Sender"}
+		my openSmartGroup(theSmartGroupSpecifier, theSelection)
+	else if commandKey is "open_subject" then
+		tell application id "DNtp"
+			set theSelection to every selected record
+		end tell
+		set theSmartGroupSpecifier to {dimension:"05 Subject", customMetadataField:"subject", smartgroupsFolder:"03 Resources/Subject"}
+		my openSmartGroup(theSmartGroupSpecifier, theSelection)
+	else if commandKey is "open_year" then
+		tell application id "DNtp"
+			set theSelection to every selected record
+		end tell
+		set theSmartGroupSpecifier to {dimension:"03 Year", customMetadataField:"date", smartgroupsFolder:"03 Resources/Year"}
+		my openSmartGroup(theSmartGroupSpecifier, theSelection)
+	else if commandKey is "update_dimensions_cache" then
+		tell application id "DNtp"
+			my updateDimensionsCache(name of current database)
+		end tell
+	else if commandKey is "update_metadata" then
+		set theSelection to my selectedRecordsOrError()
+		my updateRecordsMetadata(theSelection)
+	else if commandKey is "verify_records" then
+		my verifyTags("/05 Files")
+	else
+		error "Unsupported DEVONthink menu command: " & commandKey
+	end if
+
+	logger's trace(logCtx, "exit")
+end runMenuCommand
+
+-- Returns selected DEVONthink records as a concrete non-empty list.
+-- Parameters: none.
+-- Return: list<DEVONthink record (class 'record' / DTrc)> current selection.
+on selectedRecordsOrError()
+	tell application id "DNtp"
+		set theSelection to every selected record
+	end tell
+	if (count of theSelection) is 0 then error "Please select some contents."
+	return theSelection
+end selectedRecordsOrError
 
 -- Resolves the active DEVONthink database from current window context.
 -- Parameters: none.
@@ -1819,6 +1994,23 @@ on setTagFromCompareRecord(theRecord, theDatabase, theFields, theDimension)
 
 	logger's trace(logCtx, "exit")
 end setTagFromCompareRecord
+
+-- Evaluates global worker configuration and current invocation mode.
+-- Parameters:
+--    argv:list command-line arguments passed by AppleScript/osascript.
+--    config:script object loaded global config.
+-- Return: boolean true when worker relaunch should be used.
+on shouldUseWorker(argv, config)
+	set useWorker to true
+	try
+		set useWorker to pUseWorker of config
+	on error
+		set useWorker to true
+	end try
+	if not useWorker then return false
+	if my hasWorkerFlag(argv) then return false
+	return true
+end shouldUseWorker
 
 -- Reads a subject value from metadata for supported records.
 -- Parameters:
