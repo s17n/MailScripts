@@ -1668,6 +1668,8 @@ on setCustomMetadata(theIndex, theRecord, theFields, theSupplemental, theSupplem
 
 	else if theType is equal to "TEXT" then
 
+		set newValue to currentValue
+
 		set theCategory to theFields's objectForKey:theDimension
 		if theCategory is missing value then set theCategory to ""
 		set theCategory to my tagAlias(theCategory)
@@ -1738,14 +1740,16 @@ on setCustomMetadata(theIndex, theRecord, theFields, theSupplemental, theSupplem
 
 		-- Replace amount placeholder "{Amount}"
 		set amountText to ""
-		if currentAmount is not missing value then set amountText to " [EUR " & currentAmount & "]"
+		if currentAmount is not missing value then set amountText to "[EUR " & currentAmount & "]"
 		set cmdValue to my replaceText("{Amount}", amountText, cmdValue as string)
 
 		set newValue to cmdValue
 	end if
 
-	if newValue is not equal to currentValue then
-		tell logger to info_r(theRecord, "Field '" & theField & "' changed from: " & currentValue & " to: " & newValue)
+	set newValue to baseLib's trim(newValue)
+	set newValue to baseLib's collapseSpaces(newValue)
+	if newValue as string is not equal to currentValue as string then
+		tell logger to info_r(theRecord, "Field '" & theField & "' changed from: \"" & currentValue & "\" to: \"" & newValue & "\"")
 		tell application id "DNtp"
 			add custom meta data newValue for theField to theRecord
 		end tell

@@ -464,3 +464,14 @@ on isoStringToDate(isoString)
 	tell logger to debug(logCtx, "exit => d: " & d as text)
 	return d
 end isoStringToDate
+
+on collapseSpaces(theText)
+	set theText to theText as text
+
+	repeat while theText contains "  "
+		set theText to my replaceText("  ", " ", theText)
+	end repeat
+
+	return theText
+end collapseSpaces
+
