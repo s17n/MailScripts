@@ -20,6 +20,9 @@ property tagAliases : missing value
 property monthsByName : missing value
 property monthsByDigit : missing value
 property pIssueCount : 0
+property pSmartGroupConditionCustomMetadata : "CustomMetadata"
+property pSmartGroupConditionLabel : "Label"
+property pSmartGroupConditionTags : "Tags"
 
 --- DATABASE CONFIGURATION PROPERTIES: START
 
@@ -264,7 +267,7 @@ on chooseLabelInfoForRecord(theRecord)
 	set labelNames to {}
 
 	tell application id "DNtp"
-		set labelIndex to label of theRecord
+		if theRecord is not missing value then set labelIndex to label of theRecord
 		set labelNames to label names
 	end tell
 
@@ -277,23 +280,29 @@ on chooseLabelInfoForRecord(theRecord)
 	end if
 
 	-- No label assigned: let the user pick one explicit label index from DEVONthink's label list.
-	set selectedItems to choose from list labelNames with title "Open Label Smart Group" with prompt "No label is assigned to the selected record. Choose a label." OK button name "Choose" cancel button name "Cancel" without multiple selections allowed
+	set chooserItems to {}
+	repeat with labelListIndex from 1 to count of labelNames
+		set end of chooserItems to ((labelListIndex as string) & "-" & (item labelListIndex of labelNames as string))
+	end repeat
+
+	set selectedItems to choose from list chooserItems with title "Open Label Smart Group" with prompt "No label is assigned to the selected record. Choose a label." OK button name "Choose" cancel button name "Cancel" without multiple selections allowed
 	if selectedItems is false then
 		logger's info(logCtx, "Label chooser canceled.")
 		logger's trace(logCtx, "exit")
 		return missing value
 	end if
 
-	set selectedLabelName to first item of selectedItems as string
+	set selectedItemLabel to first item of selectedItems as string
 	set selectedLabelIndex to 0
-	repeat with labelListIndex from 1 to count of labelNames
-		if item labelListIndex of labelNames as string is selectedLabelName then
+	repeat with labelListIndex from 1 to count of chooserItems
+		if item labelListIndex of chooserItems as string is selectedItemLabel then
 			set selectedLabelIndex to labelListIndex
 			exit repeat
 		end if
 	end repeat
-
 	if selectedLabelIndex is 0 then error "Failed to resolve selected label index."
+
+	set selectedLabelName to item selectedLabelIndex of labelNames as string
 
 	logger's trace(logCtx, "exit")
 	return {labelIndex:selectedLabelIndex, labelName:selectedLabelName}
@@ -595,11 +604,11 @@ on findOrCreateSmartGroup(smartGroupInfo, customMetadataField, smartgroupsFolder
 
 	tell application id "DNtp"
 		if not (exists record at theSmartGroupLocation in theDatabase) then
-			if smartGroupConditionField is equal to "Tags" then
+			if smartGroupConditionField is equal to pSmartGroupConditionTags then
 				set theSmartGroup to create record with {name:theValue, record type:smart group, search predicates:"tags:" & smartGroupQueryValue} in theSmartGroupsRecord
-			else if smartGroupConditionField is equal to "CustomMetadata" then
+			else if smartGroupConditionField is equal to pSmartGroupConditionCustomMetadata then
 				set theSmartGroup to create record with {name:theValue, record type:smart group, search predicates:"md" & customMetadataField & ":" & smartGroupQueryValue} in theSmartGroupsRecord
-			else if smartGroupConditionField is equal to "Label" then
+			else if smartGroupConditionField is equal to pSmartGroupConditionLabel then
 				set theSmartGroup to create record with {name:theValue, record type:smart group, search predicates:"label:" & smartGroupQueryValue} in theSmartGroupsRecord
 			else
 				error "Unsupported smart group condition field: " & smartGroupConditionField
@@ -1049,56 +1058,41 @@ on openLabelSmartGroup(theSmartGroupSpecifier, theRecords)
 	logger's trace(logCtx, "enter")
 
 	set smartgroupsFolder to smartgroupsFolder of theSmartGroupSpecifier
+	set labelInfo to missing value
 
-	-- Interactive mode: no selection means pick an existing smart group from folder.
+	-- Resolve selected record and database context.
 	if theRecords is {} then
-		set theDatabase to missing value
-
-		-- Resolve an active database robustly (current database first, then current group -> database).
-		tell application id "DNtp"
-			try
-				set theDatabase to get current database
-			end try
-			if theDatabase is missing value then
-				try
-					set theCurrentGroup to get current group
-					if theCurrentGroup is not missing value then set theDatabase to database of theCurrentGroup
-				end try
-			end if
-		end tell
+		set theDatabase to my resolveActiveDatabase()
 		if theDatabase is missing value then error "No current database available."
 
-		set selectedSmartGroup to my chooseSmartGroupFromFolder(smartgroupsFolder, theDatabase)
-		if selectedSmartGroup is missing value then
+		-- With no selected record, always show the label chooser.
+		set labelInfo to my chooseLabelInfoForRecord(missing value)
+		if labelInfo is missing value then
+			logger's trace(logCtx, "exit")
+			return
+		end if
+	else
+		-- Derived mode: exactly one source record is supported.
+		if length of theRecords > 1 then error "openLabelSmartGroup expects zero or one record."
+
+		set theRecord to first item of theRecords
+		set labelInfo to my chooseLabelInfoForRecord(theRecord)
+		if labelInfo is missing value then
 			logger's trace(logCtx, "exit")
 			return
 		end if
 
 		tell application id "DNtp"
-			open window for record selectedSmartGroup
+			set theDatabase to database of theRecord
 		end tell
-
-		logger's trace(logCtx, "exit")
-		return
-	end if
-
-	-- Derived mode: exactly one source record is supported.
-	if length of theRecords > 1 then error "openLabelSmartGroup expects zero or one record."
-
-	set theRecord to first item of theRecords
-	set labelInfo to my chooseLabelInfoForRecord(theRecord)
-	if labelInfo is missing value then
-		logger's trace(logCtx, "exit")
-		return
 	end if
 
 	set labelIndex to labelIndex of labelInfo
 	set labelName to labelName of labelInfo
-	set smartGroupInfo to {value:labelName, queryValue:(labelIndex as string), conditionField:"Label"}
+	set smartGroupName to (labelIndex as string) & "-" & labelName
+	set smartGroupInfo to {value:smartGroupName, queryValue:(labelIndex as string), conditionField:pSmartGroupConditionLabel}
 
 	tell application id "DNtp"
-		set theDatabase to database of theRecord
-
 		my initializeDatabaseConfiguration(theDatabase)
 		set theSmartGroupsRecord to my ensureSmartGroupsFolder(smartgroupsFolder, theDatabase)
 		set theSmartGroup to my findOrCreateSmartGroup(smartGroupInfo, "", smartgroupsFolder, theSmartGroupsRecord, theDatabase)
@@ -1122,20 +1116,7 @@ on openSmartGroup(theSmartGroupSpecifier, theRecords)
 
 	-- Interactive mode: no selection means pick an existing smart group from folder.
 	if theRecords is {} then
-		set theDatabase to missing value
-
-		-- Resolve an active database robustly (current database first, then current group -> database).
-		tell application id "DNtp"
-			try
-				set theDatabase to get current database
-			end try
-			if theDatabase is missing value then
-				try
-					set theCurrentGroup to get current group
-					if theCurrentGroup is not missing value then set theDatabase to database of theCurrentGroup
-				end try
-			end if
-		end tell
+		set theDatabase to my resolveActiveDatabase()
 		if theDatabase is missing value then error "No current database available."
 
 		set selectedSmartGroup to my chooseSmartGroupFromFolder(smartgroupsFolder, theDatabase)
@@ -1376,6 +1357,30 @@ on replaceText(findText, replaceText, sourceText)
 	return newText
 end replaceText
 
+-- Resolves the active DEVONthink database from current window context.
+-- Parameters: none.
+-- Return: DEVONthink database (class 'database' / DTkb)|missing value resolved database context.
+on resolveActiveDatabase()
+	set logCtx to my initialize("resolveActiveDatabase")
+	logger's trace(logCtx, "enter")
+
+	set theDatabase to missing value
+	tell application id "DNtp"
+		try
+			set theDatabase to get current database
+		end try
+		if theDatabase is missing value then
+			try
+				set theCurrentGroup to get current group
+				if theCurrentGroup is not missing value then set theDatabase to database of theCurrentGroup
+			end try
+		end if
+	end tell
+
+	logger's trace(logCtx, "exit")
+	return theDatabase
+end resolveActiveDatabase
+
 -- Resolves the smart group value and predicate source for a record.
 -- Parameters:
 --    theSmartGroupSpecifier:record with dimension:text and customMetadataField:text.
@@ -1387,14 +1392,14 @@ on resolveSmartGroupInfoForRecord(theSmartGroupSpecifier, theRecord)
 
 	set theDimension to dimension of theSmartGroupSpecifier
 	set customMetadataField to customMetadataField of theSmartGroupSpecifier
-	set smartGroupConditionField to "Tags"
+	set smartGroupConditionField to pSmartGroupConditionTags
 
 	set theFields to my fieldsFromTags(theRecord, true)
 	set theValue to theFields's objectForKey:theDimension
 
 	if theValue is missing value then
 		tell application id "DNtp" to set theValue to get custom meta data for customMetadataField from theRecord
-		set smartGroupConditionField to "CustomMetadata"
+		set smartGroupConditionField to pSmartGroupConditionCustomMetadata
 	end if
 
 	if theValue is missing value then error "No value found for smart group dimension '" & theDimension & "' or custom metadata field '" & customMetadataField & "'."
