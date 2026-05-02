@@ -302,6 +302,7 @@ on chooseLabelInfoForRecord(theRecord)
 		set end of chooserItems to ((labelListIndex as string) & "-" & (item labelListIndex of labelNames as string))
 	end repeat
 
+	tell application id "DNtp" to activate
 	set selectedItems to choose from list chooserItems with title "Open Label Smart Group" with prompt "No label is assigned to the selected record. Choose a label." OK button name "Choose" cancel button name "Cancel" without multiple selections allowed
 	if selectedItems is false then
 		logger's info(logCtx, "Label chooser canceled.")
@@ -376,6 +377,7 @@ on chooseSmartGroupFromFolder(smartgroupsFolder, theDatabase)
 	set AppleScript's text item delimiters to oldTIDs
 
 	-- Let the user choose one smart group; cancel keeps behavior non-destructive.
+	tell application id "DNtp" to activate
 	set selectedItems to choose from list chooserItems with title "Open Smart Group" with prompt ("Choose a smart group in '" & smartgroupsFolder & "'.") without multiple selections allowed
 	if selectedItems is false then
 		logger's info(logCtx, "Smart group chooser canceled.")
@@ -739,8 +741,9 @@ on handleUncategorizedTag(theTag)
 			sortedArrayUsingSelector:"localizedCaseInsensitiveCompare:"
 		set sortedList to sortedList as list
 
+		tell application id "DNtp" to activate
 		set theItem to choose from list sortedList ¬
-			with title "Uncategorized Tag: " & theTag with prompt "The Tag '" & theTag & "' is not categorized yet. You can categorize it now to one of the following dimensions or leave it as is." default items "05 Subject" OK button name "Catagorize" cancel button name "Cancel" without multiple selections allowed
+			with title ("Uncategorized Tag: " & theTag) with prompt "The Tag '" & theTag & "' is not categorized yet. You can categorize it now to one of the following dimensions or leave it as is." default items {"05 Subject"} OK button name "Catagorize" cancel button name "Cancel" without multiple selections allowed
 
 		-- Tag zu Categories der entsprechenden Dimension hinzufügen
 		if theItem is not {} and theItem is not false then
@@ -1451,7 +1454,7 @@ end replaceText
 on runCommand(argv, commandKey)
 	set config to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
 
-	if my shouldUseWorker(argv, config) then
+	if my shouldUseWorker(argv, config, commandKey) then
 		set scriptPath to POSIX path of (path to me)
 		my launchWorker(scriptPath)
 		return
@@ -1999,12 +2002,28 @@ on setTagFromCompareRecord(theRecord, theDatabase, theFields, theDimension)
 	logger's trace(logCtx, "exit")
 end setTagFromCompareRecord
 
+-- Returns true when a command should run in-process to keep chooser dialogs focused.
+-- Parameters:
+--    commandKey:text logical DEVONthink menu command identifier.
+-- Return: boolean true when worker relaunch should be skipped.
+on shouldRunInProcess(commandKey)
+	-- `choose from list` dialogs can lose keyboard focus when executed via osascript worker.
+	-- Keep interactive smart-group commands in-process to allow direct keyboard continuation.
+	if commandKey is "open_context" then return true
+	if commandKey is "open_label" then return true
+	if commandKey is "open_sender" then return true
+	if commandKey is "open_subject" then return true
+	if commandKey is "open_year" then return true
+	return false
+end shouldRunInProcess
+
 -- Evaluates global worker configuration and current invocation mode.
 -- Parameters:
 --    argv:list command-line arguments passed by AppleScript/osascript.
 --    config:script object loaded global config.
+--    commandKey:text logical DEVONthink menu command identifier.
 -- Return: boolean true when worker relaunch should be used.
-on shouldUseWorker(argv, config)
+on shouldUseWorker(argv, config, commandKey)
 	set useWorker to true
 	try
 		set useWorker to pUseWorker of config
@@ -2013,6 +2032,7 @@ on shouldUseWorker(argv, config)
 	end try
 	if not useWorker then return false
 	if my hasWorkerFlag(argv) then return false
+	if my shouldRunInProcess(commandKey) then return false
 	return true
 end shouldUseWorker
 
