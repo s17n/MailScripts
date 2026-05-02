@@ -1145,43 +1145,59 @@ end normalizeRecordsForProcessing
 on openLabelSmartGroup(theSmartGroupSpecifier, theRecords)
 	set logCtx to my initialize("openLabelSmartGroup")
 	logger's trace(logCtx, "enter")
+	set theRecords to my normalizeOptionalRecords(theRecords)
 
 	set smartgroupsFolder to smartgroupsFolder of theSmartGroupSpecifier
-	set labelInfo to missing value
 
-	-- Resolve selected record and database context.
+	-- Interactive mode: no selection means pick an existing smart group from folder.
 	if theRecords is {} then
-		set theDatabase to my resolveActiveDatabase()
+		set theDatabase to missing value
+
+		-- Resolve an active database robustly (current database first, then current group -> database).
+		tell application id "DNtp"
+			try
+				set theDatabase to get current database
+			end try
+			if theDatabase is missing value then
+				try
+					set theCurrentGroup to get current group
+					if theCurrentGroup is not missing value then set theDatabase to database of theCurrentGroup
+				end try
+			end if
+		end tell
 		if theDatabase is missing value then error "No current database available."
 
-		-- With no selected record, always show the label chooser.
-		set labelInfo to my chooseLabelInfoForRecord(missing value)
-		if labelInfo is missing value then
-			logger's trace(logCtx, "exit")
-			return
-		end if
-	else
-		-- Derived mode: exactly one source record is supported.
-		if length of theRecords > 1 then error "openLabelSmartGroup expects zero or one record."
-
-		set theRecord to first item of theRecords
-		set labelInfo to my chooseLabelInfoForRecord(theRecord)
-		if labelInfo is missing value then
+		set selectedSmartGroup to my chooseSmartGroupFromFolder(smartgroupsFolder, theDatabase)
+		if selectedSmartGroup is missing value then
 			logger's trace(logCtx, "exit")
 			return
 		end if
 
 		tell application id "DNtp"
-			set theDatabase to database of theRecord
+			open window for record selectedSmartGroup
 		end tell
+
+		logger's trace(logCtx, "exit")
+		return
+	end if
+
+	-- Derived mode: exactly one source record is supported.
+	if (count of theRecords) > 1 then error "openLabelSmartGroup expects zero or one record."
+
+	set theRecord to first item of theRecords
+	set labelInfo to my chooseLabelInfoForRecord(theRecord)
+	if labelInfo is missing value then
+		logger's trace(logCtx, "exit")
+		return
 	end if
 
 	set labelIndex to labelIndex of labelInfo
 	set labelName to labelName of labelInfo
-	set smartGroupName to (labelIndex as string) & "-" & labelName
-	set smartGroupInfo to {value:smartGroupName, queryValue:(labelIndex as string), conditionField:pSmartGroupConditionLabel}
+	set smartGroupInfo to {value:labelName, queryValue:(labelIndex as string), conditionField:"Label"}
 
 	tell application id "DNtp"
+		set theDatabase to database of theRecord
+
 		my initializeDatabaseConfiguration(theDatabase)
 		set theSmartGroupsRecord to my ensureSmartGroupsFolder(smartgroupsFolder, theDatabase)
 		set theSmartGroup to my findOrCreateSmartGroup(smartGroupInfo, "", smartgroupsFolder, theSmartGroupsRecord, theDatabase)
@@ -1190,6 +1206,20 @@ on openLabelSmartGroup(theSmartGroupSpecifier, theRecords)
 
 	logger's trace(logCtx, "exit")
 end openLabelSmartGroup
+
+-- Normalizes incoming record collections to a concrete list while allowing an empty result.
+-- Parameters:
+--    theRecords:any list-like record collection from menu handlers.
+-- Return: list<DEVONthink record (class 'record' / DTrc)> normalized list (possibly empty).
+on normalizeOptionalRecords(theRecords)
+	if theRecords is missing value then return {}
+	if class of theRecords is list then return theRecords
+	try
+		return theRecords as list
+	on error
+		return {}
+	end try
+end normalizeOptionalRecords
 
 -- Opens or creates smart groups for the tag value derived from a configured dimension.
 -- If the dimension value was not found and a customMetadataField is present, the smart group is created with custom metadata.
