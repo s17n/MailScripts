@@ -235,14 +235,14 @@ on classifyRecords(theRecords)
 	set logCtx to my initialize("classifyRecords")
 	if not pPerformanceTraceManagedByCaller then logger's resetTraceMetrics()
 	logger's trace(logCtx, "enter")
-	set theRecords to my normalizeRecordsForProcessing(theRecords)
+	-- set theRecords to my normalizeRecordsForProcessing(theRecords)
 
 	tell application id "DNtp"
-		try
-			set theDatabase to current database
-		on error
-			set theDatabase to database of first item of theRecords
-		end try
+		-- try
+		--    set theDatabase to current database
+		-- on error
+		set theDatabase to database of first item of theRecords
+		-- end try
 
 		my initializeDatabaseConfiguration(theDatabase)
 		set {recordsSelected, recordsProcessed} to {0, 0}
@@ -821,7 +821,7 @@ on initialize(loggingContext)
 		set pExiftool to pExiftool of config
 
 		set dtInfo to baseLib's getDEVONthinkRuntimeInfo()
-		tell logger to info(logCtx, "DEVONthink " & (applicationVersion of dtInfo))
+		tell logger to debug(logCtx, "DEVONthink " & (applicationVersion of dtInfo))
 
 		set pIsInitialized to true
 		tell logger to debug(logCtx, "Initialization finished")
@@ -951,6 +951,20 @@ end initializeMailConfiguration
 on launchWorker(scriptPath)
 	do shell script ("/usr/bin/osascript -l AppleScript " & quoted form of scriptPath & " --worker")
 end launchWorker
+
+-- Relaunches the current smart-rule script externally with command key and record UUIDs.
+-- Parameters:
+--    scriptPath:text absolute script path.
+--    commandKey:text logical smart-rule command identifier.
+--    recordUUIDs:list<text> unique record identifiers.
+-- Return: none (side effects only).
+on launchWorkerForSmartRule(scriptPath, commandKey, recordUUIDs)
+	set cmd to "/usr/bin/osascript -l AppleScript " & quoted form of scriptPath & " --worker --smart-rule-command " & quoted form of commandKey
+	repeat with aUUID in recordUUIDs
+		set cmd to cmd & " --record-uuid " & quoted form of (aUUID as text)
+	end repeat
+	do shell script cmd
+end launchWorkerForSmartRule
 
 -- Logs a validation issue and updates issue-tracking state.
 -- Parameters:
@@ -1476,6 +1490,61 @@ on replaceText(findText, replaceText, sourceText)
 	return newText
 end replaceText
 
+-- Extracts stable UUIDs from DEVONthink records for worker handoff.
+-- Parameters:
+--    theRecords:list<DEVONthink record (class 'record' / DTrc)> records to transform.
+-- Return: list<text> UUID values.
+on recordUUIDsFromRecords(theRecords)
+	if class of theRecords is not list then return {}
+	set recordUUIDs to {}
+	tell application id "DNtp"
+		repeat with theRecord in theRecords
+			try
+				set theUUID to uuid of theRecord
+				if theUUID is not missing value and theUUID is not "" then set end of recordUUIDs to theUUID as rich text
+			end try
+		end repeat
+	end tell
+	return recordUUIDs
+end recordUUIDsFromRecords
+
+-- Resolves worker arguments back to DEVONthink record objects.
+-- Parameters:
+--    argv:list command-line arguments passed by AppleScript/osascript.
+-- Return: list<DEVONthink record (class 'record' / DTrc)> records resolved from UUID flags.
+on recordsFromWorkerArgs(argv)
+	if class of argv is not list then return {}
+	set recordUUIDs to {}
+	set argCount to count of argv
+	set argIndex to 1
+	repeat while argIndex ≤ argCount
+		set anArg to item argIndex of argv
+		try
+			set argText to anArg as text
+		on error
+			set argText to ""
+		end try
+		if argText is "--record-uuid" then
+			set argIndex to argIndex + 1
+			if argIndex ≤ argCount then set end of recordUUIDs to (item argIndex of argv as text)
+		end if
+		set argIndex to argIndex + 1
+	end repeat
+
+	if recordUUIDs is {} then return {}
+
+	set resolvedRecords to {}
+	tell application id "DNtp"
+		repeat with aUUID in recordUUIDs
+			try
+				set theRecord to get record with uuid (aUUID as rich text)
+				if theRecord is not missing value then set end of resolvedRecords to theRecord
+			end try
+		end repeat
+	end tell
+	return resolvedRecords
+end recordsFromWorkerArgs
+
 -- Central entrypoint for DEVONthink menu scripts with optional worker execution.
 -- Parameters:
 --    argv:list command-line arguments passed by AppleScript/osascript.
@@ -1576,6 +1645,51 @@ on runMenuCommand(commandKey, config)
 
 	logger's trace(logCtx, "exit")
 end runMenuCommand
+
+-- Central entrypoint for DEVONthink smart-rule scripts with optional worker execution.
+-- Parameters:
+--    theRecords:list<DEVONthink record (class 'record' / DTrc)> records passed by performSmartRule.
+--    argv:list command-line arguments passed by AppleScript/osascript.
+--    commandKey:text logical smart-rule command identifier.
+-- Return: none (side effects only).
+on runSmartRuleCommand(theRecords, argv, commandKey)
+	set config to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
+
+	if my shouldUseWorker(argv, config, commandKey) then
+		set recordUUIDs to my recordUUIDsFromRecords(theRecords)
+		if recordUUIDs is {} then return
+		set scriptPath to POSIX path of (path to me)
+		my launchWorkerForSmartRule(scriptPath, commandKey, recordUUIDs)
+		return
+	end if
+
+	set effectiveRecords to theRecords
+	if class of effectiveRecords is not list then set effectiveRecords to my recordsFromWorkerArgs(argv)
+	if class of effectiveRecords is not list then set effectiveRecords to {}
+
+	my runSmartRuleCommandByKey(commandKey, effectiveRecords)
+end runSmartRuleCommand
+
+-- Executes one DEVONthink smart-rule command by logical key.
+-- Parameters:
+--    commandKey:text logical smart-rule command identifier.
+--    theRecords:list<DEVONthink record (class 'record' / DTrc)> records to process.
+-- Return: none (side effects only).
+on runSmartRuleCommandByKey(commandKey, theRecords)
+	if commandKey is "smart_classify" then
+		my classifyRecords(theRecords)
+		return
+	end if
+	if commandKey is "smart_process_documents" then
+		my processDocuments(theRecords)
+		return
+	end if
+	if commandKey is "smart_update_metadata" then
+		my updateRecordsMetadata(theRecords)
+		return
+	end if
+	error "Unknown smart-rule command key: " & commandKey
+end runSmartRuleCommandByKey
 
 -- Returns selected DEVONthink records as a concrete non-empty list.
 -- Parameters: none.

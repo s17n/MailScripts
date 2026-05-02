@@ -2,8 +2,6 @@
 use AppleScript version "2.4"
 use scripting additions
 
-property pScriptName : "Rule - Process Document"
-
 on configPath()
 	return (POSIX path of (path to home folder)) & ".mailscripts/config.scpt"
 end configPath
@@ -20,8 +18,11 @@ on runCommand(theRecords, argv)
 	try
 		set config to load script (my configPath())
 		set docLib to load script (pDocLibraryPath of config)
-		docLib's runSmartRuleCommand(theRecords, argv, "smart_process_documents")
+		docLib's runSmartRuleCommand(theRecords, argv, "smart_update_metadata")
 	on error errorMessage number errorNumber
 		display alert "DEVONthink" message (errorMessage & " (" & errorNumber & ")") as warning
 	end try
 end runCommand
+
+
+
