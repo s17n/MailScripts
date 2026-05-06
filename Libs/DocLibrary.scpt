@@ -118,22 +118,28 @@ on archiveRecords(theRecords)
 
 		repeat with theRecord in theRecords
 
-			set tagFields to my fieldsFromTags(theRecord, true)
+			-- don't archive when filed in a "Reference" folder/group which is uses for external indexed files
+			set theLocation to location of theRecord
+			if theLocation does not contain "References" then
+				set tagFields to my fieldsFromTags(theRecord, true)
 
-			-- Replace placeholder
-			set theFilesHome to my replaceDimensionPlaceholders(allDimensions, tagFields, pFilesHome)
-			set theFilesHome to my replaceFieldPlaceholder("{Decades}", tagFields, theFilesHome)
-			if pClassificationDate is not missing value and pClassificationDate is not "" and pDateDimensions is {} then
-				set theClassificationDate to my getClassificationDate(theRecord, pClassificationDate)
-				set theFilesHome to my replaceDatePlaceholder(theClassificationDate, theFilesHome)
+				-- Replace placeholder
+				set theFilesHome to my replaceDimensionPlaceholders(allDimensions, tagFields, pFilesHome)
+				set theFilesHome to my replaceFieldPlaceholder("{Decades}", tagFields, theFilesHome)
+				if pClassificationDate is not missing value and pClassificationDate is not "" and pDateDimensions is {} then
+					set theClassificationDate to my getClassificationDate(theRecord, pClassificationDate)
+					set theFilesHome to my replaceDatePlaceholder(theClassificationDate, theFilesHome)
+				end if
+
+				if theFilesHome contains "[" or the theFilesHome contains "{" then
+					error "Record can't be archived due to existing placeholders in destination group name: " & theFilesHome
+				else
+					my moveRecord(theRecord, theFilesHome)
+				end if
 			end if
 
-			if theFilesHome contains "[" or the theFilesHome contains "{" then
-				error "Record can't be archived due to existing placeholders in destination group name: " & theFilesHome
-			else
-				my moveRecord(theRecord, theFilesHome)
-				set locking of theRecord to true
-			end if
+			set locking of theRecord to true
+
 		end repeat
 	end tell
 	logger's trace(logCtx, "exit")
