@@ -1631,9 +1631,9 @@ on runMenuCommand(commandKey, config)
 		set theSmartGroupSpecifier to {dimension:"03 Year", customMetadataField:"date", smartgroupsFolder:"03 Resources/Year"}
 		my openSmartGroup(theSmartGroupSpecifier, theSelection)
 	else if commandKey is "update_dimensions_cache" then
-		tell application id "DNtp"
-			my updateDimensionsCache(name of current database)
-		end tell
+		set theDatabase to my resolveActiveDatabase()
+		if theDatabase is missing value then error "No current database available."
+		my updateDimensionsCache(theDatabase)
 	else if commandKey is "update_metadata" then
 		set theSelection to my selectedRecordsOrError()
 		my updateRecordsMetadata(theSelection)
@@ -2239,15 +2239,15 @@ on twoDigit(d)
 	return theResult
 end twoDigit
 
--- Explicitly refreshes the dimensions cache for a database name.
+-- Explicitly refreshes the dimensions cache for a database.
 -- Parameters:
---    theDatabaseName:text name of the target database.
+--    theDatabase:DEVONthink database (class 'database' / DTkb) target database.
 -- Return: none (side effects only).
-on updateDimensionsCache(theDatabaseName)
+on updateDimensionsCache(theDatabase)
 	set logCtx to my initialize("updateDimensionsCache")
+	tell application id "DNtp" to set theDatabaseName to name of theDatabase
 	logger's trace(logCtx, "enter > " & theDatabaseName)
 
-	tell application id "DNtp" to set theDatabase to database named theDatabaseName
 	my initializeDatabaseConfiguration(theDatabase)
 	my refreshDimensionsCache(theDatabase)
 
