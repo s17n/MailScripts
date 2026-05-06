@@ -1261,7 +1261,7 @@ on openSmartGroup(theSmartGroupSpecifier, theRecords)
 
 	-- Interactive mode: no selection means pick an existing smart group from folder.
 	if theRecords is {} then
-		set theDatabase to my resolveActiveDatabase(missing value)
+		set theDatabase to my resolveActiveDatabase(smartgroupsFolder)
 		if theDatabase is missing value then error "No current database available."
 
 		set selectedSmartGroup to my chooseSmartGroupFromFolder(smartgroupsFolder, theDatabase)
