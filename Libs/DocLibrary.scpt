@@ -1249,7 +1249,7 @@ on openSmartGroup(theSmartGroupSpecifier, theRecords)
 
 	-- Interactive mode: no selection means pick an existing smart group from folder.
 	if theRecords is {} then
-		set theDatabase to my resolveActiveDatabase()
+		set theDatabase to my resolveActiveDatabase(missing value)
 		if theDatabase is missing value then error "No current database available."
 
 		set selectedSmartGroup to my chooseSmartGroupFromFolder(smartgroupsFolder, theDatabase)
@@ -1631,7 +1631,7 @@ on runMenuCommand(commandKey, config)
 		set theSmartGroupSpecifier to {dimension:"03 Year", customMetadataField:"date", smartgroupsFolder:"03 Resources/Year"}
 		my openSmartGroup(theSmartGroupSpecifier, theSelection)
 	else if commandKey is "update_dimensions_cache" then
-		set theDatabase to my resolveActiveDatabase()
+		set theDatabase to my resolveActiveDatabase(missing value)
 		if theDatabase is missing value then error "No current database available."
 		my updateDimensionsCache(theDatabase)
 	else if commandKey is "update_metadata" then
@@ -1703,22 +1703,77 @@ on selectedRecordsOrError()
 end selectedRecordsOrError
 
 -- Resolves the active DEVONthink database from current window context.
--- Parameters: none.
+-- Parameters:
+--    theLocation:text|missing value optional location prefix used for fallback resolution.
 -- Return: DEVONthink database (class 'database' / DTkb)|missing value resolved database context.
-on resolveActiveDatabase()
+on resolveActiveDatabase(theLocation)
 	set logCtx to my initialize("resolveActiveDatabase")
 	logger's trace(logCtx, "enter")
 
+	-- Normalize optional location input for worker-safe fallback lookup.
+	set requestedLocation to missing value
+	try
+		set requestedLocation to theLocation as string
+	on error
+		set requestedLocation to missing value
+	end try
+
+	set resolvedDatabaseName to missing value
 	set theDatabase to missing value
 	tell application id "DNtp"
+		-- Prefer frontmost database context when available.
 		try
-			set theDatabase to get current database
+			set theDatabase to current database
 		end try
+		if theDatabase is missing value then
+			try
+				set theDatabase to get current database
+			end try
+		end if
+
+		-- Ensure we really resolved a database object and not an invalid reference.
+		if theDatabase is not missing value then
+			try
+				set resolvedDatabaseName to name of theDatabase as string
+			on error
+				set theDatabase to missing value
+				set resolvedDatabaseName to missing value
+			end try
+		end if
+
+		-- Fall back to current group context if no frontmost database is available.
 		if theDatabase is missing value then
 			try
 				set theCurrentGroup to get current group
 				if theCurrentGroup is not missing value then set theDatabase to database of theCurrentGroup
 			end try
+		end if
+
+		-- Re-validate fallback result from current group context.
+		if theDatabase is not missing value and resolvedDatabaseName is missing value then
+			try
+				set resolvedDatabaseName to name of theDatabase as string
+			on error
+				set theDatabase to missing value
+				set resolvedDatabaseName to missing value
+			end try
+		end if
+
+		-- Worker-safe fallback: locate a database that contains the requested location prefix.
+		if theDatabase is missing value and requestedLocation is not missing value and requestedLocation is not "" then
+			set candidateDatabases to {}
+			try
+				set candidateDatabases to every database
+			end try
+			repeat with aDatabase in candidateDatabases
+				try
+					if (exists record at requestedLocation in aDatabase) then
+						set theDatabase to aDatabase
+						set resolvedDatabaseName to name of aDatabase as string
+						exit repeat
+					end if
+				end try
+			end repeat
 		end if
 	end tell
 
@@ -2309,51 +2364,73 @@ end updateRecordsMetadata
 
 -- Validates tag consistency for records at a location and logs metrics.
 -- Parameters:
---    theLocation:text (DEVONthink location prefix, z.B. '/05 Files') location prefix to validate.
+--    theLocation:text (DEVONthink location prefix, e.g. '/05 Files') location prefix to validate.
 -- Return: none (side effects only).
 on verifyTags(theLocation)
 	set logCtx to my initialize("verifyTags")
 	logger's trace(logCtx, "enter")
 
 	tell application id "DNtp"
-		set currentDatabase to current database
+		-- Resolve the target database with location-aware fallback for worker mode.
+		set currentDatabase to my resolveActiveDatabase(theLocation)
+		if currentDatabase is missing value then error "No current database available."
+		set currentDatabaseName to name of currentDatabase as string
 		my initializeDatabaseConfiguration(currentDatabase)
 
+		-- Build a safe in-memory record list for the requested location prefix.
 		set theRecords to every content of currentDatabase whose location begins with theLocation
-		tell logger to info(logCtx, "Verification started for Database: " & (name of currentDatabase as string) & ", Location: " & theLocation & ¬
+
+		tell logger to info(logCtx, "Verification started for Database: " & currentDatabaseName & ", Location: " & theLocation & ¬
 			", Number of Records: " & (length of theRecords as string))
 
+		-- Verify each filtered record and aggregate issue metrics.
 		set {issueRecords, issues, totalPages} to {0, 0, 0}
 		repeat with theRecord in theRecords
 			logger's debug(logCtx, " " & name of theRecord)
 
-			set {theYear, theMonth, theDay, theSender, theSubject, pIssueCount} to {null, null, null, null, null, 0}
+			-- Reset per-record issue counter and collect PDF page metrics.
+			set pIssueCount to 0
 			if type of theRecord is PDF document then set totalPages to totalPages + (page count of theRecord)
 
-			set theFields to my fieldsFromTags(theRecord, false)
-			-- set allDimensionConstraints to pDimensionsConstraintsDictionary's allKeys()
-			-- repeat with aDimensionName in allDimensionConstraints
-			-- 	set theCardinality to (pConstraintsDictionary's objectForKey:aDimensionName)
-			-- 	set theCategories to (theFields's objectForKey:aDimensionName)
-			--
-			-- 	if theCategories is missing value then
-			-- 		my logIssue(theRecord, true, "No category found for dimension '" & theDimension & "'.")
-			-- 	else
-			-- 		if theCount = 1 then
-			-- 			if not (theCategories's isKindOfClass:(current application's NSString)) as boolean then
-			-- 				set logtext to theCategories as list
-			-- 				my logIssue(theRecord, true, "More than 1 category found for dimension '" & theDimension & "': " & logtext)
-			-- 			end if
-			-- 			-- else if (setCategories's isKindOfClass:(current application's NSArray)) as boolean
-			-- 		end if
-			-- 	end if
-			-- end repeat
-			--
-			-- if pIssueCount > 0 then
-			-- 	set issueRecords to issueRecords + 1
-			-- 	set issues to issues + pIssueCount
-			-- end if
+			-- Verify exact tag cardinality for each database-specific constrained dimension.
+			set recordTags to tags of theRecord
+			set allDimensionConstraints to pDimensionsConstraintsDictionary's allKeys() as list
+			repeat with aDimensionName in allDimensionConstraints
+				set dimensionName to aDimensionName as string
+				set expectedTagCount to (pDimensionsConstraintsDictionary's objectForKey:aDimensionName) as integer
+
+				if expectedTagCount > 0 then
+					set dimensionTags to (pDimensionsDictionary's objectForKey:aDimensionName)
+					if dimensionTags is missing value then
+						my logIssue(theRecord, true, "Configured dimension '" & dimensionName & "' was not found in the dimensions dictionary.")
+					else
+						-- Count matching dimension tags on the record.
+						set matchingTags to {}
+						set dimensionTagList to dimensionTags as list
+						repeat with aTag in recordTags
+							set tagName to aTag as string
+							if dimensionTagList contains tagName then set end of matchingTags to tagName
+						end repeat
+
+						-- Report missing or non-exact cardinality matches.
+						set matchingTagCount to count of matchingTags
+						if matchingTagCount is 0 then
+							my logIssue(theRecord, true, "No category found for dimension '" & dimensionName & "'. Expected exactly " & expectedTagCount & " tag(s).")
+						else if matchingTagCount is not expectedTagCount then
+							my logIssue(theRecord, true, "Expected exactly " & expectedTagCount & " tag(s) for dimension '" & dimensionName & "', found " & matchingTagCount & ": " & (matchingTags as string))
+						end if
+					end if
+				end if
+			end repeat
+
+			-- Roll up record-level issues into global summary counters.
+			if pIssueCount > 0 then
+				set issueRecords to issueRecords + 1
+				set issues to issues + pIssueCount
+			end if
 		end repeat
+
+		-- Emit final verification summary for quick operator feedback.
 		tell logger to info(logCtx, "Verification finished - Records with Issues: " & issueRecords & ", Total Issues: " & issues & ", Total Pages (PDF only): " & totalPages)
 	end tell
 	logger's trace(logCtx, "exit")

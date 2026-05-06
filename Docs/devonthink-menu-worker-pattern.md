@@ -30,6 +30,7 @@ property pUseWorker : true
 5. For selected commands, `runCommand` wraps execution with performance tracing.
 
 For handlers that support an empty selection (for example smart-group navigation commands), the fallback behavior is implemented inside the library handler itself.
+For `verify_records`, the handler also resolves the target database by location prefix as a worker-safe fallback when no frontmost database context is available.
 
 ## Smart Rule Flow
 

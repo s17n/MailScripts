@@ -96,7 +96,7 @@ The following scripts has been created to be added to the Scripts menu:
 - **Classify Records** ⌃⇧⌘C:  Classify records. At least one record must be selected.
 - **Set Name and Metadata** ⌃⇧⌘U: Set record name and updates metadata. At least one record must be selected.
 - **Archive Records** ⌃⇧⌘A: Move record to archive folder. At least one record must be selected.
-- **Verify Records** ⌃⇧⌘V: Start verification of record tags, field values and formats.
+- **Verify Records** ⌃⇧⌘V: Verifies records under `/05 Files` against configured `pDimensionsConstraints` (expected number of tags per dimension). Violations are written to the log and affected records are marked.
 - **Open Year / Sender / Subject / Context** ⌥⇧⌘3 / ⌥⇧⌘4 / ⌥⇧⌘5 / ⌥⇧⌘6: With one selected record, resolves the target value and opens (or creates) the corresponding smart group in the configured smart-groups folder; with no selected record, shows an alphabetically sorted chooser with existing smart groups under the configured `smartgroupsFolder` and opens the selected smart group.
 - **Open Label** ⌥⇧⌘L: Opens (or creates) a smart group for a DEVONthink label under `03 Resources/Label`. Label smart groups are named `Number-Label Name`, for example `3-Action needed`. If one record is selected and it already has a label, that label is used directly. Otherwise, the script always shows a label chooser and then creates or opens the smart group for the chosen label.
 

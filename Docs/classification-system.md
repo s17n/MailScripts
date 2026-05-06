@@ -40,7 +40,9 @@ The classification system can be configured through AppleScripts properties in t
 	property pDimensionsHome : "/Tags"
 	```
 
-- **pDimensionsConstraints**: Optional. Currently used to check cardinality. For examle:
+- **pDimensionsConstraints**: Optional cardinality constraints for verification. Each entry is `{dimensionName, expectedTagCount}`.  
+  A value greater than `0` means the record must contain exactly that number of tags from the dimension (for example `"1"` means exactly one tag).  
+  Violations are logged by **Verify Records** and affected records are marked with label `7`. For example:
 
 	```applescript
 	property pDimensionsConstraints : {{"01 Day", "1"}, {"02 Month", "1"}, {"03 Year", "1"}}	```
