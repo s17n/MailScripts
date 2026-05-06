@@ -55,3 +55,6 @@ property pMonths : {{"01", "Januar"}, {"02", "Februar"}, {"03", "März"}, {"04",
 
 -- Logger level for DocLibrary (initializeDatabaseConfiguration): 0 TRACE, 1 DEBUG, 2 INFO, 3 ERROR.
 property pLogLevel : 2
+
+-- Optional database/workflow-specific file log path. Leave empty to use the global fallback from config.scpt.
+property pLogFilePath : ""

@@ -51,3 +51,5 @@ property pFolderConfig : "/Users/.../Library/Mobile Documents/com~apple~CloudDoc
 
 -- 1 DEBUG, 2 INFO, 3 ERROR
 property pLogLevel : 2
+
+property pLogFilePath : ""

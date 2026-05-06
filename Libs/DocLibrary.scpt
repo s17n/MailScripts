@@ -51,6 +51,7 @@ property pAmountLookupDimensionValues : missing value
 property pAmountLookupCategories : missing value
 property pFilesHome : missing value
 property pTagAliases : missing value
+property pLogFilePath : missing value
 
 --- DATABASE CONFIGURATION PROPERTIES: END
 
@@ -851,8 +852,15 @@ on initializeDatabaseConfiguration(theDatabase)
 	set pContentType to pContentType of configurationFile
 
 	-- Logger
-	set pLogLevel to pLogLevel of configurationFile
-	logger's setLogLevel(pLogLevel)
+	set pLogLevel to missing value
+	try
+		set pLogLevel to pLogLevel of configurationFile
+	end try
+	set pLogFilePath to missing value
+	try
+		set pLogFilePath to pLogFilePath of configurationFile
+	end try
+	logger's configure(pLogLevel, pLogFilePath)
 
 	-- Dimensions
 	set pDimensionsHome to pDimensionsHome of configurationFile

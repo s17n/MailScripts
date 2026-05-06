@@ -32,16 +32,21 @@ The functional configuration consists of the following properties:
 	property pContentType : "DOCUMENTS"
 	```
 
-- **pLogLevel**: Log verbosity. Supported values are:
+- **pLogLevel**: Log verbosity for this functional configuration. If omitted, the bootstrap/fallback value from `~/.mailscripts/config.scpt` is used. Supported values are:
 	- `0`: TRACE
 	- `1`: DEBUG
 	- `2`: INFO
 	- `3`: ERROR
 
 	For example:
-	```applescript
-	property pLogLevel : 2
-	```
+		```applescript
+		property pLogLevel : 2
+		```
+- **pLogFilePath**: Optional file log path for this functional configuration. Leave empty (`""`) to use the bootstrap/fallback path from `~/.mailscripts/config.scpt`. `~/` is expanded to the current user's home folder. For example:
+
+		```applescript
+		property pLogFilePath : "~/Library/Logs/MailScripts/documents.log"
+		```
 - **pUseWorker**: Global toggle for DEVONthink worker execution. Supported values are:
 	- `true`: worker-enabled menu scripts and smart rules relaunch via `osascript ... --worker`
 	- `false`: scripts run directly without worker relaunch

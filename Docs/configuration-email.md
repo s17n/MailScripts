@@ -48,14 +48,18 @@ The email configuration can be configured through AppleScripts properties in the
 	property pDelayBeforeImport : 5
 	```
 
-- **pLogLevel**: Log verbosity. Supported values are `1` (DEBUG), `2` (INFO), and `3` (ERROR). For example:
+- **pLogLevel**: Log verbosity. Supported values are `0` (TRACE), `1` (DEBUG), `2` (INFO), and `3` (ERROR). For example:
 
 	```applescript
 	property pLogLevel : 2
 	```
 
+- **pLogFilePath**: Optional file log path for this functional configuration. Leave empty (`""`) to use the bootstrap/fallback path from `~/.mailscripts/config.scpt`. For example:
+
+	```applescript
+	property pLogFilePath : "~/Library/Logs/MailScripts/emails.log"
+	```
+
 ## Implementation Notes
 
 - `pDtArchiveRoot` is read by `Rule - Archive Records` from global `config.scpt`. If it is only set in `Default-Configuration-Emails.scpt`, it will not be picked up by that rule.
-
-

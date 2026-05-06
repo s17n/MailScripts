@@ -68,6 +68,25 @@ on beginTraceOperation(operationName)
 	set end of pTraceCallStack to frame
 end beginTraceOperation
 
+-- Applies runtime logging configuration.
+-- Parameters:
+--    logLevel:integer|missing value target threshold (trace/debug/info/warn); missing keeps the current value.
+--    logFilePath:text|missing value file log path; missing or empty keeps the current value.
+-- Return: none (side effects only).
+on configure(logLevel, logFilePath)
+	try
+		if logLevel is not missing value then set LOG_LEVEL to logLevel as integer
+	end try
+
+	try
+		if logFilePath is not missing value and (logFilePath as text) is not "" then set pLogFilePath to my resolveLogFilePath(logFilePath)
+	end try
+
+	set logFilePathText to "<missing>"
+	if pLogFilePath is not missing value then set logFilePathText to pLogFilePath as text
+	my debug(pScriptName, "configure: logLevel=" & LOG_LEVEL & ", logFilePath=" & logFilePathText)
+end configure
+
 -- Emits a debug-level log entry.
 -- Parameters:
 --    theMethod:text operation context.
@@ -214,13 +233,17 @@ on initialize()
 	my debug(pScriptName, "initialize: enter")
 
 	set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
-	set LOG_LEVEL to (pLogLevel of mailscriptsConfig)
+	set bootstrapLogLevel to LOG_LEVEL
 	try
-		set pLogFilePath to (pLogFilePath of mailscriptsConfig)
-	on error
-		set pLogFilePath to "/tmp/mailscripts.log"
+		set bootstrapLogLevel to (pLogLevel of mailscriptsConfig)
 	end try
-	set pLogFilePath to my resolveLogFilePath(pLogFilePath)
+
+	set bootstrapLogFilePath to "/tmp/mailscripts.log"
+	try
+		set bootstrapLogFilePath to (pLogFilePath of mailscriptsConfig)
+	end try
+	if bootstrapLogFilePath is missing value or (bootstrapLogFilePath as text) is "" then set bootstrapLogFilePath to "/tmp/mailscripts.log"
+	my configure(bootstrapLogLevel, bootstrapLogFilePath)
 
 	my debug(pScriptName, "initialize: exit")
 end initialize

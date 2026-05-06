@@ -21,10 +21,10 @@ property pMailLibraryPath : pMailScriptsPath & "/Libs/MailLibrary.scpt"
 property pDocLibraryPath : pMailScriptsPath & "/Libs/DocLibrary.scpt"
 property pPopClipLibraryPath : pMailScriptsPath & "/Libs/PopClipLibrary.scpt"
 
--- Default Log Level - 1 DEBUG, 2 INFO, 3 ERROR
+-- Bootstrap/fallback log level. Prefer pLogLevel in the database-independent functional configuration.
 property pLogLevel : 2
 
--- Optional path for file logging; leave empty to disable file output
+-- Bootstrap/fallback file log path. Prefer pLogFilePath in the database-independent functional configuration.
 property pLogFilePath : pMailScriptsPath & "/logs/mailscripts.log"
 
 -- Global toggle for DEVONthink menu worker execution pattern.
