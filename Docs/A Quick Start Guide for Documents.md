@@ -41,70 +41,70 @@ The scripts needed for doing this will be described in a seconds, but before con
 
 Only a small piece of DEVONthink features are used by the solution itself but they are crucial. The following features are used:
 
-- **Tags**: Tags in DEVONthink can be hierarchaly structrued but does not have much more capabilities. A classification system is added throught Tag Groups and Tags.
+- **Tags**: Tags in DEVONthink can be structured hierarchically, but they do not provide much behavior on their own. This solution adds a classification system on top of Tag Groups and Tags.
 - **Custom Metadata**: DEVONthink comes with Custom Metadata to store, well, custom metadata. Some Custom Metadata fields are added to store classification data, with the option to add individual information.
-- **Scripting & Automation**: Scripting support is a first class citizen in DEVONthink. Scripting is used to implement the workflow through Smart Rules, Scriptig Menu script (wich offers keyboard shortcuts) and under the hood to access document properties, move documents and so on.
+- **Scripting & Automation**: Scripting support is a first-class DEVONthink feature. The workflow uses scripts through Smart Rules, Script Menu scripts (including keyboard shortcuts), and internal automation for document properties, document moves, and related operations.
 
 ### Classification system (Tags)
 
-Tags are used to implement a (multi-dimensional) classification system where Tag Groups are used to implement _dimensions_ and Tags within the tag groups are used to implement _categories_. The following dimensions has been added through tag groups:
+Tags are used to implement a multi-dimensional classification system. Top-level Tag Groups implement _dimensions_; tags within these top-level tag groups implement _dimension values_. The default document configuration defines these dimensions:
 
-- **Day**: Days is used to represents the logical day of a document. 
+- **Day**: Represents the logical day of a document.
 	- Days are named 01, 02 ... 31.
-- **Month**: Months is used to represents the logical month of a document. 
+- **Month**: Represents the logical month of a document.
 	- Months are named Januar, Februar ... Dezember.
-- **Year**: Years are used to represents the logical year of a document. 
+- **Year**: Represents the logical year of a document.
 	- Years are named 2026, 2025 ...
-- **Sender**: Senders are used to represent the sender / originator of a document. This can be company name, a representative category for individual documents like Retail, Travel or Service etc.
-	- Tags can be named any way (following the usually best practices is recommended).
--  **Subject**: Subjects are used to represent the subject category of a document, like Invoice, Contract, Payslip or super-generic ones like Information.
-	- like senders, subjects can be named any way
+- **Sender**: Senders are used to represent the sender/originator of a document. This can be a company name or a representative dimension value for individual documents like Retail, Travel, or Service.
+	- Tags can be named freely. Following a consistent naming convention is recommended.
+- **Subject**: Subjects are used to represent the subject dimension value of a document, like Invoice, Contract, Payslip, or generic values like Information.
+	- Like senders, subjects can be named freely.
 - **Context**: Contexts are used as an additional piece of information for cases where Sender and Subject are not unique for a specific time period (e.g. when you get more than one monthly invoice from the same sender) or when a different view is helpful (e.g. a contract number or a license plate).
-	- like senders and subjects, contexts can be named any way
+	- Like senders and subjects, contexts can be named freely.
 
-The Day, Month and Year dimensions will be also refered as Date dimension in the following. 
+The Day, Month, and Year dimensions are referred to as the Date dimensions below.
 
-Note: The reason to implement a Date that way is quite simple and does have a historical background. DEVONthink's document date feature was not there at the time where I went paperless for all(most all) of my documents - but they have always been filed by date somehow, physically. Scanning a chuck of documents for a known time period and tagging it accordingly, maybe only with the right year and month in a first iteration, was super fast. Over time I stucked with that structure.
+Note: The date model has a historical background. DEVONthink's document date feature was not available when this workflow was first created, while the existing paper archive was already filed by date. Scanning a batch of documents for a known time period and tagging it with year and month was fast, so the structure stayed.
 
-The dimension tag groups are excluded from tagging. The name of the dimentsion tag groups can be configured. 
+The dimension tag groups themselves are excluded from tagging. Dimension tag group names can be configured.
 
-According to the classification system the top level Tags group in DEVONthink could looks like this:
+With this classification system, the top-level Tags group in DEVONthink can look like this:
 
 ![Top level Tags group](images/tags-structure.png)
 
 ### Custom Metadata
  
-Custom Metadata are used to be able to:
+Custom Metadata is used to:
 
-- show classification information from tags in a structured and condensed way 
-- store additional information for Sender and Subject - right beside to the category itself 
+- show classification information from tags in a structured and condensed way
+- store additional information for Sender and Subject right beside the dimension value itself
 - store additional data extracted from the document like document amount
- 
-The following Custom Metadata fields has been added:
 
-- **Date**: A field of type Date to represent the document date from the tags.
-- **Sender**: A field of type 'Single-line Text' to show the Sender tag with the option to add individual text.
-- **Subject**: A field of type 'Single-line Text' to show the Subject tag and additional tags and fields when applicable. Also with the option to add individual text.
-- **Betrag**: A field of type 'Decimal Number' with format 'Currency'  to show the document amount for specified subjects.
+The following Custom Metadata fields have been added:
+
+- **Date**: A field of type Date to represent the document date from dimension values.
+- **Sender**: A field of type 'Single-line Text' to show the Sender dimension value with the option to add individual text.
+- **Subject**: A field of type 'Single-line Text' to show the Subject dimension value and additional tags and fields when applicable. Also with the option to add individual text.
+- **Betrag**: A field of type 'Decimal Number' with format 'Currency' to show the document amount for specified subjects.
 
 ### Scripting & Automation
 
-AppleScript scripts are used to implement the solution and for automation of the workflow. For automation menu bar scripts, a Smart Rule and a PopClip script has been created. 
+AppleScript scripts implement the solution and automate the workflow. The automation uses menu bar scripts, Smart Rules, and a PopClip script.
 
-The following scripts has been created to be added to the Scripts menu:
+The following scripts can be added to the Scripts menu:
 
-- **Classify Records** ⌃⇧⌘C:  Classify records. At least one record must be selected.
-- **Set Name and Metadata** ⌃⇧⌘U: Set record name and updates metadata. At least one record must be selected.
-- **Archive Records** ⌃⇧⌘A: Move record to archive folder. At least one record must be selected.
-- **Verify Records** ⌃⇧⌘V: Verifies records under `/05 Files` against configured `pDimensionsConstraints` (expected number of tags per dimension). Violations are written to the log and affected records are marked.
+- **Classify Records** ⌃⇧⌘C: Classifies records. At least one record must be selected.
+- **Set Name and Metadata** ⌃⇧⌘U: Sets the record name and updates metadata. At least one record must be selected.
+- **Archive Records** ⌃⇧⌘A: Moves records to the archive folder. At least one record must be selected.
+- **Verify Records** ⌃⇧⌘V: Verifies records under `/05 Files` against configured `pDimensionsConstraints` (expected number of dimension values per dimension). Violations are written to the log and affected records are marked.
 - **Open Year / Sender / Subject / Context** ⌥⇧⌘3 / ⌥⇧⌘4 / ⌥⇧⌘5 / ⌥⇧⌘6: With one selected record, resolves the target value and opens (or creates) the corresponding smart group in the configured smart-groups folder; with no selected record, shows an alphabetically sorted chooser with existing smart groups under the configured `smartgroupsFolder` and opens the selected smart group.
 - **Open Label** ⌥⇧⌘L: Opens (or creates) a smart group for a DEVONthink label under `03 Resources/Label`. Label smart groups are named `Number-Label Name`, for example `3-Action needed`. If one record is selected and it already has a label, that label is used directly. Otherwise, the script always shows a label chooser and then creates or opens the smart group for the chosen label.
 
-The following script has been created to be attached to a Smart Rule:
+The following script can be attached to a Smart Rule:
 
-- **Rule - Process Document**: This does the classification and set name and metadata in one step.
+- **Rule - Process Document**: Runs classification, naming, and metadata updates in one step.
 
-The following scripts has been created to be installed as PopClip extension:
+The following script can be installed as a PopClip extension:
 
 - **dt-set-subject.popcliptxt**: This adds the selected text to the subject field.
 
@@ -117,21 +117,21 @@ The application and integration logic are contained in the following script libr
 
 ## Naming Schema and Custom Metadata Field Formats
 
-When a document is tagged according to the classification system, the file name will be set in this format: 
+When a document is tagged according to the classification system, the file name will be set in this format:
 
 `[YYYY]-[MM]-[DD]_[Sender]_[Subject].extension`
 
-The corresponding tags will be used straight-forward, except for month, where the name is mapped to a double-digit number. 
+The corresponding dimension values are used directly, except for month, where the name is mapped to a double-digit number.
 
-The field seperators between the dimensions are configurable.   
+Field separators between dimensions are configurable.
 
-The Custom Metadata 'Sender' and 'Subject' will be set to the corresponding tag values (categories) as well but with the option to add individual information. This is usefull to add additional text which will not change - even when you change the tags, rename the document and update the Custom Metadata fields. To add inividual text you have to add a special field separator after the tag value / category, which is by default the ":" character.
+The Custom Metadata fields 'Sender' and 'Subject' are set to the corresponding dimension values and can include individual text. This is useful for text that should stay unchanged when tags change, record names are updated, and Custom Metadata fields are refreshed. To add individual text, add the configured field separator after the dimension value. The default separator is `: `.
 
-The Custom Metadata 'Subject' is used to show something more on information. When available the following information will be showed in squared brackets on the right-hand side:
+The Custom Metadata field 'Subject' can include additional information. When available, the following values are shown in square brackets on the right-hand side:
 
-- when a Context is set it will be displayed 
-- when a document amount was set it will be displayed 
-- when specific tags are set, theses tags will be displayed
+- when a Context is set, it is displayed
+- when a document amount is set, it is displayed
+- when specific tags are set, these tags are displayed
 
 For example, the 'Subject' field could show text in the following formats:
 

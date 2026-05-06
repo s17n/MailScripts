@@ -1,57 +1,57 @@
 #@osa-lang:AppleScript
 property pContentType : "DOCUMENTS"
 
--- Root-Tag-Gruppe fuer Dimensionen; wird in initializeDimensions() geladen und in handleUncategorizedTag() als Zielpfad genutzt.
+-- Root tag group for dimensions; loaded in initializeDimensions() and used as target path in handleUncategorizedTag().
 property pDimensionsHome : "/Tags"
 
--- Kardinalitaet je Dimension (Dimension, max. Anzahl Werte). In setField() wird > 0 als "nur ein Wert erlaubt" behandelt.
+-- Cardinality per dimension (dimension, max. number of values). In setField(), values greater than 0 mean "only one value allowed".
 property pDimensionsConstraints : {{"01 Day", "1"}, {"02 Month", "1"}, {"03 Year", "1"}, {"04 Sender", "1"}, {"05 Subject", "1"}}
 
--- Datumsdimensionen in fixer Reihenfolge {Jahr, Monat, Tag}; wird in setDateTags(), setCustomMetadata(DATE), replaceFieldPlaceholder({Decades}) und Validierung genutzt.
+-- Date dimensions in fixed order {year, month, day}; used in setDateTags(), setCustomMetadata(DATE), replaceFieldPlaceholder({Decades}), and validation.
 property pDateDimensions : {"03 Year", "02 Month", "01 Day"}
 
--- Dimensionen, die in classifyRecords() via setTagFromCompareRecord() aus aehnlichen Records uebernommen werden, falls noch leer.
+-- Dimensions copied from similar records in classifyRecords() via setTagFromCompareRecord() when still empty.
 property pCompareDimensions : {"04 Sender", "05 Subject", "06 Context"}
 
--- Mindest-Score fuer Vergleichsrecords in setTagFromCompareRecord(); darunter werden keine Tags uebernommen.
+-- Minimum score for compare records in setTagFromCompareRecord(); below this threshold no tags are copied.
 property pCompareDimensionsScoreThreshold : 0.25
 
--- Datumsquelle fuer Auto-Klassifikation (getClassificationDate): DOCUMENT_CREATION_DATE | DATE_MODIFIED | DATE_CREATED | RECORD_CREATION_DATE; leer deaktiviert Datumsklassifikation.
+-- Date source for auto-classification (getClassificationDate): DOCUMENT_CREATION_DATE | DATE_MODIFIED | DATE_CREATED | RECORD_CREATION_DATE; empty disables date classification.
 property pClassificationDate : "DOCUMENT_CREATION_DATE"
 
--- Name-Template fuer setName(); Platzhalter [Dimension] werden ueber replaceDimensionPlaceholders() ersetzt; leer deaktiviert Umbenennung.
+-- Name template for setName(); [Dimension] placeholders are replaced via replaceDimensionPlaceholders(); empty disables renaming.
 property pNameTemplate : "[03 Year]-[02 Month]-[01 Day]_[04 Sender]_[05 Subject]"
 
--- Custom-Metadata-Feldnamen; wird in updateRecordsMetadata() iteriert. Wichtig: erstes Feld wird in setCustomMetadata() als Betrag-Referenz verwendet.
+-- Custom metadata field names; iterated in updateRecordsMetadata(). The first field is used as amount reference in setCustomMetadata().
 property pCustomMetadataFields : {"Betrag", "Date", "Sender", "Subject"}
 
--- Dimensions-Mapping je Custom-Metadata-Feld (indexbasiert zu pCustomMetadataFields); bei DATE muss ein Triple {Jahr, Monat, Tag} sein.
+-- Dimension mapping per custom metadata field (index-aligned to pCustomMetadataFields); DATE entries must be a {year, month, day} triple.
 property pCustomMetadataDimensions : {"", pDateDimensions, "04 Sender", "05 Subject"}
 
--- Typ je Custom-Metadata-Feld (indexbasiert): AMOUNT | DATE | TEXT; steuert Branching in setCustomMetadata().
+-- Type per custom metadata field (index-aligned): AMOUNT | DATE | TEXT; controls branching in setCustomMetadata().
 property pCustomMetadataTypes : {"AMOUNT", "DATE", "TEXT", "TEXT"}
 
--- Template je Custom-Metadata-Feld (indexbasiert, v.a. fuer TEXT); unterstuetzt [Dimension], [[Dimension]], {Text}, {Amount}.
+-- Template per custom metadata field (index-aligned, mainly for TEXT); supports [Dimension], [[Dimension]], {Text}, {Amount}.
 property pCustomMetadataTemplates : {"", "", "[04 Sender]{Text}", "[05 Subject]{Text}{Amount}[06 Context][[09 Marker]]"}
 
--- Trenner zwischen berechnetem Teil und Freitext in TEXT-Custom-Metadata; genutzt beim Parsen und Schreiben (extractCustomTextFromCmdValue/setCustomMetadata).
+-- Separator between computed content and free text in TEXT custom metadata; used for parsing and writing (extractCustomTextFromCmdValue/setCustomMetadata).
 property pCustomMetadataFieldSeparator : ": "
 
--- Liste von Custom-Metadata-Feldern, die nach updateRecordsMetadata() in Kommentare kopiert werden (setFinderComment()).
+-- Custom metadata fields copied into comments after updateRecordsMetadata() (setFinderComment()).
 property pCommentsFields : {"Sender", "Subject"}
 
--- Kategorien fuer Betrag-Autofill (AMOUNT), als String; wird per words of in Liste umgewandelt und gegen Tag-Werte geprueft.
-property pAmountLookupCategories : "Rechnung"
+-- Dimension values enabling amount autofill (AMOUNT), as a string; converted with "words of" and checked against tag values.
+property pAmountLookupDimensionValues : "Rechnung"
 
--- Archiv-Zieltemplate fuer archiveRecords(); unterstuetzt [Dimension], {Decades} sowie optional {Year}/{Month}/{Day} (Fallback bei leerem pDateDimensions).
+-- Archive target template for archiveRecords(); supports [Dimension], {Decades}, and optional {Year}/{Month}/{Day} (fallback when pDateDimensions is empty).
 property pFilesHome : "/05 Files/{Decades}[03 Year]/[02 Month]"
 
--- Alias-Mapping Tag -> Kurztext; angewendet in tagAlias() fuer Namens-/Textaufbau in setCustomMetadata().
+-- Alias mapping tag -> short text; applied in tagAlias() for name/text composition in setCustomMetadata().
 property pTagAliases : {{"analog", "A"}, {"digital", "D"}}
 
--- Monatsmapping {MM, Name}; wird in buildMonthDictionaries() fuer Umrechnung Name<->Nummer (replaceDimensionPlaceholders, setDateTags, DATE-Custom-Metadata) genutzt.
+-- Month mapping {MM, name}; used in buildMonthDictionaries() to convert name <-> number (replaceDimensionPlaceholders, setDateTags, DATE custom metadata).
 property pMonths : {{"01", "Januar"}, {"02", "Februar"}, {"03", "März"}, {"04", "April"}, {"05", "Mai"}, {"06", "Juni"}, ¬
 	{"07", "Juli"}, {"08", "August"}, {"09", "September"}, {"10", "Oktober"}, {"11", "November"}, {"12", "Dezember"}}
 
--- Logger-Level fuer DocLibrary (initializeDatabaseConfiguration): 0 TRACE, 1 DEBUG, 2 INFO, 3 ERROR.
+-- Logger level for DocLibrary (initializeDatabaseConfiguration): 0 TRACE, 1 DEBUG, 2 INFO, 3 ERROR.
 property pLogLevel : 2

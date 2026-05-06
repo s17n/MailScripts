@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The dimensions cache stores flattened dimension/category data as JSON on the filesystem to avoid repeated expensive DEVONthink tag traversal during `initializeDimensions`.
+The dimensions cache stores flattened dimension and dimension value data as JSON on the filesystem to avoid repeated expensive DEVONthink tag traversal during `initializeDimensions`.
 
 ## Design
 
@@ -25,7 +25,7 @@ This keeps cache transport logic reusable and prevents duplication in `DocLibrar
 
 ### `updateDimensionsCache(theDatabaseName)`
 
-Use this when dimensions/tags changed and the cache must be refreshed explicitly.
+Use this when dimensions or dimension values changed and the cache must be refreshed explicitly.
 
 Behavior:
 
@@ -56,7 +56,7 @@ Operational note:
 Internal worker operation in `DocLibrary`:
 
 - Reads dimensions from DEVONthink.
-- Flattens categories.
+- Flattens dimension values.
 - Delegates persistence to `BaseLibrary.writeDimensionsCache`.
 
 ## BaseLibrary Cache API
@@ -73,7 +73,7 @@ JSON object:
 
 - `version` (integer)
 - `updatedAt` (string timestamp)
-- `dimensions` (object: `dimensionName -> [category1, category2, ...]`)
+- `dimensions` (object: `dimensionName -> [dimensionValue1, dimensionValue2, ...]`)
 
 Example:
 

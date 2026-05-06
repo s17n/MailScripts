@@ -47,6 +47,7 @@ property pCustomMetadataFieldSeparator : missing value
 
 property pCommentsFields : missing value
 
+property pAmountLookupDimensionValues : missing value
 property pAmountLookupCategories : missing value
 property pFilesHome : missing value
 property pTagAliases : missing value
@@ -223,9 +224,9 @@ on buildDimensionsDictionaryFromDEVONthink(theDatabase)
 		set theDimensions to every child of dimensionHome
 		repeat with aDimension in theDimensions
 			set {dimensionName, dimensionChilds} to {name, every child} of aDimension
-			set categories to my createTagList(dimensionChilds, {})
-			(dimensionsDictionary's setObject:categories forKey:dimensionName)
-			tell logger to debug(logCtx, "Dimension '" & dimensionName & "' refreshed with " & length of categories & " categories.")
+			set dimensionValues to my createTagList(dimensionChilds, {})
+			(dimensionsDictionary's setObject:dimensionValues forKey:dimensionName)
+			tell logger to debug(logCtx, "Dimension '" & dimensionName & "' refreshed with " & length of dimensionValues & " dimension values.")
 		end repeat
 	end tell
 
@@ -265,7 +266,7 @@ on classifyRecords(theRecords)
 				end if
 			end if
 
-			-- restliche Dimensionen
+			-- Remaining dimensions.
 			repeat with aCompareDimension in pCompareDimensions
 				my setTagFromCompareRecord(theRecord, theDatabase, tagFields, aCompareDimension)
 			end repeat
@@ -565,7 +566,7 @@ on extractCustomTextFromCmdValue(currentValue)
 			set customText to my removeTrailingBracketBlocks(customText)
 
 		else
-			-- Migrationsszenario bei EMAILS: wenn kein pCustomMetadataFieldSeparator vorhanden ist wird currentValue komplett übernommen
+			-- EMAILS migration case: when no pCustomMetadataFieldSeparator exists, currentValue is kept as-is.
 			if (count of words of currentValue) > 1 and pContentType is equal to "EMAILS" then
 				logger's debug(logCtx, "Custom Text found but no pCustomMetadataFieldSeparator -> current value will be used")
 				set customText to currentValue
@@ -724,7 +725,7 @@ on hasWorkerFlag(theArgs)
 	return false
 end hasWorkerFlag
 
--- Handles interactive assignment for an uncategorized tag.
+-- Handles interactive dimension assignment for an unassigned tag.
 -- Parameters:
 --    theTag:text tag value to evaluate.
 -- Return: none (side effects only).
@@ -749,16 +750,16 @@ on handleUncategorizedTag(theTag)
 
 		tell application id "DNtp" to activate
 		set theItem to choose from list sortedList ¬
-			with title ("Uncategorized Tag: " & theTag) with prompt "The Tag '" & theTag & "' is not categorized yet. You can categorize it now to one of the following dimensions or leave it as is." default items {"05 Subject"} OK button name "Catagorize" cancel button name "Cancel" without multiple selections allowed
+			with title ("Unassigned Tag: " & theTag) with prompt "The tag '" & theTag & "' is not assigned to a dimension yet. Assign it to one of the following dimensions or leave it unchanged." default items {"05 Subject"} OK button name "Assign" cancel button name "Cancel" without multiple selections allowed
 
-		-- Tag zu Categories der entsprechenden Dimension hinzufügen
+		-- Add the tag to the dimension values of the selected dimension.
 		if theItem is not {} and theItem is not false then
 			set theDimensionName to first item of theItem as string
 
 			-- Dictionary
-			set theCategories to (pDimensionsDictionary's objectForKey:theDimensionName) as list
-			set end of theCategories to name of theUncategorizedRecord as string
-			(pDimensionsDictionary's setObject:theCategories forKey:theDimensionName)
+			set theDimensionValues to (pDimensionsDictionary's objectForKey:theDimensionName) as list
+			set end of theDimensionValues to name of theUncategorizedRecord as string
+			(pDimensionsDictionary's setObject:theDimensionValues forKey:theDimensionName)
 			my persistDimensionsCacheIfEnabled()
 
 			-- Tag Group
@@ -880,7 +881,12 @@ on initializeDatabaseConfiguration(theDatabase)
 
 	set pCommentsFields to pCommentsFields of configurationFile
 
-	set pAmountLookupCategories to words of (pAmountLookupCategories of configurationFile)
+	try
+		set pAmountLookupDimensionValues to words of (pAmountLookupDimensionValues of configurationFile)
+	on error
+		set pAmountLookupDimensionValues to words of (pAmountLookupCategories of configurationFile)
+	end try
+	set pAmountLookupCategories to pAmountLookupDimensionValues
 	set pFilesHome to pFilesHome of configurationFile
 
 	set pDimensionsConstraints to pDimensionsConstraints of configurationFile
@@ -906,7 +912,7 @@ on initializeDatabaseConfiguration(theDatabase)
 	logger's trace(logCtx, "exit")
 end initializeDatabaseConfiguration
 
--- Loads dimension and category definitions into the in-memory cache.
+-- Loads dimension and dimension value definitions into the in-memory cache.
 -- Parameters:
 --    theDatabase:DEVONthink database (class 'database' / DTkb) database context used by the operation.
 -- Return: none (side effects only).
@@ -1005,10 +1011,10 @@ on moveByDimension(theRecords, theDimension, theFolderPrefix)
 		repeat with theRecord in theRecords
 
 			set tagFields to my fieldsFromTags(theRecord, true)
-			set theCategory to (tagFields's objectForKey:theDimension)
+			set theDimensionValue to (tagFields's objectForKey:theDimension)
 
-			if theCategory is not missing value and theCategory is not "" then
-				set theDestinationFolderName to theFolderPrefix & "/" & theCategory as string
+			if theDimensionValue is not missing value and theDimensionValue is not "" then
+				set theDestinationFolderName to theFolderPrefix & "/" & theDimensionValue as string
 				my moveRecord(theRecord, theDestinationFolderName)
 			end if
 
@@ -1866,7 +1872,7 @@ on setCustomMetadata(theIndex, theRecord, theFields, theSupplemental, theSupplem
 
 			set allValues to theFields's allValues()
 			repeat with aValue in allValues
-				if pAmountLookupCategories contains aValue then
+				if pAmountLookupDimensionValues contains aValue then
 					tell application id "DNtp"
 						set newValue to document amount of theRecord
 					end tell
@@ -1878,9 +1884,9 @@ on setCustomMetadata(theIndex, theRecord, theFields, theSupplemental, theSupplem
 
 		set newValue to currentValue
 
-		set theCategory to theFields's objectForKey:theDimension
-		if theCategory is missing value then set theCategory to ""
-		set theCategory to my tagAlias(theCategory)
+		set theDimensionValue to theFields's objectForKey:theDimension
+		if theDimensionValue is missing value then set theDimensionValue to ""
+		set theDimensionValue to my tagAlias(theDimensionValue)
 
 		-- Custom Metadata Value von Template initialisieren - nachfolgend werden alle Placeholder ersetzt
 		set cmdValue to theTemplate
@@ -1903,12 +1909,12 @@ on setCustomMetadata(theIndex, theRecord, theFields, theSupplemental, theSupplem
 			end if
 		end repeat
 
-		-- Replace category placeholder "[...]"
+		-- Replace dimension value placeholder "[...]"
 		repeat with aDimension in pDimensionsDictionary's allKeys()
 			if (cmdValue as string) contains ("[" & aDimension & "]" as string) then
 				set theReplaceText to my tagAlias((theFields's objectForKey:aDimension))
 				if aDimension as string is equal to theDimension as string then
-					set theReplaceText to theCategory
+					set theReplaceText to theDimensionValue
 				else
 					if theReplaceText is missing value then
 						set theReplaceText to ""
@@ -2022,8 +2028,8 @@ on setField(theTag, theFields, interactiveMode, theRecord)
 
 		set allDimensions to pDimensionsDictionary's allKeys()
 		repeat with aDimension in allDimensions
-			set categories to (pDimensionsDictionary's objectForKey:aDimension) as list
-			if categories contains theTag then
+			set dimensionValues to (pDimensionsDictionary's objectForKey:aDimension) as list
+			if dimensionValues contains theTag then
 				set theCardinality to (pDimensionsConstraintsDictionary's objectForKey:aDimension)
 				logger's debug(logCtx, "theCardinality: " & theCardinality)
 
@@ -2114,15 +2120,15 @@ on setNameForAsset(theRecord, f)
 
 	tell application id "DNtp"
 
-		-- das technische Datum wird aus "Creation Date" ermittelt (Datum und Uhrzeit)
+		-- The technical date is derived from "Creation Date" (date and time).
 		tell baseLib to set technicalDate to format(my creationDateFromMetadata(theRecord))
 
-		-- das logische Datum wird aus den Tags ermittelt (nur Datum)
+		-- The logical date is derived from tags (date only).
 		if logicalYear is not missing value and logicalMonth is not missing value and logicalDay is not missing value then
 			set logicalDate to logicalYear & logicalMonth & logicalDay & "-0000"
 		end if
 
-		-- wenn technisches und logisches Datum identisch sind wird das technische Datum verwendet, sonst das logische
+		-- If technical and logical dates are identical, use the technical date; otherwise use the logical date.
 		set theName to technicalDate
 		if logicalDate is not missing value then
 			if not (rich texts 1 thru 8 of logicalDate = rich texts 1 thru 8 of technicalDate) then
@@ -2132,7 +2138,7 @@ on setNameForAsset(theRecord, f)
 		end if
 
 		-- prüfen, ob ein Dateiname passend zum Namen möglich ist (das geht nur, wenn der Dateiname noch nicht existiert)
-		-- falls bereits eine Datei mit dem Namen existiert wird die laufende Nummer um 1 erhöht
+		-- If a file with the same name already exists, increment the sequence number.
 		set currentFilename to filename of theRecord
 		tell baseLib to set theExtension to extentionOf(currentFilename)
 		set {incrementalCounter, availableNumber} to {0, missing value}
@@ -2188,10 +2194,10 @@ on setTagFromCompareRecord(theRecord, theDatabase, theFields, theDimension)
 						set theCompareRecordTags to tags of aCompareRecord
 						set theTag to missing value
 
-						set categories to (pDimensionsDictionary's objectForKey:theDimension) as list
+						set dimensionValues to (pDimensionsDictionary's objectForKey:theDimension) as list
 
 						repeat with aCompareRecordTag in theCompareRecordTags
-							if categories contains aCompareRecordTag then set theTag to aCompareRecordTag
+							if dimensionValues contains aCompareRecordTag then set theTag to aCompareRecordTag
 						end repeat
 						if theTag is not missing value then
 							tell logger to debug(logCtx, "theTag: " & theTag)
@@ -2421,7 +2427,7 @@ on verifyTags(theLocation)
 						-- Report missing or non-exact cardinality matches.
 						set matchingTagCount to count of matchingTags
 						if matchingTagCount is 0 then
-							my logIssue(theRecord, true, "No category found for dimension '" & dimensionName & "'. Expected exactly " & expectedTagCount & " tag(s).")
+							my logIssue(theRecord, true, "No dimension value found for dimension '" & dimensionName & "'. Expected exactly " & expectedTagCount & " tag(s).")
 						else if matchingTagCount is not expectedTagCount then
 							my logIssue(theRecord, true, "Expected exactly " & expectedTagCount & " tag(s) for dimension '" & dimensionName & "', found " & matchingTagCount & ": " & (matchingTags as string))
 						end if

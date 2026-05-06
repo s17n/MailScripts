@@ -51,5 +51,5 @@ The functional configuration consists of the following properties:
 	property pUseWorker : true
 	```
 - **Classification system** properties are documented [here](./classification-system.md#Configuration) and include: pDimensionsHome, pDimensionsConstraints, pDateDimensions, pCompareDimensions, pCompareDimensionsScoreThreshold, pClassificationDate, pTagAliases, pMonths
-- **Custom Metadata** related properties are documented [here](custom-metadata-additions.md#Configuration) and include: pCustomMetadataFields, pCustomMetadataDimensions, pCustomMetadataTypes, pCustomMetadataTemplates, pCustomMetadataFieldSeparator, pCommentsFields, pAmountLookupCategories
+- **Custom Metadata** related properties are documented [here](custom-metadata-additions.md#Configuration) and include: pCustomMetadataFields, pCustomMetadataDimensions, pCustomMetadataTypes, pCustomMetadataTemplates, pCustomMetadataFieldSeparator, pCommentsFields, pAmountLookupDimensionValues
 - **File names and filing** related properties are documented [here](./name-and-file-documents.md#Configuration) and include: pNameTemplate, pFilesHome
