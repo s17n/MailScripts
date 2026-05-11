@@ -16,6 +16,9 @@ property pCompareDimensions : {"04 Sender", "05 Subject", "06 Context"}
 -- Minimum score for compare records in setTagFromCompareRecord(); below this threshold no tags are copied.
 property pCompareDimensionsScoreThreshold : 0.25
 
+-- Aktiviert das Caching und liest Tags aus dem Filesystem
+property pUseDimensionsFilesystemCache : true
+
 -- Date source for auto-classification (getClassificationDate): DOCUMENT_CREATION_DATE | DATE_MODIFIED | DATE_CREATED | RECORD_CREATION_DATE; empty disables date classification.
 property pClassificationDate : "DOCUMENT_CREATION_DATE"
 
