@@ -82,14 +82,8 @@ on importMessages(theMessages, theDatabaseName)
 				tell application id "DNtp"
 					set theGroup to incoming group of database theDatabaseName
 					set theRecord to create record with {name:theName & ".eml", type:unknown, creation date:theDateSent, modification date:theDateReceived, URL:theSender, source:(theSource as string), unread:(not theReadFlag)} in theGroup
-					-- set theImportFolder to create location theImportFolder in database theDatabaseName
-					-- move record theRecord to theImportFolder
 
 					my setCustomAttributes(theRecord, senderAddress)
-
-					set theSender to get custom meta data for "Sender" from theRecord
-					tell baseLib to set theSenderEncoded to replaceText("/", "\\/", theSender)
-					set unread of theRecord to not (exists record at "07 Miscellaneous/Configuration/Import as Read/" & theSenderEncoded)
 
 					tell logger to info_r(theRecord, "New Message imported - received at:  " & theDateSent & " from: " & theSender)
 
@@ -151,22 +145,21 @@ on createSmartGroup(theRecords)
 			tell logger to debug(pScriptName, "createSmartGroup: theSender: " & theSender & ", theEmailAddress: " & theEmailAddress)
 
 			-- Erstelle Smartgroup für Sender
-			if (exists record at "03 Resources/by Sender/" & theSenderEncoded in theDatabase) or ¬
-				(exists record at "03 Resources/by Sender (FID)/" & theSenderEncoded in theDatabase) then
+			if exists record at "03 Resources/Sender/" & theSenderEncoded in theDatabase then
 				tell logger to debug_r(theRecord, "Smartgroup already exists for Sender: " & theSender)
 			else
 
-				set theGroup to get record at "03 Resources/by Sender" in theDatabase
+				set theGroup to get record at "03 Resources/Sender" in theDatabase
 				set theSmartGroup to create record with {name:theSender, URL:theEmailAddress, record type:smart group, search predicates:"mdsender:" & theSender} in theGroup
 				tell logger to info_r(theRecord, "Smartgroup created for Sender: " & theSender)
 			end if
 
 			-- Erstelle Smartgroup für Email-Adresse
-			if (exists record at "03 Resources/by Email/" & theEmailAddress in theDatabase) then
+			if (exists record at "03 Resources/Email/" & theEmailAddress in theDatabase) then
 				tell logger to debug_r(theRecord, "Smartgroup already exists for Email: " & theEmailAddress)
 			else
 
-				set theGroup to get record at "03 Resources/by Email" in theDatabase
+				set theGroup to get record at "03 Resources/Email" in theDatabase
 				set theSmartGroup to create record with {name:theEmailAddress, URL:theEmailAddress, record type:smart group, search predicates:"kMDItemAuthorEmailAddresses:" & theEmailAddress} ¬
 					in theGroup
 				tell logger to info_r(theRecord, "Smartgroup created for Email: " & theEmailAddress)
