@@ -2077,7 +2077,12 @@ on setFinderComment(theField, theRecord)
 		set theValue to get custom meta data for theField from theRecord
 
 		if theValue is not missing value then
-			set wordCount to count of words of theValue
+
+			set oldDelims to AppleScript's text item delimiters
+			set AppleScript's text item delimiters to space
+			set wordCount to count of text items of theValue
+			set AppleScript's text item delimiters to oldDelims
+
 			if wordCount > 1 then
 				set finderComment to comment of theRecord
 				if finderComment is not "" then
