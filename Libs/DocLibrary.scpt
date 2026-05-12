@@ -243,20 +243,24 @@ on classifyRecords(theRecords)
 	set logCtx to my initialize("classifyRecords")
 	if not pPerformanceTraceManagedByCaller then logger's resetTraceMetrics()
 	logger's trace(logCtx, "enter")
-	-- set theRecords to my normalizeRecordsForProcessing(theRecords)
+
+	-- Worker mode can pass an empty/non-list payload when no records resolve.
+	set recordCount to 0
+	if class of theRecords is list then set recordCount to count of theRecords
+	if recordCount is 0 then
+		logger's info(logCtx, "No records provided for classification. Skipping.")
+		logger's trace(logCtx, "exit")
+		if not pPerformanceTraceManagedByCaller then logger's logTraceMetrics()
+		return
+	end if
 
 	tell application id "DNtp"
-		-- try
-		--    set theDatabase to current database
-		-- on error
 		set theDatabase to database of first item of theRecords
-		-- end try
 
 		my initializeDatabaseConfiguration(theDatabase)
-		set {recordsSelected, recordsProcessed} to {0, 0}
+		set recordsSelected to 0
 		repeat with theRecord in theRecords
 			set recordsSelected to recordsSelected + 1
-			set recordsProcessed to recordsProcessed + 1
 
 			set tagFields to my fieldsFromTags(theRecord, true)
 
@@ -273,7 +277,7 @@ on classifyRecords(theRecords)
 			end repeat
 
 		end repeat
-		tell logger to info(logCtx, "Records selected: " & recordsSelected & ", Records processed:  " & recordsProcessed)
+		tell logger to info(logCtx, "Records selected: " & recordsSelected)
 	end tell
 
 	logger's trace(logCtx, "exit")
@@ -1612,51 +1616,40 @@ on runMenuCommand(commandKey, config)
 	set logCtx to my initialize("runMenuCommand")
 	logger's trace(logCtx, "enter > " & commandKey)
 
-	if commandKey is "archive" then
+	if commandKey is "archive" or commandKey is "classify" or commandKey is "update_metadata" then
 		set theSelection to my selectedRecordsOrError()
-		my archiveRecords(theSelection)
-	else if commandKey is "classify" then
-		set theSelection to my selectedRecordsOrError()
-		my classifyRecords(theSelection)
+		if commandKey is "archive" then
+			my archiveRecords(theSelection)
+		else if commandKey is "classify" then
+			my classifyRecords(theSelection)
+		else
+			my updateRecordsMetadata(theSelection)
+		end if
 	else if commandKey is "import_mail" then
 		my importMailMessages(pPrimaryEmailDatabase of config)
-	else if commandKey is "open_context" then
+	else if commandKey is "open_context" or commandKey is "open_label" or commandKey is "open_sender" or commandKey is "open_subject" or commandKey is "open_year" then
 		tell application id "DNtp"
 			set theSelection to every selected record
 		end tell
-		set theSmartGroupSpecifier to {dimension:"06 Context", customMetadataField:"", smartgroupsFolder:"03 Resources/Context"}
-		my openSmartGroup(theSmartGroupSpecifier, theSelection)
-	else if commandKey is "open_label" then
-		tell application id "DNtp"
-			set theSelection to every selected record
-		end tell
-		set theSmartGroupSpecifier to {smartgroupsFolder:"03 Resources/Label"}
-		my openLabelSmartGroup(theSmartGroupSpecifier, theSelection)
-	else if commandKey is "open_sender" then
-		tell application id "DNtp"
-			set theSelection to every selected record
-		end tell
-		set theSmartGroupSpecifier to {dimension:"04 Sender", customMetadataField:"sender", smartgroupsFolder:"03 Resources/Sender"}
-		my openSmartGroup(theSmartGroupSpecifier, theSelection)
-	else if commandKey is "open_subject" then
-		tell application id "DNtp"
-			set theSelection to every selected record
-		end tell
-		set theSmartGroupSpecifier to {dimension:"05 Subject", customMetadataField:"subject", smartgroupsFolder:"03 Resources/Subject"}
-		my openSmartGroup(theSmartGroupSpecifier, theSelection)
-	else if commandKey is "open_year" then
-		tell application id "DNtp"
-			set theSelection to every selected record
-		end tell
-		set theSmartGroupSpecifier to {dimension:"03 Year", customMetadataField:"date", smartgroupsFolder:"03 Resources/Year"}
-		my openSmartGroup(theSmartGroupSpecifier, theSelection)
+		if commandKey is "open_label" then
+			set theSmartGroupSpecifier to {smartgroupsFolder:"03 Resources/Label"}
+			my openLabelSmartGroup(theSmartGroupSpecifier, theSelection)
+		else
+			if commandKey is "open_context" then
+				set theSmartGroupSpecifier to {dimension:"06 Context", customMetadataField:"", smartgroupsFolder:"03 Resources/Context"}
+			else if commandKey is "open_sender" then
+				set theSmartGroupSpecifier to {dimension:"04 Sender", customMetadataField:"sender", smartgroupsFolder:"03 Resources/Sender"}
+			else if commandKey is "open_subject" then
+				set theSmartGroupSpecifier to {dimension:"05 Subject", customMetadataField:"subject", smartgroupsFolder:"03 Resources/Subject"}
+			else
+				set theSmartGroupSpecifier to {dimension:"03 Year", customMetadataField:"Date", smartgroupsFolder:"03 Resources/Year"}
+			end if
+			my openSmartGroup(theSmartGroupSpecifier, theSelection)
+		end if
 	else if commandKey is "update_dimensions_cache" then
 		set theDatabase to my resolveActiveDatabase(missing value)
 		if theDatabase is missing value then error "No current database available."
 		my updateDimensionsCache(theDatabase)
-	else if commandKey is "update_metadata" then
-		set theSelection to my selectedRecordsOrError()
-		my updateRecordsMetadata(theSelection)
 	else if commandKey is "verify_records" then
 		my verifyTags("/05 Files")
 	else
@@ -1995,12 +1988,19 @@ on setDateTags(theRecord, theFields, theClassificationDate)
 	set theDay to theFields's objectForKey:(third item of pDateDimensions)
 	-- logger's trace(logCtx, "theYear: " & theYear & ", theMonth: " & theMonth & ", theDay: " & theDay)
 
-	-- Date Tags will not be set if Year, Month or Day is already set
-	if theYear is not missing value or theMonth is not missing value or theDay is not missing value then
+	set hasYear to theYear is not missing value
+	set hasMonth to theMonth is not missing value
+	set hasDay to theDay is not missing value
 
-		if theYear is not missing value then tell logger to debug(logCtx, "Year already set to: " & theYear)
-		if theMonth is not missing value then tell logger to debug(logCtx, "Month already set to: " & theMonth)
-		if theDay is not missing value then tell logger to debug(logCtx, "Day already set to: " & theDay)
+	-- Date Tags will not be set if Year, Month or Day is already set
+	if hasYear or hasMonth or hasDay then
+		if hasYear and hasMonth and hasDay then
+			tell logger to debug(logCtx, "Year already set to: " & theYear)
+			tell logger to debug(logCtx, "Month already set to: " & theMonth)
+			tell logger to debug(logCtx, "Day already set to: " & theDay)
+		else
+			error "Incomplete date tags found. Year, month, and day tags must all be present or all missing."
+		end if
 	else
 
 		tell application id "DNtp"
@@ -2342,6 +2342,16 @@ on updateRecordsMetadata(theRecords)
 	set logCtx to my initialize("updateRecordsMetadata")
 	if not pPerformanceTraceManagedByCaller then logger's resetTraceMetrics()
 	logger's trace(logCtx, "enter")
+
+	-- Worker mode can pass an empty/non-list payload when no records resolve.
+	set recordCount to 0
+	if class of theRecords is list then set recordCount to count of theRecords
+	if recordCount is 0 then
+		logger's info(logCtx, "No records provided for metadata update. Skipping.")
+		logger's trace(logCtx, "exit")
+		if not pPerformanceTraceManagedByCaller then logger's logTraceMetrics()
+		return
+	end if
 
 	tell application id "DNtp"
 
