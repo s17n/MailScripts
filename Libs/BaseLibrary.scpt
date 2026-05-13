@@ -474,4 +474,3 @@ on collapseSpaces(theText)
 
 	return theText
 end collapseSpaces
-

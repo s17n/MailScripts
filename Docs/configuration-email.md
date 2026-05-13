@@ -48,17 +48,7 @@ The email configuration can be configured through AppleScripts properties in the
 	property pDelayBeforeImport : 5
 	```
 
-- **pLogLevel**: Log verbosity. Supported values are `0` (TRACE), `1` (DEBUG), `2` (INFO), and `3` (ERROR). For example:
-
-	```applescript
-	property pLogLevel : 2
-	```
-
-- **pLogFilePath**: Optional file log path for this functional configuration. Leave empty (`""`) to use the bootstrap/fallback path from `~/.mailscripts/config.scpt`. For example:
-
-	```applescript
-	property pLogFilePath : "~/Library/Logs/MailScripts/emails.log"
-	```
+- Logging is configured globally in `~/.mailscripts/config.scpt` through `pLogLevel` and `pLogFilePath`.
 
 ## Implementation Notes
 

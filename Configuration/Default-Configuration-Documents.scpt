@@ -55,9 +55,3 @@ property pTagAliases : {{"analog", "A"}, {"digital", "D"}}
 -- Month mapping {MM, name}; used in buildMonthDictionaries() to convert name <-> number (replaceDimensionPlaceholders, setDateTags, DATE custom metadata).
 property pMonths : {{"01", "Januar"}, {"02", "Februar"}, {"03", "März"}, {"04", "April"}, {"05", "Mai"}, {"06", "Juni"}, ¬
 	{"07", "Juli"}, {"08", "August"}, {"09", "September"}, {"10", "Oktober"}, {"11", "November"}, {"12", "Dezember"}}
-
--- Logger level for DocLibrary (initializeDatabaseConfiguration): 0 TRACE, 1 DEBUG, 2 INFO, 3 ERROR.
-property pLogLevel : 2
-
--- Optional database/workflow-specific file log path. Leave empty to use the global fallback from config.scpt.
-property pLogFilePath : ""

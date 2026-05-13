@@ -51,7 +51,6 @@ property pAmountLookupDimensionValues : missing value
 property pAmountLookupCategories : missing value
 property pFilesHome : missing value
 property pTagAliases : missing value
-property pLogFilePath : missing value
 
 --- DATABASE CONFIGURATION PROPERTIES: END
 
@@ -71,7 +70,7 @@ on addTextToCustomMetadata(theCustomMetadataField, theText)
 	tell application id "DNtp"
 
 		set theRecord to missing value
-		set selectedRecords to selection
+		set selectedRecords to every selected record
 		if selectedRecords is not {} then set theRecord to first item of selectedRecords
 		if theRecord is missing value then set theRecord to content record
 		if theRecord is missing value then error "No current record selected."
@@ -847,24 +846,13 @@ end initialize
 -- Return: none (side effects only).
 on initializeDatabaseConfiguration(theDatabase)
 	set logCtx to my initialize("initializeDatabaseConfiguration")
-	logger's trace(logCtx, "enter")
 
 	tell application id "DNtp" to set theDatabaseName to name of theDatabase
 
 	set configurationFile to baseLib's loadConfiguration(pDatabaseConfigurationFolder, theDatabaseName)
 
 	set pContentType to pContentType of configurationFile
-
-	-- Logger
-	set pLogLevel to missing value
-	try
-		set pLogLevel to pLogLevel of configurationFile
-	end try
-	set pLogFilePath to missing value
-	try
-		set pLogFilePath to pLogFilePath of configurationFile
-	end try
-	logger's configure(pLogLevel, pLogFilePath)
+	logger's trace(logCtx, "enter")
 
 	-- Dimensions
 	set pDimensionsHome to pDimensionsHome of configurationFile

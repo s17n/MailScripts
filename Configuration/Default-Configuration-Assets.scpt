@@ -48,8 +48,3 @@ property pObjectSubject : "Objekt"
 property pCaptureContextConfig : "/Users/.../Library/Mobile Documents/com~apple~CloudDocs/Assets/09 Configuration/capture-contexts.json"
 
 property pFolderConfig : "/Users/.../Library/Mobile Documents/com~apple~CloudDocs/Assets/09 Configuration/ablage-itemlinks.json"
-
--- 1 DEBUG, 2 INFO, 3 ERROR
-property pLogLevel : 2
-
-property pLogFilePath : ""

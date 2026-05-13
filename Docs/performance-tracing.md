@@ -32,13 +32,12 @@ Formatting details:
 
 No dedicated tracing config file is required. Tracing uses existing logger/runtime settings:
 
-- `pLogLevel` in the database-independent functional configuration
+- `pLogLevel` in `~/.mailscripts/config.scpt`
   - `2` (INFO) is sufficient to see totals and per-operation metric lines.
   - `0` (TRACE) additionally shows all trace enter/exit lines.
-- `pLogFilePath` in the database-independent functional configuration (optional)
+- `pLogFilePath` in `~/.mailscripts/config.scpt`
   - Performance-tracing output from `logTraceMetrics()` is written to this file.
-  - If unset/empty, logger uses the bootstrap/fallback path from `~/.mailscripts/config.scpt`.
-  - If no fallback path is configured, logger uses `/tmp/mailscripts.log`.
+  - If unset or empty, logger uses `/tmp/mailscripts.log`.
 
 Runtime toggle (optional):
 

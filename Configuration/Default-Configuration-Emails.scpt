@@ -29,8 +29,3 @@ property pDelayBeforeImport : 5
 
 -- sort message by senders contact group
 property pDtSortBySender : false
-
--- 1 DEBUG, 2 INFO, 3 ERROR
-property pLogLevel : 2
-
-property pLogFilePath : ""

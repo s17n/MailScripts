@@ -118,6 +118,27 @@ to display given msg:theMsg : "", record:theRecord : missing value
 	my writeLog("INFO", pScriptName, theMsg, theRecord)
 end display
 
+-- Emits one log event to DEVONthink and the configured file sink.
+-- Parameters:
+--    theLevel:text severity label.
+--    theMethod:text operation context.
+--    theMessage:text message payload.
+--    theRecord:DEVONthink record|missing value optional record context.
+-- Return: none (side effects only).
+on emitLogEvent(theLevel, theMethod, theMessage, theRecord)
+	try
+		tell application id "DNtp"
+			if theRecord is missing value then
+				log message (theLevel & ": " & theMethod) info theMessage
+			else
+				log message info theMessage record theRecord
+			end if
+		end tell
+	end try
+
+	my appendToLogFile(my formatLogLine(theLevel, theMethod, theMessage, theRecord))
+end emitLogEvent
+
 -- Pops an operation frame and records inclusive/exclusive timings.
 -- Parameters:
 --    operationName:text operation identifier.
@@ -230,8 +251,6 @@ on info_r(theRecord, theMessage)
 end info_r
 
 on initialize()
-	my debug(pScriptName, "initialize: enter")
-
 	set mailscriptsConfig to load script (POSIX path of (path to home folder) & ".mailscripts/config.scpt")
 	set bootstrapLogLevel to LOG_LEVEL
 	try
@@ -245,6 +264,7 @@ on initialize()
 	if bootstrapLogFilePath is missing value or (bootstrapLogFilePath as text) is "" then set bootstrapLogFilePath to "/tmp/mailscripts.log"
 	my configure(bootstrapLogLevel, bootstrapLogFilePath)
 
+	my debug(pScriptName, "initialize: enter")
 	my debug(pScriptName, "initialize: exit")
 end initialize
 
@@ -487,15 +507,5 @@ end updateTraceMetrics
 --    theRecord:DEVONthink record|missing value optional record context.
 -- Return: none (side effects only).
 on writeLog(theLevel, theMethod, theMessage, theRecord)
-	try
-		tell application id "DNtp"
-			if theRecord is missing value then
-				log message (theLevel & ": " & theMethod) info theMessage
-			else
-				log message info theMessage record theRecord
-			end if
-		end tell
-	end try
-
-	my appendToLogFile(my formatLogLine(theLevel, theMethod, theMessage, theRecord))
+	my emitLogEvent(theLevel, theMethod, theMessage, theRecord)
 end writeLog
