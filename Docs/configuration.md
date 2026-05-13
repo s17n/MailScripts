@@ -33,6 +33,11 @@ The functional configuration consists of the following properties:
 	```
 
 - Logging is configured globally in `~/.mailscripts/config.scpt` through `pLogLevel` and `pLogFilePath`. Functional configurations do not define logging settings.
+- Runtime log-level override (optional):
+  - File: `~/.mailscripts/log-level.txt`
+  - Supported values: `0` (TRACE), `1` (DEBUG), `2` (INFO), `3` (ERROR)
+  - If the file exists with a valid value, it overrides `pLogLevel` from `config.scpt`.
+  - Use DEVONthink menu script `Set Log Level.scpt` to set or clear this override.
 - **pUseWorker**: Global toggle for DEVONthink worker execution. Supported values are:
 	- `true`: worker-enabled menu scripts and smart rules relaunch via `osascript ... --worker`
 	- `false`: scripts run directly without worker relaunch

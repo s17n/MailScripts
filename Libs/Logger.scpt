@@ -220,6 +220,31 @@ on formatLogLine(theLevel, theMethod, theMessage, theRecord)
 	return logLine
 end formatLogLine
 
+-- Returns the runtime override file path for log-level changes.
+-- Parameters:
+--    none.
+-- Return: text absolute override file path.
+on getLogLevelOverridePath()
+	return (POSIX path of (path to home folder)) & ".mailscripts/log-level.txt"
+end getLogLevelOverridePath
+
+-- Reads an optional runtime log-level override from disk.
+-- Parameters:
+--    none.
+-- Return: integer|missing value parsed log level override.
+on getLogLevelOverrideValue()
+	set overridePath to my getLogLevelOverridePath()
+	set fm to current application's NSFileManager's defaultManager()
+	if (fm's fileExistsAtPath:overridePath) as boolean is false then return missing value
+
+	try
+		set rawValue to do shell script "/bin/cat " & quoted form of overridePath
+		return my normalizeLogLevel(rawValue)
+	on error
+		return missing value
+	end try
+end getLogLevelOverrideValue
+
 -- Returns current trace metric records.
 -- Parameters:
 --    none.
@@ -261,9 +286,15 @@ on initialize()
 	try
 		set bootstrapLogFilePath to (pLogFilePath of mailscriptsConfig)
 	end try
+
+	set overrideLogLevel to my getLogLevelOverrideValue()
+	if overrideLogLevel is not missing value then set bootstrapLogLevel to overrideLogLevel
 	if bootstrapLogFilePath is missing value or (bootstrapLogFilePath as text) is "" then set bootstrapLogFilePath to "/tmp/mailscripts.log"
 	my configure(bootstrapLogLevel, bootstrapLogFilePath)
 
+	if overrideLogLevel is not missing value then
+		my debug(pScriptName, "initialize: runtime log-level override active (" & overrideLogLevel & ") from " & my getLogLevelOverridePath())
+	end if
 	my debug(pScriptName, "initialize: enter")
 	my debug(pScriptName, "initialize: exit")
 end initialize
@@ -321,6 +352,28 @@ on monotonicMs()
 	return ((current application's NSProcessInfo's processInfo()'s systemUptime()) * 1000.0) as real
 end monotonicMs
 
+-- Validates and normalizes a log-level value to the supported integer range.
+-- Parameters:
+--    theValue:any candidate value from config, UI, or override file.
+-- Return: integer|missing value normalized log level when valid.
+on normalizeLogLevel(theValue)
+	try
+		set levelValue to (my trimWhitespace(theValue as text)) as integer
+	on error
+		return missing value
+	end try
+	if levelValue < LOG_LEVEL_TRACE or levelValue > LOG_LEVEL_WARN then return missing value
+	return levelValue
+end normalizeLogLevel
+
+-- Removes an existing runtime log-level override.
+-- Parameters:
+--    none.
+-- Return: none (side effects only).
+on removeLogLevelOverride()
+	do shell script "/bin/rm -f " & quoted form of (my getLogLevelOverridePath())
+end removeLogLevelOverride
+
 -- Clears all collected trace metrics.
 -- Parameters:
 --    none.
@@ -375,6 +428,19 @@ on safeToText(theValue)
 	end try
 end safeToText
 
+-- Persists a runtime log-level override in ~/.mailscripts/log-level.txt.
+-- Parameters:
+--    logLevel:any candidate log level value.
+-- Return: none (side effects only).
+on saveLogLevelOverride(logLevel)
+	set normalizedLevel to my normalizeLogLevel(logLevel)
+	if normalizedLevel is missing value then error "Unsupported log level. Use 0 (TRACE), 1 (DEBUG), 2 (INFO), or 3 (ERROR)."
+
+	set overridePath to my getLogLevelOverridePath()
+	set dirPath to do shell script "/usr/bin/dirname " & quoted form of overridePath
+	do shell script "/bin/mkdir -p " & quoted form of dirPath & " && /usr/bin/printf '%s\\n' " & quoted form of (normalizedLevel as text) & " > " & quoted form of overridePath
+end saveLogLevelOverride
+
 -- Sets active log verbosity level.
 -- Parameters:
 --    logLevel:integer target threshold (trace/debug/info/warn).
@@ -398,7 +464,12 @@ end setTraceMetricsEnabled
 -- Return: none (side effects only).
 on showLogLevel()
 	set log_ctx to pScriptName & "." & "showLogLevel"
-	my info(log_ctx, "Current log level is: " & LOG_LEVEL)
+	set overrideLogLevel to my getLogLevelOverrideValue()
+	if overrideLogLevel is missing value then
+		my info(log_ctx, "Current log level is: " & LOG_LEVEL & " (source: config.scpt)")
+	else
+		my info(log_ctx, "Current log level is: " & LOG_LEVEL & " (source: " & my getLogLevelOverridePath() & ")")
+	end if
 end showLogLevel
 
 -- Sorts operation metrics ascending by operation name.

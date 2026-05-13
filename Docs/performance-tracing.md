@@ -35,6 +35,7 @@ No dedicated tracing config file is required. Tracing uses existing logger/runti
 - `pLogLevel` in `~/.mailscripts/config.scpt`
   - `2` (INFO) is sufficient to see totals and per-operation metric lines.
   - `0` (TRACE) additionally shows all trace enter/exit lines.
+  - Optional runtime override: `~/.mailscripts/log-level.txt` with values `0..3` (settable via `Set Log Level.scpt`).
 - `pLogFilePath` in `~/.mailscripts/config.scpt`
   - Performance-tracing output from `logTraceMetrics()` is written to this file.
   - If unset or empty, logger uses `/tmp/mailscripts.log`.
